@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Project:  PeerFoil  |  File: .github/scripts/fresh-clone.sh
+# Project:  PeerFoil  |  File: .github/scripts/required-files.sh
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco)
 # Created:  2026-09-04  |  Modified: 2026-09-04
-# Summary:  Verifies that a fresh PeerFoil checkout contains its required pre-release contract files.
+# Summary:  Confirms that a PeerFoil checkout includes the files needed to understand the project.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
@@ -23,9 +23,9 @@ required=(
 
 for path in "${required[@]}"; do
   if [[ ! -s "$path" ]]; then
-    echo "fresh clone: missing or empty required file: $path" >&2
+    echo "required files: missing or empty file: $path" >&2
     exit 1
   fi
 done
 
-echo "fresh clone: required PeerFoil contract files present"
+echo "required files: all PeerFoil project files are present"

@@ -2,7 +2,7 @@
 # Project:  PeerFoil  |  File: .github/scripts/conformance.sh
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco)
 # Created:  2026-09-04  |  Modified: 2026-09-04
-# Summary:  Runs the repository's pre-implementation documentation and metadata conformance checks.
+# Summary:  Checks PeerFoil's required files, project identity, headers, and license notices.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
@@ -10,8 +10,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-bash .github/scripts/fresh-clone.sh
-bash .github/scripts/embedded-example.sh
+bash .github/scripts/required-files.sh
+bash .github/scripts/project-packs.sh
 
 if grep -RInE '(^# Crosscut|Project:  (Crosscut|Privatium)|github\.com/gabrielmongefranco/crosscut)' \
   README.md AGENTS.md NOTICE .zenodo.json docs .github; then
@@ -31,8 +31,8 @@ metadata_files=(
   .github/FUNDING.yml
   .github/copilot-instructions.md
   .github/scripts/conformance.sh
-  .github/scripts/embedded-example.sh
-  .github/scripts/fresh-clone.sh
+  .github/scripts/project-packs.sh
+  .github/scripts/required-files.sh
   .github/workflows/ci.yml
 )
 
@@ -59,4 +59,4 @@ for path in README.md AGENTS.md NOTICE .zenodo.json docs/*.md .github/* .github/
   fi
 done
 
-echo "conformance: PeerFoil metadata and pre-release contracts pass"
+echo "conformance: PeerFoil repository checks pass"

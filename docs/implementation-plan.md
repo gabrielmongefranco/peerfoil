@@ -1,177 +1,179 @@
 <!--
-Project:  PeerFoil  |  File: docs/implementation-plan.md
-Authors:  Gabriel Mongefranco (@gabrielmongefranco)
-Created:  2026-09-04  |  Modified: 2026-09-04
-Summary:  Provides PeerFoil's high-level delivery plan from guided skills to the 1.0 product.
-SPDX-License-Identifier: GFDL-1.3-or-later
+This file is part of PeerFoil.
+docs/implementation-plan.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-04
+Last Modified: 2026-09-04
+Summary: Explains what PeerFoil will deliver, when it will arrive, and how each release will be checked.
+Notes: See README for an overview and full license information.
+
+Copyright © 2026 Gabriel Mongefranco
+
+Permission is granted to copy, distribute and/or modify this document under the terms of
+the GNU Free Documentation License, Version 1.3 or any later version published by the Free
+Software Foundation; with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 -->
 
-# PeerFoil High-Level Implementation Plan
+# PeerFoil Implementation Plan
 
-## A usable guided workflow in five days, enforced core in thirteen, and complete 1.0 within six months
+## A useful guided workflow in five days, a working core in thirteen, and version 1.0 within six months
 
-- **Version:** 0.1, 4 September 2026
-- **Status:** Pre-implementation plan
-- **Software license intent:** `GPL-3.0-or-later`
-- **Documentation license intent:** `GFDL-1.3-or-later`
+[Return to the PeerFoil README](../README.md)
 
-## 1. Delivery objective
+PeerFoil will be useful before the complete application is finished. The first release is
+a set of skills that guides Claude Code and Codex through the whole workflow. The next
+release is a small local application that runs and records the most important steps. Later
+releases add stronger review, change handling, memory, connected knowledge, local models,
+and project types other than software.
 
-PeerFoil ships in three useful increments:
+This plan gives each release a firm boundary and a clear test. If a feature is not ready,
+PeerFoil will say so instead of presenting a guided step as an enforced safeguard.
 
-| Release | Deadline from project start | User-visible outcome |
+## 1. Release schedule
+
+The day count starts when implementation begins.
+
+| Release | Target | What the user gets |
 |---|---:|---|
-| **PeerFoil Skills 0.1** | Day 5 | A guided architecture-to-production-to-review workflow using Markdown skills and the official Codex plugin |
-| **PeerFoil Core Alpha 0.2** | Day 13 | A local CLI mechanically enforces one narrow software-first path, evidence capture, recovery, and independent review |
-| **PeerFoil 1.0** | No later than Week 26 | A hardened cross-platform product with bounded review, change control, project packs, context, MCP, memory, and qualified local models |
+| PeerFoil Skills 0.1 | Day 5 | A complete guided workflow inside Claude Code |
+| PeerFoil Core Alpha 0.2 | Day 13 | A local command-line application that runs one software phase and records its evidence |
+| Reliable Core | Week 4 | Safer recovery, clearer errors, and the first document workflow |
+| Review Beta | Week 8 | Bounded two-family review and one independently checked repair cycle |
+| Planning Beta | Week 12 | Plan updates that preserve unaffected work when requirements change |
+| Context Beta | Week 16 | Focused skills, MCP access, shared context, and reviewed lessons |
+| Model Beta | Week 20 | Qualified local models and provider-neutral model settings |
+| Release Beta | Week 24 | Finished built-in project packs and easier installation |
+| PeerFoil 1.0 | Week 26 | The complete, tested cross-platform product |
 
-Software development remains the flagship use. The controller and schemas use neutral concepts so documentation, business plans, research reports, and later custom packs can share the same lifecycle:
+## 2. Rules that apply to every release
+
+PeerFoil must:
+
+- work natively on Windows, macOS, and Linux;
+- require no paid non-LLM service or hosted control plane;
+- keep normal setup simple and place detailed controls under Advanced settings;
+- use high effort for software work by default;
+- prevent an agent from approving its own work;
+- prefer a different model family for independent review;
+- check every repair again with an independent model;
+- keep required failures visible instead of letting reviewers vote them away;
+- revise the plan when requirements, TODOs, deferrals, or discovered work change;
+- treat `AGENTS.md` as the repository's highest local instruction source; and
+- clearly label safeguards that are guided rather than enforced.
+
+PeerFoil 1.0 will not include operating-system sandboxing, multiple agents writing at the
+same time, team administration, a hosted dashboard, or automatic production deployment.
+Those features would add complexity without improving the first experience for a solo
+developer.
+
+## 3. What PeerFoil will reuse
+
+PeerFoil is a coordination and quality layer. It will use mature tools for the work those
+tools already do well.
+
+| Need | Existing tool or standard |
+|---|---|
+| Claude and Codex cooperation | Official `openai/codex-plugin-cc` plugin |
+| Model execution | Separately installed Claude Code, Codex CLI, Ollama, or compatible endpoints |
+| Versions and isolated changes | Git branches and worktrees |
+| Portable agent instructions | Agent Skills format and `AGENTS.md` |
+| Connected tools and knowledge | Model Context Protocol (MCP) |
+| Tests and quality checks | Commands and scanners already used by the project |
+
+PeerFoil will not build another coding agent, Git implementation, model runtime, scanner,
+credential store, or general workflow framework.
+
+## 4. Project packs
+
+A project pack tells PeerFoil what kind of work is being produced, which checks matter,
+and what evidence reviewers need. Every pack uses the same basic workflow:
 
 ```text
 Define → Architect → Plan → Produce → Validate → Review → Repair → Approve
 ```
 
-## 2. Fixed constraints
-
-- Native Windows, macOS, and Linux operation.
-- Software and operational artifacts—including skills, agents, packs, templates, schemas, and machine-consumed Markdown—licensed `GPL-3.0-or-later`; human-facing prose documentation licensed `GFDL-1.3-or-later`, with explicit SPDX identifiers for ambiguous files.
-- No required hosted control plane, database service, paid CI, or other non-LLM subscription.
-- No Docker, WSL, Bash, tmux, or Unix-only dependency in the default path.
-- No agent approves its own work.
-- Normal primary approval comes from another qualified model family.
-- Software production uses high effort by default; medium is limited to bounded, reversible, qualified low-risk work.
-- Every repair uses high effort and receives fresh cross-family verification.
-- Objective failures and missing required evidence cannot be voted away.
-- `AGENTS.md` remains authoritative.
-- Normal operation requires no hand-edited configuration; advanced controls stay under Advanced settings.
-- Sandboxing, parallel writers, hosted dashboards, team administration, and automatic production deployment remain outside 1.0.
-
-The schedule assumes one experienced developer working with focused model assistance and protecting the stated scope. Dates and exit gates are both commitments. Missing either is reported plainly.
-
-## 3. Reuse strategy
-
-PeerFoil builds only the governance layer that existing tools do not provide.
-
-| Need | Reuse |
+| Pack | Plan |
 |---|---|
-| Claude-to-Codex cooperation | Official `openai/codex-plugin-cc` |
-| Model execution | Separately installed Claude Code, Codex CLI, and later local runtimes |
-| Versioning and change isolation | Git and Git worktrees |
-| Portable skills | Agent Skills format |
-| Connected knowledge and tools | Model Context Protocol |
-| Quality checks | Existing project commands and compatible external scanners |
-| Local inference | Ollama, OpenAI-compatible/vLLM endpoints, and optional compatible harnesses |
+| Software | The default pack, included from the first release |
+| Generic | A small starting point for custom work, included from the first release |
+| Documentation | A small example in Skills 0.1; a complete pack by version 1.0 |
+| Business Plan | Prototype after the Reliable Core; complete by version 1.0 |
+| Research Report | Prototype after the Reliable Core; complete by version 1.0 |
+| Custom Pack Kit | Small extension guide and examples in the Release Beta |
 
-PeerFoil does not build another coding agent, Git implementation, model runtime, scanner, workflow framework, credential store, or hosted service.
+A pack may choose artifacts, checks, evidence, skills, and review lenses. It may not grant
+itself credentials, weaken `AGENTS.md`, hide failed checks, or allow self-approval.
 
-## 4. Project-pack delivery
+## 5. Days 1–5: PeerFoil Skills 0.1
 
-A project pack defines artifacts, roles, phases, validators, evidence, skills, MCP needs, review lenses, and completion criteria within the fixed PeerFoil lifecycle.
+### What the user can do
 
-| Pack | Priority | Delivery target |
-|---|---:|---|
-| Software | Flagship/default | Skills 0.1 and every later release |
-| Generic | Minimal extension base | Skills 0.1 |
-| Documentation | Neutrality fixture, then polished pack | Reference in Skills 0.1; mature by 1.0 |
-| Business Plan | Planned built-in | Prototype after Reliable Core; mature by 1.0 |
-| Research Report | Planned built-in | Prototype after Reliable Core; mature by 1.0 |
-| Custom Pack Kit | Small extension surface | Release Beta |
+A user who already has Git, Claude Code, Codex, and model authentication can install the
+PeerFoil skills and complete the whole guided journey. They can make the important design
+decisions, approve an architecture and plan, send small coding tasks to Codex, run project
+checks, receive independent Claude and Codex reviews, accept a repair, update the plan,
+and resume from files stored in the repository.
 
-Packs do not define arbitrary workflows and cannot grant credentials, widen permissions, override `AGENTS.md`, suppress evidence, or relax reviewer independence.
+### What will be included
 
-## 5. Phase 1 — PeerFoil Skills 0.1
-
-**Schedule:** Days 1–5 · **Assurance:** Guided
-
-### User-visible outcome
-
-A developer with Git, Claude Code, Codex, and authentication already available can install PeerFoil's skills, resolve consequential decisions, approve architecture and stage order, delegate bounded production work, collect evidence, run independent Claude/Codex review, revise the plan, and resume from checked-in artifacts.
-
-### Fixed scope
-
-- Claude Code marketplace and plugin package.
-- Portable Markdown skills and fresh-role agent definitions.
-- Documented setup for the official Codex plugin.
-- Neutral schemas and templates for decisions, architecture, acceptance contracts, plans, tasks, evidence, reviews, packs, and lessons.
-- Guided start, plan, produce-next, change, status, resume, review-phase, remember, and settings actions.
-- Personal/work standards profile selection without overwriting repository rules.
-- Default hosted role mapping and visible fallbacks.
-- Software and basic Generic packs.
-- One small Documentation Pack fixture.
-- Cross-family provenance and review rules.
-- Mandatory different-family architecture and plan review before either artifact governs production.
-- Four conditional review lenses:
-  - correctness and reliability;
-  - security and privacy;
-  - accessibility and user experience;
-  - maintainability, documentation, licensing, and release integrity.
-- Three-OS installation and fresh-session smoke tests.
-- Complete software and documentation license texts, SPDX path policy, and initial notices.
+- A Claude Code marketplace and plugin package.
+- Portable Markdown skills and fresh agent-role instructions.
+- Setup instructions for the official Codex plugin.
+- Readable templates for decisions, architecture, plans, tasks, evidence, reviews, and
+  lessons.
+- Guided actions for start, plan, produce next, add a change, status, resume, review a
+  phase, remember a lesson, and settings.
+- Personal and work standards profiles that do not replace a repository's own rules.
+- Software and Generic packs, plus one small Documentation example.
+- A different-family review of the architecture and plan before coding begins.
+- Review lenses for correctness, reliability, security, privacy, accessibility, user
+  experience, maintainability, documentation, licensing, and release readiness.
+- Installation and fresh-session checks on Windows, macOS, and Linux.
+- Complete license notices and a clear path-based license policy.
 
 ### Five-day sequence
 
-| Day | Primary deliverable |
+| Day | Main result |
 |---:|---|
-| 1 | Marketplace/plugin skeleton, pack contract, core artifacts, settings, and decision interview |
-| 2 | Fresh evaluator, architect, and planner agents; Quality Contract; Software Pack |
-| 3 | Explicit Codex delegation, one-task production, change intake, status/resume, plan amendments |
-| 4 | Fresh Claude reviewer, dual-family phase review, repair selection, lessons, specialist lenses |
-| 5 | Documentation fixture, two software fixtures, plugin validation, three-OS smoke tests, notices, and user documentation |
+| 1 | Plugin skeleton, project-pack format, settings, and decision interview |
+| 2 | Architect, planner, evaluator, quality contract, and Software Pack |
+| 3 | Codex delegation, one-task production, change intake, status, resume, and plan updates |
+| 4 | Fresh Claude review, two-family phase review, repair choice, lessons, and specialist checks |
+| 5 | Documentation example, two software examples, plugin validation, three-OS checks, and user documentation |
 
-### Exit evidence
+### Release check
 
-On two small software fixtures, the release must:
+Two small software examples must complete the following journey:
 
-1. reach zero unresolved consequential decisions;
-2. create an architecture, acceptance contract, and ordered plan that each receive eligible different-family review before acceptance;
-3. delegate at least one bounded Codex implementation task only after both pre-production review gates pass;
-4. retain the produced change before any coordinator edit;
-5. run and record applicable project checks;
-6. complete fresh Claude and Codex phase review;
-7. identify the eligible different-family primary reviewer for each material item;
-8. revise the plan after a change or deferral;
-9. resume from committed artifacts.
+1. Resolve every important open decision.
+2. Create an architecture, quality contract, and ordered plan.
+3. Receive a different-family review of the architecture and plan.
+4. Send at least one small implementation task to Codex.
+5. Preserve who created the change before another agent edits it.
+6. Run and record the project checks.
+7. Complete fresh Claude and Codex phase reviews.
+8. Revise the plan after a change or deferral.
+9. Resume the work from checked-in project files.
 
-The same schema and review path must produce and review one small Markdown deliverable through the Documentation fixture.
+The Documentation example must use the same artifacts and review path to create and check
+one small Markdown document.
 
-### Explicit deferrals
+### What is not enforced yet
 
-- Mechanical state enforcement.
-- Authoritative controller-run evidence.
-- Atomic transitions and crash guarantees.
-- Direct provider process adapters.
-- Automated pass-count enforcement.
-- Local-model adapters and MCP orchestration.
-- Polished non-code packs.
+The Skills release depends on agents following the written process. It does not yet
+provide mechanical state control, controller-run evidence, crash recovery, direct provider
+processes, automatic pass limits, local-model routing, or MCP routing. The interface will
+show **Guided** so users understand that boundary.
 
-The release displays **Guided** and never implies those controls are enforced.
+## 6. Days 6–13: PeerFoil Core Alpha 0.2
 
-## 6. Phase 2 — PeerFoil Core Alpha 0.2
+### What the user can do
 
-**Schedule:** Days 6–13 · **Assurance:** Enforced within the documented alpha boundary
-
-### User-visible outcome
-
-The `peerfoil` executable consumes the same Skills artifacts and automatically completes one sequential software task with controller-run evidence, task-boundary recovery, and one independent phase-review/repair path.
-
-### Fixed scope
-
-- Small Go CLI and native development binaries.
-- Deterministic state loop.
-- Stable artifact, plan, and project-pack validation.
-- Direct Claude Code and Codex process adapters using provider-native authentication.
-- One supported default role mapping.
-- Software Pack enforcement and Documentation fixture processing.
-- Existing clean Git workspaces with an initial commit.
-- One producer at a time and one task per model call.
-- Dedicated software-task worktree and integration branch.
-- Controller-owned executable evidence bound to exact revisions.
-- Durable artifact-, change-set-, invocation-, and review-lineage provenance that survives a clone without provider session data.
-- Redacted transition history.
-- Task-boundary crash recovery.
-- One fixed Claude/Codex phase-review round.
-- One guided high-effort repair and fresh cross-family verification.
-- Native Windows, macOS, and Linux CI and smoke tests.
+The `peerfoil` command will read the same files created by PeerFoil Skills and run one
+small software phase. It will call Claude Code and Codex, keep the change in a Git
+worktree, run checks itself, record who produced and reviewed the work, and resume safely
+from a completed task boundary.
 
 Initial commands:
 
@@ -183,269 +185,246 @@ peerfoil status
 peerfoil resume
 ```
 
-### Exit evidence
+### What will be included
+
+- A small Go command-line application with native development builds.
+- One clear, sequential workflow.
+- Validation of plans, project packs, and saved artifacts.
+- Direct Claude Code and Codex processes using their existing authentication.
+- One supported default model arrangement.
+- One coding task per model call and one writing agent at a time.
+- A dedicated worktree and integration branch for the task.
+- Controller-run checks tied to the exact Git revision.
+- Authorship and review records that remain understandable after a fresh clone.
+- Redacted workflow history and task-boundary recovery.
+- One Claude and Codex phase review.
+- One guided high-effort repair with fresh different-family verification.
+- Native Windows, macOS, and Linux continuous integration.
+
+### Release check
+
+On all three operating systems, Core Alpha must:
+
+1. Read an architecture, project pack, and plan created by Skills 0.1.
+2. Run one coding task in its own worktree.
+3. Run the declared checks and tie the results to the correct revision.
+4. Integrate only work that is in scope and has its required evidence.
+5. Resume safely after an interruption between tasks.
+6. Block an out-of-scope change or a change made directly in the user's checkout.
+7. Run a two-family review without allowing self-approval.
+8. Guide one high-effort repair and have another family check it.
+9. Process the Documentation example without special document-only controller code.
+
+Core Alpha is a developer preview. It does not claim to contain the complete six-month
+product.
+
+## 7. Weeks 3–4: Reliable Core
+
+PeerFoil will handle common command, provider, timeout, path, output, and restart failures
+safely. It will either recover or tell the user exactly what to do next.
+
+Main work:
+
+- versioned project-pack and artifact validation;
+- timeout and child-process cleanup;
+- model and effort detection with visible fallbacks;
+- limited retry escalation;
+- repairable state diagnostics;
+- Documentation Pack alpha;
+- Business Plan and Research Report prototypes; and
+- optional detection of compatible security scanners already installed by the user.
+
+The release check will inject common failures on all three operating systems. Each failure
+must recover predictably or stop with a useful message. Adding a normal project pack must
+not require a controller change.
+
+## 8. Weeks 5–8: Review Beta
+
+Every phase will receive limited, evidence-based review from fresh Claude and Codex model
+families. Reviewers will work independently first, then compare specific findings. One
+accepted repair cycle may run at high effort, followed by a fresh independent check.
+
+Main work:
+
+- freeze the exact material being reviewed;
+- retain authorship for each artifact and change;
+- select specialist checks from the project pack and risk level;
+- combine duplicate findings without hiding disagreement;
+- require a different-family primary approval;
+- use six review passes per reviewer by default and eight at most;
+- reserve the final allowed pass for checking repairs;
+- use three passes per reviewer to choose a repair model by default and four at most; and
+- stop and ask the user when the allowed review cannot reach a safe conclusion.
+
+Seeded code defects and unsupported document claims must block approval, receive an
+explicit decision, and be checked again after repair.
+
+## 9. Weeks 9–12: Planning Beta
+
+PeerFoil will accept a new request while work is in progress. It will decide whether the
+request belongs now, later in the current phase, in a later phase, in the backlog, or
+should be declined. It will update the plan and preserve work that the change does not
+affect.
+
+Main work:
+
+- change-impact review and placement;
+- selective reopening of tasks and evidence;
+- readable plan history;
+- links from requirements to tasks and evidence;
+- capture of TODOs, unsupported claims, skipped checks, deviations, and deferrals; and
+- beta Business Plan and Research Report packs.
+
+The release check will add an important change to a software example and a non-coding
+example. PeerFoil must reopen affected work, keep unrelated work, and prevent stale work
+from being approved.
+
+## 10. Weeks 13–16: Context Beta
+
+PeerFoil will give each role only the approved context, skills, knowledge sources, and
+lessons it needs. Personal and work information will remain separate.
+
+Main work:
+
+- personal and work standards profiles;
+- predictable skill selection and version records;
+- small, reviewable skills based on `AGENTS.md`;
+- task-specific MCP settings, tool allowlists, and health checks;
+- clear rules about which information may leave the computer;
+- compact shared context packets;
+- lesson candidates that require review before promotion; and
+- promotion of useful lessons into tests, decisions, skills, glossary entries, or proposed
+  instruction changes.
 
-On every supported operating system, Core Alpha must:
+A required MCP outage must block only the dependent task. Unapproved MCP tools must stay
+unavailable, private content must stay out of Git, and a repeated problem must be promoted
+to the right durable project file.
 
-1. load Skills-generated architecture, pack, and plan artifacts;
-2. invoke a sequential producer task in a dedicated worktree;
-3. run declared commands itself and bind results to the exact revision;
-4. integrate only in-scope work with passing required evidence and durable author/reviewer lineage records;
-5. survive interruption at a task boundary;
-6. detect and block an injected out-of-scope or live-checkout mutation;
-7. run one dual-family review with provenance-aware approvals;
-8. guide one high-effort repair and independent re-verification when seeded;
-9. process the Documentation fixture without a controller code path specific to documents.
+## 11. Weeks 17–20: Model Beta
 
-### Explicit deferrals
+Advanced settings will allow qualified local models to replace hosted model seats without
+changing PeerFoil's project files or review rules.
 
-- Multi-round review reconciliation and automatic repair consensus.
-- Advanced change-impact analysis and selective invalidation.
-- Deterministic skills routing and role-scoped MCP.
-- Memory promotion and cross-project lessons.
-- Arbitrary provider and local-model adapters.
-- Scanner installation, parallel workers, submodules, LFS, GUI, and production deployment.
-- Mature Documentation, Business Plan, and Research Report experiences.
+Main work:
 
-Core Alpha is a developer alpha, not the finished six-month product.
+- one provider-neutral model adapter contract;
+- clear model-family records for hosted and local models;
+- configurable model, fallback, and effort settings;
+- authentication and usage diagnostics;
+- Ollama and OpenAI-compatible/vLLM adapters;
+- an optional OpenCode coding adapter;
+- small qualification tasks for each role and project pack; and
+- read-only access for models that have not qualified for a writing or review role.
 
-## 7. Phase 3 — Reliable Core
+Models derived from the same base model will count as the same family for independent
+review. A fully local setup will still require two qualified families for normal approval.
 
-**Schedule:** Weeks 3–4
+## 12. Weeks 21–24: Release Beta
 
-### User-visible outcome
+Fresh users should be able to install PeerFoil, complete setup in about five minutes, and
+choose a finished built-in project pack.
 
-Normal subprocess, provider, path, timeout, malformed-output, and restart failures recover safely or stop with an exact next action on all three operating systems.
+Main work:
 
-### Scope
+- cross-platform packaging and checksummed binaries;
+- safe state upgrades;
+- software bills of materials, notices, and license checks;
+- cost limits and simple usage information;
+- VS Code tasks and terminal integration;
+- finished Software, Documentation, Business Plan, and Research Report packs;
+- a small Custom Pack Kit; and
+- complete examples and upgrade tests.
 
-- Structured packet and plan validation.
-- Stable versioned pack manifest.
-- Timeout and complete process-tree termination.
-- Model and effort capability detection with visible fallback.
-- Bounded retry escalation.
-- Repairable state diagnostics.
-- Documentation Pack alpha.
-- Business Plan and Research Report pack prototypes.
-- Optional detection of compatible Gitleaks and OSV-Scanner installations.
+The release matrix will cover spaces, Unicode, apostrophes, CRLF line endings, case-only
+changes, cancellation, damaged local state, reconstruction from Git, package installation,
+offline local-model operation, and every built-in project pack on all three operating
+systems.
 
-### Exit evidence
+## 13. Weeks 25–26: PeerFoil 1.0
 
-Injected command, provider, timeout, malformed-output, pack, encoding, path, and restart failures either recover deterministically or pause honestly. Adding an ordinary pack requires no controller change.
+The final two weeks are reserved for fixes, usability, release checks, and documentation.
+They are not available for adding major features.
 
-## 8. Phase 4 — Review Beta
+Version 1.0 must include:
 
-**Schedule:** Weeks 5–8
+- a GPLv3 compatibility and dependency review;
+- documentation-license and notice checks;
+- an upgrade guide and reference projects;
+- accessibility, privacy, and security reviews of PeerFoil itself;
+- the five-minute setup check; and
+- a complete start-to-approved-phase test.
 
-### User-visible outcome
+Any capability that does not meet its acceptance check will remain clearly unshipped.
 
-Every phase receives bounded, evidence-backed review from two fresh model families. Accepted repairs are performed once, at high effort, and independently reverified.
+## 14. Quality gates
 
-### Scope
+Every release must meet these conditions:
 
-- Frozen review bundles.
-- Artifact- and change-set-level provenance.
-- Pack- and risk-selected specialist lenses.
-- Normalized finding ledger.
-- Different-family primary approval.
-- Six review passes per reviewer by default; eight maximum.
-- One phase-review pass per reviewer reserved for post-repair verification.
-- Three repair-selection passes per reviewer by default; four maximum.
-- Exact repair-producer consensus.
-- One automatic repair cycle.
-- Fresh independent re-verification.
-- Non-code lenses for factual support, assumptions, calculations, clarity, feasibility, source quality, and limitations.
-
-### Exit evidence
-
-Seeded software defects and unsupported document claims block acceptance, receive explicit dispositions, and are independently rechecked after repair. Forced disagreement exhausts its configured budget and pauses without invented consensus.
-
-## 9. Phase 5 — Planning and change control
-
-**Schedule:** Weeks 9–12
-
-### User-visible outcome
-
-A new request can be accepted during work. PeerFoil decides whether it belongs now, later in the current phase, in a later phase, in the backlog, or should be declined—then revises the plan and preserves unaffected work.
-
-### Scope
-
-- Impact-aware change placement.
-- Selective task and evidence invalidation.
-- Explicit plan-revision history.
-- Requirement-to-task-to-evidence traceability.
-- TODO, unsupported-claim, deviation, skipped-check, and deferral capture.
-- Pack-aware acceptance contracts.
-- Business Plan and Research Report beta packs.
-
-### Exit evidence
-
-A consequential mid-stage change revises the plan, reopens affected work, preserves unrelated completed work, and prevents stale integration in both a software fixture and a non-code fixture.
-
-## 10. Phase 6 — Context, skills, MCP, and memory
-
-**Schedule:** Weeks 13–16
-
-### User-visible outcome
-
-PeerFoil automatically supplies each role with relevant approved context, pertinent skills, permitted knowledge sources, and durable lessons without mixing personal and work material.
-
-### Scope
-
-- Personal/work standards profiles.
-- Deterministic skill eligibility and pinned skill records.
-- Reviewable focused skills derived from `AGENTS.md`.
-- Ephemeral per-invocation MCP configuration, deny-by-default tool filtering, adapter qualification, and health checks.
-- Personal/work data-egress policy.
-- Compact shared context packets.
-- Manual and discovered lesson candidates.
-- Reviewed promotion into tests, decisions, skills, glossary entries, or proposed standards changes.
-- Strict personal/work memory separation.
-
-### Exit evidence
-
-A required MCP outage or an adapter unable to enforce role isolation blocks the dependent task; unpermitted servers and tools remain unavailable; private payloads remain outside Git; and a recurring issue becomes the correct reviewed durable artifact.
-
-## 11. Phase 7 — Provider and local-model support
-
-**Schedule:** Weeks 17–20
-
-### User-visible outcome
-
-Advanced settings can replace hosted seats with qualified local models while preserving the same project artifacts, evidence, and review protocol.
-
-### Scope
-
-- Provider-neutral seat contract.
-- Canonical hosted-model lineage catalog and user-approved local manifests containing base lineage and model digests.
-- Model, fallback, and effort settings.
-- Authentication and usage diagnostics.
-- Ollama adapter.
-- OpenAI-compatible/vLLM adapter.
-- Optional OpenCode production harness.
-- Transformers.js external-helper path where appropriate.
-- Role- and pack-specific qualification fixtures.
-- Read-only default for unqualified models.
-- Fully local two-lineage configuration.
-
-### Exit evidence
-
-Hosted and qualified local seats can exchange roles without schema changes. No local model performs an unqualified role, endpoint aliases and derivatives of one base remain one lineage, and normal independent approval still requires a distinct qualified lineage root.
-
-## 12. Phase 8 — Release Beta
-
-**Schedule:** Weeks 21–24
-
-### User-visible outcome
-
-Fresh users can complete the default setup in approximately five minutes, use PeerFoil from a terminal or VS Code, and select a mature built-in project pack.
-
-### Scope
-
-- Cross-platform hardening.
-- Checksummed and freely signed binaries.
-- Schema migration tooling.
-- Conditional packaging, SBOM, notices, and license gates.
-- Cost ceilings and compact usage reporting.
-- VS Code tasks and terminal integration.
-- Finished Software, Documentation, Business Plan, and Research Report packs.
-- Small Custom Pack Kit with examples and validation.
-- Complete reference projects and migration fixtures.
-
-### Exit evidence
-
-The release matrix passes spaces, Unicode, apostrophes, CRLF, case-only changes, cancellation, corrupt state, reconstruction from Git, package installation, offline local-model operation, and every built-in pack fixture on Windows, macOS, and Linux.
-
-## 13. Phase 9 — PeerFoil 1.0
-
-**Schedule:** Weeks 25–26
-
-### User-visible outcome
-
-A supported user can install PeerFoil, complete setup, and finish one reviewed phase without editing configuration files.
-
-### Scope
-
-- Schedule buffer and usability repairs.
-- Dependency and GPLv3 compatibility audit.
-- Documentation-license verification.
-- Release candidate and migration guide.
-- Reference projects and tutorials.
-- Accessibility, privacy, and security review of PeerFoil itself.
-- Final five-minute setup and end-to-end acceptance pass.
-
-### Exit evidence
-
-All committed acceptance criteria pass. Any missed capability remains explicitly unshipped rather than being silently weakened or relabeled.
-
-## 14. Cross-cutting release gates
-
-Every release must satisfy:
-
-| Gate | Requirement |
+| Area | Requirement |
 |---|---|
-| Independence | No authoring agent approves its own work; normal primary approval comes from another family |
-| Evidence | Required outcomes have executable, inspectable, or explicit human evidence |
-| Simplicity | Normal operation needs no configuration-file editing; advanced controls stay hidden |
-| Portability | Native Windows, macOS, and Linux acceptance tests pass |
-| Licensing | Distributed software is GPLv3-compatible; documentation licensing and notices are correct |
-| Cost | No non-LLM subscription, hosted service, or paid account is required |
-| Honesty | Missing evidence, exhausted budgets, reduced assurance, and unresolved decisions remain visible |
-| Generality | Software remains best-supported; shared controller code contains no pack-level software assumptions |
-| Scope | Sandboxing, team administration, hosted dashboards, parallel writers, and automatic deployment stay excluded |
+| Independence | No agent approves its own work; another family normally provides primary approval |
+| Evidence | Important results have current test output, inspectable support, or explicit human confirmation |
+| Simplicity | Normal use requires no configuration-file editing |
+| Portability | Windows, macOS, and Linux acceptance checks pass |
+| Licensing | Distributed dependencies are GPLv3-compatible and notices are complete |
+| Cost | No non-LLM paid account or hosted service is required |
+| Honesty | Missing evidence, reduced assurance, and unresolved decisions remain visible |
+| Generality | Software remains best supported while other packs use the same controller |
+| Scope | Deferred features do not quietly enter the release |
 
-## 15. Critical dependencies
+## 15. Main risks
 
-| Capability | Must exist first |
+| Risk | Response |
 |---|---|
-| Skills 0.1 | Stable artifacts, pack contract, fresh-role prompts, Codex plugin integration |
-| Core Alpha | Skills schemas, Go build, Git behavior, provider CLI invocation |
-| Review Beta | Evidence engine, provenance map, frozen revision bundle |
-| Change control | Stable plan graph and accepted-transition history |
-| Non-code packs | Neutral artifact and evidence model |
-| Context and MCP | Stable roles, capability policy, and private-data boundary |
-| Local models | Provider-neutral seat contract and qualification fixtures |
-| Release 1.0 | Cross-platform CI, schema migration, license gate, pack reference projects |
+| The five-day release becomes only a demo | Protect the complete guided journey and defer polish first |
+| The thirteen-day alpha grows into the whole product | Keep one narrow software path and publish its limits |
+| Non-coding packs slow down software quality | Build Software first and use one small Documentation example to test the shared design |
+| Packs become a new programming language | Keep one lifecycle and use small declarative pack files |
+| Windows, macOS, and Linux behave differently | Run all three in continuous integration from the beginning |
+| Reviews use too much time or model credit | Freeze review inputs, combine duplicates, stop early, and enforce pass limits |
+| A model reviews a renamed version of its own family | Record the underlying model family and treat unknown lineage as reduced assurance |
+| Documents do not have executable tests | Allow inspectable and human evidence with pack-specific consistency checks |
+| Local models lower quality without warning | Qualify them for each role and leave unknown models read-only |
+| Provider behavior changes | Check capabilities and show every fallback |
+| Licensing problems appear late | Check licenses, notices, and dependency reports in every release |
+| Advanced machinery makes daily use confusing | Keep five normal actions and test them with new users |
+| Six months of ideas become six years of scope | Cut optional integrations before weakening the release checks |
 
-## 16. Principal risks
+## 16. Definition of done
 
-| Risk | Mitigation |
-|---|---|
-| Five-day release becomes a demo without a full journey | Freeze the exit journey and defer polish before weakening it |
-| Day-13 scope becomes the entire product | Enforce the alpha boundary and publish explicit deferrals |
-| Generic packs delay software quality | Build Software first; prove neutrality with one small Documentation fixture |
-| Packs become a workflow-language project | Keep one fixed lifecycle and declarative pack manifests |
-| Core duplicates prompt logic | Keep skills as policy; Core validates and controls transitions |
-| Cross-platform process behavior slips | Run three-OS CI from the first commit; test process trees and difficult paths |
-| Review loops consume excessive time or tokens or exhaust repair verification | Freeze context, stop early, bound passes, reserve the final pass for post-repair review, allow one repair cycle |
-| Same-lineage work is accidentally self-approved through aliases or fine-tunes | Canonicalize hosted families; require pinned local lineage manifests and model digests; treat unknown lineage as Reduced assurance |
-| Non-code work lacks executable tests | Support inspectable and human evidence plus pack-specific consistency checks |
-| Local models silently reduce quality | Require role qualifications; leave unknown models read-only |
-| Provider or plugin behavior changes | Probe capabilities, pin tested versions where possible, expose every fallback |
-| License incompatibility appears late | Define path-level licensing with SPDX identifiers; generate dependency reports, notices, and SBOMs; manually review ambiguous licenses |
-| Hidden machinery leaks into daily use | Retain five normal actions and user-test the default path |
-| Lack of sandboxing is misunderstood | State the trusted-workspace boundary and never call worktrees a security sandbox |
-| Six-month scope expands | Cut GUI, parallelism, enterprise features, and optional integrations before gates |
+PeerFoil 1.0 is complete only when:
 
-## 17. Definition of done
-
-PeerFoil 1.0 is done only when:
-
-1. Skills, Core, and built-in packs share the same artifacts and lifecycle.
-2. A fresh user completes one phase without editing configuration.
-3. Software, Documentation, Business Plan, and Research Report reference projects pass their acceptance contracts.
-4. Every material artifact receives eligible independent approval or an explicit `Reduced assurance` decision.
-5. Required failures cannot be accepted by model consensus.
-6. Plans remain current after changes, TODOs, unsupported claims, deviations, and deferrals.
-7. Accepted state and author/reviewer lineage eligibility survive clone and reconstruction without raw transcripts, provider sessions, or private MCP payloads.
-8. Qualified hosted or local seats can be substituted without changing project schemas.
-9. Personal and work standards, context, and memory remain separated.
-10. Native Windows, macOS, and Linux releases pass the full matrix.
+1. Skills, Core, and built-in packs use the same project files and lifecycle.
+2. A new user can finish one phase without editing configuration files.
+3. Software, Documentation, Business Plan, and Research Report examples pass their own
+   quality contracts.
+4. Every important artifact has independent approval or a visible reduced-assurance
+   decision.
+5. A failed required check cannot be accepted by model agreement.
+6. Plans stay current after changes, TODOs, deviations, skipped checks, and deferrals.
+7. Accepted work and reviewer independence can be reconstructed from Git without private
+   transcripts or provider sessions.
+8. Qualified hosted and local models can exchange roles without changing project files.
+9. Personal and work context remain separate.
+10. Native Windows, macOS, and Linux releases pass the full test matrix.
 11. No non-LLM paid service or hosted component is required.
-12. Distributed code, documents, dependencies, and notices pass the stated license policy.
+12. Code, documentation, dependencies, and notices pass the license policy.
 
-## Related documents
+## Conclusion
+
+PeerFoil will ship the smallest complete experience first and add enforcement in useful
+steps. The five-day Skills release proves the workflow. The thirteen-day Core Alpha proves
+that the main safeguards can be automated. The remaining schedule improves reliability,
+review, planning, context, model choice, project packs, and installation without changing
+the simple experience promised in the first release.
+
+## Resources
 
 - [PeerFoil method](PeerFoil-Method.md)
-- [Architecture](architecture.md)
-- [Project overview](../README.md)
+- [PeerFoil architecture](architecture.md)
+- [Official Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html)
+- [GNU Free Documentation License, version 1.3](https://www.gnu.org/licenses/fdl-1.3.html)
+
+[Return to the PeerFoil README](../README.md)

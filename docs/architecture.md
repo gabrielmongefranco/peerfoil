@@ -1,158 +1,183 @@
 <!--
-Project:  PeerFoil  |  File: docs/architecture.md
-Authors:  Gabriel Mongefranco (@gabrielmongefranco)
-Created:  2026-09-04  |  Modified: 2026-09-04
-Summary:  Defines PeerFoil's coding-first, artifact-neutral orchestration architecture.
-SPDX-License-Identifier: GFDL-1.3-or-later
+This file is part of PeerFoil.
+docs/architecture.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-04
+Last Modified: 2026-09-04
+Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
+Notes: See README for an overview and full license information.
+
+Copyright © 2026 Gabriel Mongefranco
+
+Permission is granted to copy, distribute and/or modify this document under the terms of
+the GNU Free Documentation License, Version 1.3 or any later version published by the Free
+Software Foundation; with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 -->
 
 # PeerFoil Architecture
 
-## Coding-first, artifact-neutral orchestration for independent AI peers
+## How PeerFoil coordinates independent AI models without replacing their tools
 
-- **Version:** 0.1, 4 September 2026
-- **Status:** Pre-implementation architecture
-- **Software license intent:** `GPL-3.0-or-later`
-- **Documentation license intent:** `GFDL-1.3-or-later`
+[Return to the PeerFoil README](../README.md)
 
-## 1. Purpose and scope
+PeerFoil is a small local coordinator. It uses existing AI coding tools, Git, project
+checks, skills, and connected knowledge sources. Its job is to decide what happens next,
+give each model the right information, record the result, and prevent work from being
+approved without independent review and current evidence.
 
-PeerFoil coordinates existing AI agents through a controlled lifecycle for decisions, architecture, planning, production, validation, independent review, repair, and durable learning. It is designed primarily to help one developer produce stable, accessible, secure, maintainable software without pretending that a collection of models is a complete professional team.
+Software is the first and most complete use. The main controller is not limited to code,
+so project packs can apply the same workflow to documentation, business plans, research
+reports, and other work. This page describes the planned technical design.
 
-The orchestration protocol is artifact-neutral. Software is the default and most capable project pack, while documentation, business plans, research reports, and later custom deliverables use the same controller through declarative project packs.
+## 1. Design goals
 
-This document defines the architecture of the PeerFoil product and repository. A generated `.peerfoil/architecture.md` inside a user's workspace is different: it describes that user's project and is produced by the Architect role.
+PeerFoil must:
 
-## 2. Goals
+- feel simple to a person building mostly alone;
+- use a high-capability model for decisions and architecture;
+- turn an approved architecture into small, ordered tasks;
+- keep producers from approving their own work;
+- prefer a different model family for independent review;
+- use current test results and other evidence before accepting work;
+- update the plan whenever requirements or discovered work change;
+- keep accepted project information in ordinary files and Git;
+- load only the skills, memories, and Model Context Protocol (MCP) servers needed for a
+  task;
+- support hosted and qualified local models;
+- work natively on Windows, macOS, and Linux; and
+- require no paid non-LLM service.
 
-- Make the normal experience feel like five actions: start, change, status, resume, and remember.
-- Use a high-capability model to resolve consequential decisions and architecture.
-- Use a fresh planning session to compile approved architecture into phases, stages, and bounded tasks.
-- Use qualified producers for implementation or other artifact creation.
-- Prevent any agent or model family from independently approving its own output.
-- Bind acceptance to fresh executable, inspectable, or human evidence.
-- Revise the plan after every accepted change, deferral, TODO, deviation, skipped check, backlog placement, or decline.
-- Keep accepted decisions and artifacts portable in Git rather than a hosted control plane.
-- Select pertinent skills, MCP capabilities, context, and lessons automatically within explicit policy.
-- Support hosted providers and qualified local models through one seat contract.
-- Run natively on Windows, macOS, and Linux.
-- Require no paid service other than whichever LLM inference the user chooses.
-- Ship a useful guided Skills release by Day 5, an enforced Core Alpha by Day 13, and the planned 1.0 scope by Week 26.
+PeerFoil is not a model, code editor, Git replacement, project-management suite, hosted
+service, or operating-system sandbox. It also does not certify the quality or safety of
+the work it helps produce.
 
-## 3. Non-goals
-
-PeerFoil is not:
-
-- another coding agent or model runtime;
-- a general workflow language;
-- an operating-system sandbox;
-- a hosted control plane or required account;
-- an enterprise project-management, RBAC, billing, or collaboration system;
-- a replacement for Git, Claude Code, Codex, MCP, local-model runtimes, or project-native tools;
-- an office editor, market-data provider, research database, or domain expert;
-- a guarantee or certification of correctness, security, accessibility, viability, or regulatory fitness;
-- an automatic deployment or production-change system;
-- a multi-writer system in its initial releases.
-
-## 4. System context
+## 2. System overview
 
 ```mermaid
 flowchart TD
-    U["Solo builder"] --> X["Skills, CLI, editor"]
-    X --> C["PeerFoil controller"]
-    C --> K["Project pack"]
-    C --> M["Model and capability adapters"]
+    U["User"] --> S["Skills or PeerFoil CLI"]
+    S --> C["Workflow controller"]
+    C --> P["Project pack"]
+    C --> M["Model and tool adapters"]
     C --> E["Evidence and review"]
-    C --> G["Git artifacts and local state"]
+    C --> G["Git files and local state"]
 ```
 
-PeerFoil wraps existing tools through process, file, and protocol boundaries. Claude Code, Codex, Git, MCP servers, validators, and local-model runtimes remain independently installed systems. PeerFoil owns coordination and policy; it does not reimplement their core functionality.
+The user starts or changes a project through skills or the command-line application. The
+controller loads the selected project pack and current project state. It calls the right
+model or tool for one step, validates the result, records evidence, and advances only when
+the next step is allowed. Accepted decisions, plans, reviews, and lessons stay in Git.
 
-## 5. Architectural principles
+PeerFoil wraps existing tools through command, file, and protocol boundaries. Claude Code,
+Codex, Git, MCP servers, project validators, and local-model runtimes remain separate
+applications. PeerFoil coordinates them instead of rebuilding them.
 
-### 5.1 Coding-first, artifact-neutral
+## 3. Main design decisions
 
-The Software Pack may optimize aggressively for code, repositories, tests, and worktrees. Those assumptions must not leak into the controller when they can be expressed by a pack. Core uses the neutral concepts `workspace`, `artifact`, `producer`, `change_set`, `validator`, `acceptance_contract`, and `deliverable`.
+### 3.1 Coding first, but not code only
 
-### 5.2 Models propose; the controller commits
+The Software Pack can use repositories, tests, builds, and Git worktrees. Those details do
+not belong in the controller itself. Core uses broader names such as workspace, artifact,
+producer, change set, validator, evidence, and deliverable.
 
-Models may propose decisions, plans, changes, findings, and lessons. Core validates schemas, verifies eligibility, runs executable checks, enforces transitions, records provenance, and commits accepted state. A model's statement that a command passed is not evidence.
+This keeps software development efficient while allowing other project types to use the
+same review and evidence rules.
 
-### 5.3 Independent review follows provenance
+### 3.2 Models suggest; PeerFoil records
 
-The exact authoring agent and run cannot approve their output. Normal independent approval comes from a fresh, qualified model with a different canonical lineage root from every author of the item. A fresh reviewer from the same lineage may contribute findings but cannot satisfy the independent-approval requirement.
+Models can suggest decisions, plans, changes, findings, and lessons. The controller checks
+their structure, confirms that the model was allowed to perform the role, runs required
+commands, records authorship, and saves accepted state.
 
-### 5.4 Project files remain understandable
+A model cannot make its own test result authoritative by writing “passed.”
 
-Accepted project truth is human-readable Markdown, versioned structured data, and Git history. Raw transcripts, private MCP payloads, temporary attempts, and provider session details are local operational data, not project truth.
+### 3.3 Review follows authorship
 
-### 5.5 One lifecycle, small packs
+Every important artifact and change set records who created it. The exact agent and session
+that created an item cannot approve it. Normal approval also requires a qualified model
+from a different underlying family.
 
-Packs configure a fixed PeerFoil lifecycle. They do not define arbitrary programs or bring their own orchestration engines. Adding a normal pack should require manifests, templates, schemas, validators, skills, and review lenses—not controller code.
+PeerFoil calls that underlying family a **lineage root**. Aliases, fine-tunes, checkpoints,
+and quantized copies of the same base model share one lineage root. This prevents two names
+for nearly the same model from being treated as independent reviewers.
 
-### 5.6 Simple by default
+### 3.4 Project files remain readable
 
-Normal operation exposes the project outcome, current phase/stage/task, quality status, and decisions requiring a person. Provider routing, model effort, pass budgets, skills, MCP, local endpoints, costs, and standards sources remain under Advanced settings.
+A developer must be able to open the accepted project files without PeerFoil. Markdown and
+versioned JSON are the main formats. Raw conversations, private MCP responses, temporary
+attempts, and provider session details stay in local operational storage.
 
-## 6. Universal lifecycle
+### 3.5 One workflow, small project packs
+
+A project pack changes the artifacts, checks, and review areas for one type of work. It
+does not define a new workflow engine or receive permission to run arbitrary controller
+code.
+
+### 3.6 Simple by default
+
+Normal screens and commands show the goal, current work, quality state, and decisions that
+need the user. Provider routing, effort, pass limits, skills, MCP access, costs, and local
+model settings remain under Advanced settings.
+
+## 4. Workflow states
+
+The fixed lifecycle is:
 
 ```text
 Define → Architect → Plan → Produce → Validate → Review → Repair → Approve
 ```
 
 ```mermaid
-flowchart TD
-    D["Define decisions"] --> A["Draft and review architecture"]
-    A --> P["Draft and review plan"]
-    P --> O["Person approves outcomes"]
-    O --> W["Produce one bounded task"]
-    W --> V{"Required evidence passes?"}
-    V -->|no| W
-    V -->|yes| R["Independent phase review"]
-    R -->|approve| N["Next phase"]
-    R -->|repair once| F["High-effort repair"]
-    F --> V
-    R -->|unresolved| H["Person decides"]
+stateDiagram-v2
+    [*] --> Define
+    Define --> Architect: important decisions resolved
+    Architect --> Plan: independently reviewed
+    Plan --> Produce: reviewed and approved
+    Produce --> Validate: change captured
+    Validate --> Produce: required check failed
+    Validate --> Review: evidence current
+    Review --> Approve: no blocking findings
+    Review --> Repair: repair accepted
+    Repair --> Validate: rerun affected checks
+    Approve --> [*]
 ```
 
-Every project uses:
+In plain language, PeerFoil does not start production until the important decisions,
+architecture, and plan are ready. Each production task is captured before validation.
+Failed checks return the task for correction. A phase can close only after review, any
+accepted repair, and fresh validation.
 
-```text
-Project → Phase → Stage → Task
-```
+PeerFoil pauses from any state when it needs a user decision, permission, authentication,
+human check, or accepted risk. It also pauses when a retry or review limit is reached.
 
-- A **project** binds a workspace, project pack, standards profile, providers, and accepted state.
-- A **phase** produces a releasable or otherwise reviewable increment and ends in full review.
-- A **stage** is a user-visible outcome within a phase.
-- A **task** is one bounded producer assignment tied to one plan revision and basis revision.
+### Required transitions
 
-### Transition invariants
-
-| Transition | Required conditions |
+| Move | What must be true |
 |---|---|
-| Define → Architect | No unresolved consequential decision, or an explicitly visible assumption |
-| Architect → Plan | Architecture and acceptance contract have eligible different-lineage review; required findings are resolved or explicitly accepted; person accepts the result |
-| Plan → Produce | Plan has eligible different-lineage review; material human edits are revalidated; stage order is approved; task is unblocked, bounded, and tied to current plan revision |
-| Produce → Validate | Change set captured with author, run, basis, scope, and affected artifacts |
-| Validate → Review | Required task and phase evidence is fresh and bound to the reviewed revision |
-| Review → Repair | Findings are normalized; exact repair producer selected within the pass budget |
-| Repair → Approve | Affected evidence rerun; repair receives fresh approval from another canonical lineage root |
-| Any state → Pause | Required evidence fails, consequential choice remains, budget expires, authorization is missing, or convergence ends |
+| Define to Architect | Important decisions are answered or visible as assumptions |
+| Architect to Plan | Another model family reviewed the architecture; the user accepted it |
+| Plan to Produce | Another model family reviewed the plan; the user approved stage order |
+| Produce to Validate | The change set and its author were recorded |
+| Validate to Review | Required evidence matches the exact revision under review |
+| Review to Repair | Findings are specific; both reviewers agree on the repair and producer |
+| Repair to Approve | Affected checks ran again; another model family verified the repair |
 
-No transition silently substitutes a model, effort level, pack, evidence method, or standards source.
+No transition quietly changes the model, effort, project pack, evidence method, or project
+rules.
 
-## 7. Architectural layers
+## 5. Main components
 
-### 7.1 User surfaces
+### 5.1 User interface
 
-The initial surfaces are:
+The first interfaces are:
 
-- a Claude Code plugin and portable Markdown skills;
-- the native `peerfoil` CLI;
-- VS Code terminal integration and checked-in tasks;
-- ordinary project files that remain editable without PeerFoil.
+- a Claude Code plugin and Markdown skills;
+- the native `peerfoil` command-line application;
+- VS Code through its terminal and checked-in tasks; and
+- ordinary project files that can be read and edited without PeerFoil.
 
-The stable normal command vocabulary is:
+The stable normal commands are:
 
 ```text
 peerfoil start
@@ -162,192 +187,131 @@ peerfoil resume
 peerfoil remember
 ```
 
-`peerfoil settings` exposes advanced configuration and is omitted from normal help unless requested. A dedicated VS Code activity view, desktop application, and web interface remain outside 1.0.
+`peerfoil settings` opens Advanced settings. A dedicated desktop application, web
+dashboard, and large VS Code panel are outside the first release.
 
-### 7.2 Workflow controller
+### 5.2 Workflow controller
 
-Core contains a deterministic state loop responsible for:
+The controller performs one permitted step at a time:
 
-- loading and validating accepted state;
-- determining the next permitted transition;
-- assembling a role-specific request;
-- invoking an eligible model seat;
-- validating structured output;
-- running or registering evidence;
-- integrating accepted changes;
-- appending a durable, redacted transition event;
-- recovering or stopping honestly after interruption.
+1. Load and validate accepted project state.
+2. Decide which transition is allowed next.
+3. Build a small request for the selected role.
+4. Call an eligible model or tool.
+5. Validate the response.
+6. Run or register required evidence.
+7. Save the accepted change and its author.
+8. Append a redacted history record.
+9. Continue, recover, or stop with a clear reason.
 
-It does not contain a second prompt system. The same skills and templates used by the Skills Edition remain the human-readable policy; Core supplies structural enforcement.
+The controller uses the same skills and templates as the Skills release. It adds reliable
+state and enforcement rather than a second, hidden prompt system.
 
-### 7.3 Project-pack loader
+### 5.3 Project-pack loader
 
-The loader resolves a pinned built-in or external pack, validates its schema and license policy, and exposes only declared data to the controller. A pack defines:
+The pack loader checks a built-in or pinned external project pack before use. A pack may
+define:
 
-- names and normal-interface labels;
 - artifact and deliverable types;
-- default phase, stage, and task templates;
-- role aliases, eligibility, and effort defaults;
-- applicable skills and requested MCP capability classes;
-- validators and accepted evidence types;
-- specialist review lenses;
-- completion criteria.
+- common phases and stages;
+- role instructions;
+- evidence types and validators;
+- review areas;
+- completion requirements; and
+- optional skill and MCP needs.
 
-The loader rejects a pack that attempts to override core invariants, expand credentials, widen permissions, suppress provenance, accept failed required evidence, or authorize self-review.
+A pack cannot override `AGENTS.md`, grant credentials, relax reviewer independence, or
+turn a failed required check into a pass.
 
-### 7.4 Provider adapters
+### 5.4 Model adapters
 
-Every provider adapter implements one seat lifecycle:
+All model providers implement one small contract:
 
 ```text
-discover → diagnose → invoke → wait/stream → cancel → parse → report usage
+check capabilities → start fresh session → send request → stream events
+→ return structured result → cancel when requested
 ```
 
-The first adapters invoke separately installed Claude Code and Codex CLIs. Later adapters support Ollama, OpenAI-compatible endpoints such as vLLM, and optional local harnesses.
+An adapter reports its supported models, effort settings, tools, context limit, structured
+output support, authentication state, and model lineage. The controller checks these facts
+before assigning a role.
 
-Each invocation records:
+The first adapters call Claude Code and Codex as separate local processes. Later adapters
+support Ollama, vLLM, and compatible local or hosted endpoints. PeerFoil uses each tool's
+normal login and does not store its token.
 
-- configured `agent_id`;
-- unique `agent_instance_id` and `run_id`;
-- provider, concrete model, canonical `lineage_root_id`, lineage evidence and resolution source, role, and effort;
-- input artifact and policy revisions;
-- selected skills and permitted MCP capabilities;
-- output schema version, status, timing, and available usage data.
+### 5.5 Skills and MCP broker
 
-PeerFoil stores no vendor token. It reuses provider-native authentication and reports the resolved route.
+The broker selects the approved skills and MCP capabilities needed by the current task.
+It applies limits by role, project, server, and operation.
 
-Model independence is not accepted from a model's own claim or an endpoint alias. Adapters normalize hosted models through a pinned provider catalog. Local-model manifests record base model, derivative relationship, source, and model digest. Aliases, quantizations, fine-tunes, and checkpoints inherit the base `lineage_root_id` unless independent lineage is established. Unknown or conflicting lineage cannot satisfy independent approval and results in `Reduced assurance`. “Family” remains a user-facing term; Core enforces lineage roots.
+Retrieved content is data, not instruction. A document or MCP response cannot change
+PeerFoil's policy, widen its own access, or expose credentials. Important outside facts
+keep a source reference and retrieval date.
 
-### 7.5 Capability router
+### 5.6 Git workspace manager
 
-The router creates a least-context packet from:
+The Software Pack uses a separate Git worktree and branch for one production task. This
+keeps incomplete edits away from the user's current checkout and preserves the producer's
+original change before integration.
 
-- approved architecture and the relevant plan slice;
-- applicable workspace artifacts;
-- effective `AGENTS.md` and provider bridge;
-- the selected pack;
-- eligible, pinned skills;
-- allowed and healthy MCP sources;
-- approved lessons;
-- current evidence and findings.
+The manager:
 
-Skill eligibility is derived from role, pack, task type, stack, paths, risk, operating system, required tools, MCP needs, and adapter capability. Retrieved MCP content is untrusted data. It cannot override standards, permissions, plan state, or controller instructions.
+- requires a clean starting point;
+- records the base commit and plan revision;
+- allows one producer to write at a time;
+- captures the producer's patch before another agent changes it;
+- checks for unexpected files and secrets;
+- integrates only accepted work; and
+- records the author of conflict-resolution edits separately.
 
-In Enforced mode, every invocation receives an ephemeral provider-native MCP configuration containing only role-allowlisted servers and tools. The adapter also applies deny-by-default tool filtering and references credentials without copying them into project state. An adapter that cannot enforce both configuration isolation and tool filtering is not eligible for role-scoped MCP. Required access then blocks; optional access is omitted and recorded. The Skills Edition can only guide this boundary and reports it as Guided.
+Git worktrees isolate changes. They are not a security boundary.
 
-### 7.6 Workspace and provenance manager
+### 5.7 Evidence runner
 
-Git is the canonical version and integration mechanism. The Software Pack uses one short-named task worktree branched from an integration branch. Text-oriented packs may use the same mechanism for Markdown, structured data, diagrams, and generated sources.
+The evidence runner starts commands with argument arrays, not assembled shell strings. It
+uses an explicit working directory, timeout, environment allowlist, and captured output.
 
-Each material artifact and change set records its internal author run, concrete model, canonical `author_lineage_root_id`, lineage resolution and evidence reference, basis revision, and resulting patch or content digest. Reviews durably record the reviewer lineage roots and eligibility decision. Mechanical application preserves attribution. Any rewrite, tidy-up, generated conflict resolution, or manual change becomes a separately attributed change set requiring its own independent approval.
+Each result includes:
 
-Binary deliverables should normally be generated from reviewable source. Where that is impractical, the workspace retains the editable source of record plus inspectable render evidence.
+- the project and plan revision;
+- the command and working directory;
+- the exit code, duration, and tool version;
+- hashes for relevant configuration and inputs; and
+- references to retained output.
 
-Worktrees isolate version-control changes. They do not restrict filesystem, network, process, or credential access.
+Inspectable and human evidence use similarly structured records. Sensitive output is
+redacted before storage.
 
-### 7.7 Evidence engine
+### 5.8 Review coordinator
 
-Evidence has three supported forms:
+At the end of each phase, the review coordinator freezes the deliverables, changes,
+evidence, requirements, plans, and known risks.
 
-1. **Executable evidence:** a command with expected status or structured result, run by Core.
-2. **Inspectable evidence:** a retained structured inspection by an agent, browser, or platform tool.
-3. **Human evidence:** an explicit procedure and expected result confirmed by a person.
+Claude and Codex review that same package independently at extra-high effort. Findings are
+normalized by location, requirement, severity, evidence, and proposed action. Duplicate
+findings are combined without hiding disagreement.
 
-For executable evidence, Core records the executable and argument array, working directory, exit status, duration, timeout, relevant tool and configuration versions, exact workspace revision, and retained or redacted output reference.
+The default limit is six passes per reviewer; eight is the maximum. One pass is reserved
+for checking a repaired result. Selecting the exact repair producer uses three passes by
+default and four at most. Only one automatic repair cycle is allowed.
 
-Required failed or missing evidence blocks acceptance and cannot be voted away. Human-accepted exceptions produce `Passing with accepted risks`, never `Passing`.
+### 5.9 Memory manager
 
-### 7.8 Review council
+The memory manager keeps four kinds of information separate:
 
-At each phase boundary, the controller freezes an identical review bundle for both reviewer seats. It contains accepted decisions, architecture, plan, acceptance contract, changes, provenance, evidence, TODOs, unsupported claims, deviations, deferrals, and known risks.
+- accepted project decisions;
+- temporary run state;
+- retrieved task context; and
+- reviewed lessons.
 
-Before production, architecture and plan each pass a smaller independent gate: one different-lineage critique, one author revision, and one independent verification. An unresolved blocker then pauses for the person. These gates prevent unreviewed governing artifacts without consuming the later phase-council budget.
+A lesson is promoted only after its trigger, scope, source, and conflicts are checked.
+Possible destinations include a decision record, test, skill, `AGENTS.md` proposal, pack
+rule, or temporary hint with an expiration date.
 
-Reviewers work in fresh sessions and exchange a normalized finding ledger rather than transcripts. Every blocker or high-severity finding receives `agree`, `disagree_with_evidence`, or `needs_evidence`. Silence becomes `needs_evidence`.
+## 6. Project files
 
-The default budget is six passes per reviewer for the entire phase, including post-repair verification; eight is the absolute maximum. One pass per configured reviewer is reserved at the start for the post-repair bundle. Pre-repair reconciliation cannot consume it. If no accepted repair plan and eligible different-lineage verifier exist before that reserve, PeerFoil pauses rather than starting an unverifiable repair. Repair-producer selection receives three passes per reviewer by default and four maximum. One automatic repair cycle is allowed. The repair always uses high effort and receives fresh verification from a qualified different lineage.
-
-If no qualified independent family is available, PeerFoil reports `Reduced assurance` and requires explicit human acceptance or waits for another reviewer.
-
-### 7.9 Memory refinery
-
-Raw transcripts never become durable memory automatically. An observation is classified, scoped, sourced, and reviewed before promotion:
-
-| Observation | Durable form |
-|---|---|
-| Product or architecture consequence | Decision record |
-| Recurring defect | Regression test or rule |
-| Reusable procedure | Skill |
-| Stable standard or preference | Proposed `AGENTS.md` change |
-| Domain meaning | Glossary entry |
-| Useful nonbinding knowledge | Sourced, dated lesson |
-| Machine-specific fact | Ignored local note |
-
-Personal and work memories remain separate. Cross-project promotion is explicit.
-
-## 8. Project packs
-
-### 8.1 Neutral mapping
-
-| Core concept | Software | Documentation | Business Plan | Research Report |
-|---|---|---|---|---|
-| Artifact | Source/test/configuration | Section/diagram/source | Narrative/model/evidence | Question/source/synthesis |
-| Producer | Coder | Writer/technical author | Analyst/writer | Researcher/synthesizer |
-| Validator | Build/lint/test/scanner | Link/style/structure/fact check | Formula/source/consistency check | Citation/source/traceability check |
-| Acceptance contract | Quality Contract | Editorial and technical contract | Evidence and viability contract | Evidence and methodology contract |
-| Deliverable | Working release | Publishable document | Reviewed plan | Reviewed report |
-
-### 8.2 Built-in packs
-
-| Pack | Release posture |
-|---|---|
-| Software | Default and fully supported from the first release |
-| Generic | Minimal schema and extension base from the first release |
-| Documentation | Small reference in Skills 0.1; mature by 1.0 |
-| Business Plan | Prototype after Reliable Core; mature by 1.0 |
-| Research Report | Prototype after Reliable Core; mature by 1.0 |
-| Proposal/RFP | Candidate post-1.0 extension |
-
-The Day-13 alpha mechanically enforces the Software Pack first and processes a small Documentation fixture to guard artifact neutrality. That fixture is architectural evidence, not a claim of polished non-code support.
-
-### 8.3 Non-code evidence model
-
-Non-code packs distinguish:
-
-- verified facts with source and date;
-- calculated results with inputs, formulas, units, and checks;
-- explicit assumptions with ownership and sensitivity;
-- clearly labeled model judgments;
-- unsupported claims that require evidence, revision, or risk acceptance;
-- consistency, readability, structure, and accessibility inspections;
-- human judgment where automation would be misleading.
-
-The Business Plan Pack may use skeptical-investor, customer, operations, financial, and evidence lenses. These are review perspectives, not simulated proof of commercial viability. The Research Report Pack records source selection and limitations and never treats model synthesis as primary evidence.
-
-## 9. Canonical data model
-
-| Entity | Principal fields |
-|---|---|
-| `Project` | Profile, selected pack and version, schema version, providers, current revision |
-| `Decision` | Question, alternatives, recommendation, answer or assumption, consequences, status |
-| `Architecture` | Goals, constraints, non-goals, accepted decisions, risks |
-| `AcceptanceContract` | Applicable quality dimensions, validators, evidence, exceptions |
-| `PlanRevision` | Phases, stages, tasks, dependencies, change rationale, superseded items |
-| `Task` | Outcome, inputs, risk, producer eligibility, evidence, basis, status |
-| `InvocationProvenance` | Internal run ID, agent, provider/model, canonical lineage root, lineage resolution source and evidence reference, role, input/output revisions |
-| `Artifact` | Identifier or path, type, revision, author run, author lineage root, lineage evidence reference, content digest |
-| `ChangeSet` | Basis revision, affected artifacts, author run, author lineage root, lineage evidence reference, scope and digest |
-| `EvidenceRecord` | Method, result, exact revision, freshness, retained reference |
-| `Finding` | Severity, claim, evidence, affected items, disposition, owner |
-| `Review` | Reviewer run and lineage root, author lineage roots, eligibility basis, independence status, findings, decision, pass count |
-| `Lesson` | Scope, trigger, source, verification, review or expiry date |
-| `CapabilityProfile` | Tools, skills, MCP access, model qualifications, platform constraints |
-
-All machine records are schema-versioned. Stable IDs are generated by the controller, not inferred from mutable labels. Human-readable Markdown is retained alongside machine-valid JSON where people must review or approve content.
-
-## 10. Persistence
-
-Committed project truth:
+A project using PeerFoil keeps accepted state under `.peerfoil/`:
 
 ```text
 .peerfoil/
@@ -357,181 +321,197 @@ Committed project truth:
   quality.md
   plan.md
   plan.json
-  glossary.md
-  lessons.md
   history.jsonl
-  provenance.jsonl
   evidence/
   reviews/
-  packs/
-skills/
-AGENTS.md
-CLAUDE.md
+  lessons/
 ```
 
-Ignored local application data contains provider session identifiers, raw logs, temporary attempts, private MCP payloads, caches, worktrees, and a rebuildable operational index. No database service is required. Git artifacts plus compact transition and provenance histories must be sufficient to reconstruct accepted state and independently audit its review eligibility on another machine.
+### What each file does
 
-`history.jsonl` and `provenance.jsonl` are schema-versioned, redacted, and single-writer. A partial final line after a crash is ignored. They contain accepted transitions, internal run IDs, model/lineage mappings, artifact digests, review eligibility, and evidence references—not provider sessions, transcripts, or full command output.
+| File | Purpose |
+|---|---|
+| `project.json` | Pack, schema, profile, role aliases, and accepted settings |
+| `decisions.md` | Questions, answers, assumptions, and consequences |
+| `architecture.md` | Project goals, boundaries, decisions, and risks |
+| `quality.md` | Required checks and evidence methods |
+| `plan.md` | Human-readable phases, stages, tasks, and changes |
+| `plan.json` | Validated task, dependency, and evidence data |
+| `history.jsonl` | Small, redacted records of accepted transitions |
+| `evidence/` | Evidence metadata and approved retained results |
+| `reviews/` | Findings, decisions, repairs, and approvals |
+| `lessons/` | Candidate and accepted lessons |
 
-## 11. Principal flows
+Raw prompts, provider tokens, complete conversations, private knowledge-base content, and
+temporary model output do not belong in these files.
 
-### 11.1 New project
+### Important identifiers
 
-1. Detect the Git workspace, selected personal/work standards profile, platform, tools, and provider authentication.
-2. Select Software by default or another installed project pack.
-3. Ask at most three plain-language consequential questions at a time until none remain unresolved.
-4. Generate architecture and the pack-aware acceptance contract in a fresh Architect session.
-5. Obtain mandatory provenance-eligible different-lineage architecture review, dispose findings, and obtain human acceptance.
-6. Compile a fresh plan, obtain mandatory different-lineage plan review, and let the user reorder, split, drop, or prioritize stages.
-7. Revalidate and re-review any material human plan change.
-8. Freeze the first task packet and begin automatic production.
+Core uses stable identifiers for projects, phases, stages, tasks, requirements, evidence,
+findings, model sessions, and change sets. Each accepted item also records:
 
-### 11.2 Task execution
+- the plan revision that requested it;
+- the source revision it started from;
+- the producer and model lineage;
+- the affected artifacts;
+- the evidence that supports it; and
+- the decision that accepted or rejected it.
 
-1. Verify that the task belongs to the current plan revision and its dependencies are satisfied.
-2. Select a qualified producer and assemble least context.
-3. Produce one bounded change set.
-4. Capture scope and provenance before any other content edit.
-5. Run controller-owned validators and register inspectable or human evidence.
-6. Reject out-of-scope changes or failed required evidence.
-7. Integrate accepted work and append the transition.
+This is enough to answer basic questions such as “Which requirement produced this change?”
+and “Was this test run against the version the reviewers saw?”
 
-### 11.3 Change intake
+## 7. Local operational state
 
-1. Accept a request at a task boundary.
-2. Use high effort, or extra high for architecture changes, to assess impact.
-3. Place it in the current task/stage, next stage, later phase, backlog with trigger, or decline with reason and trigger.
-4. Increment the plan revision in every case.
-5. Invalidate only affected tasks and evidence.
-6. Reopen consequential decisions when necessary; otherwise continue automatically.
+Core starts with files and a small write-ahead journal so interrupted work can be detected.
+Reliable Core adds SQLite in write-ahead logging mode for faster queries and recovery.
 
-### 11.4 Phase review and repair
+SQLite is a local cache, not the source of project truth. PeerFoil must rebuild it from Git
+and the accepted `.peerfoil/` files.
 
-1. Freeze the reviewed revision, artifacts, evidence, provenance, deviations, and risks.
-2. Run pack- and risk-selected specialist lenses.
-3. Send the same bundle independently to both reviewer families.
-4. Reconcile findings within the ledger and pass budget.
-5. Select one high-effort repair producer by exact configured ID.
-6. Rerun affected evidence and issue a new frozen bundle.
-7. Obtain fresh cross-family approval or pause for the user.
+Only the controller writes operational state. Every outside operation receives an
+invocation identifier, so a restart can tell whether the operation never started, is still
+running, or finished before the interruption.
 
-### 11.5 Resume and recovery
+Core Alpha guarantees recovery at task boundaries. Later releases add safer recovery for
+review passes and other long-running operations.
 
-Core reconstructs the last accepted state from Git and transition history. It never infers that an interrupted external process succeeded. At a task boundary it resumes from the next valid transition. An ambiguous in-flight change is quarantined for inspection, not silently merged or rerun.
+## 8. Change handling
 
-## 12. Default role routing
+A new request creates a candidate plan revision. The change steward compares it with the
+current architecture, active task, dependencies, risk, and cost of rework.
 
-| Role | Hosted default | Effort | Independence rule |
-|---|---|---:|---|
-| Evaluator | Claude Code Fable; Opus fallback | Extra high | Decisions only |
-| Architect | Fresh Claude Code Fable; Opus fallback | Extra high | Cannot approve architecture |
-| Planner | Fresh Claude Code Fable; Opus fallback | High | Cannot approve plan |
-| Change steward | Claude Code Fable; Opus fallback | High or extra high | Plan revisions only |
-| Software producer | Codex 6; GPT-5.6 Sol fallback | High by default | Cannot approve produced change |
-| Reviewer A | Fresh Claude Fable; Opus fallback | Extra high | Primary for eligible non-Claude work |
-| Reviewer B | Fresh Codex 6; GPT-5.6 Sol fallback | Extra high | Primary for eligible non-Codex work |
-| Repair producer | Review-council selection | High only | Removed from review seat for repair |
+The steward places the request in the current stage, a later stage, a later phase, or the
+backlog. Only affected work is reopened. Unrelated completed work remains valid.
 
-Concrete model and effort support is discovered at runtime. Unsupported or undeclared substitution stops. Packs may choose a different qualified producer when the task is not coding; reviewer independence remains provenance-based.
+Any task whose inputs changed becomes stale. It cannot be accepted until PeerFoil rebases
+or replaces it and collects current evidence.
 
-A local model may occupy a seat only after passing that role and pack's qualification fixtures. An unqualified local model begins read-only. A local-only normal-assurance configuration requires two qualified, distinct canonical lineage roots with pinned lineage evidence; aliases or derivatives of one base do not count twice.
+## 9. Non-coding project packs
 
-## 13. Trust and authorization boundaries
+The controller uses the same states for all project packs. The pack changes what “produce,”
+“validate,” and “complete” mean.
+
+| Pack | Main artifacts | Typical validators |
+|---|---|---|
+| Software | Source, tests, packages, documentation | Build, test, lint, scan, manual journey |
+| Documentation | Outline, sections, examples, diagrams | Links, sources, readability, editorial review, render |
+| Business Plan | Market, operations, finances, risks | Sources, formulas, assumptions, sensitivity checks |
+| Research Report | Search, extraction, analysis, synthesis | Source capture, citations, calculations, limitations |
+| Generic | Declared text or files | Commands, structured inspection, human procedure |
+
+The first controller release enforces the Software Pack. It also processes a small
+Documentation fixture to make sure code assumptions have not leaked into Core. Mature
+non-coding packs arrive before 1.0.
+
+## 10. Trust and security boundaries
 
 PeerFoil enforces:
 
-- no self-approval;
-- different-lineage primary review under normal assurance;
-- controller-owned executable evidence;
-- schema and plan-revision checks;
-- pinned standards, skills, packs, and capability policy;
-- role-scoped MCP access;
-- no committed secrets or raw private MCP payloads;
-- explicit approval for destructive, external, credential, deployment, or production actions;
-- visible fallbacks, exceptions, and reduced-assurance states.
+- validated model output before it affects state;
+- explicit commands, directories, timeouts, and environment variables;
+- role-based tool and MCP access;
+- no producer self-approval;
+- cross-family review when normal assurance is claimed;
+- redaction before history or evidence is stored;
+- no credentials in project files;
+- explicit approval for destructive or external effects; and
+- a stop when identity, lineage, evidence, or permission is uncertain.
 
-PeerFoil assumes the workspace, its hooks, dependencies, scripts, tools, and invoked agents are trusted. The initial product supplies no operating-system sandbox. Worktrees are provenance and change-isolation mechanisms only. Untrusted workspaces require an external disposable environment outside this architecture.
+PeerFoil assumes the workspace, its installed tools, and invoked model applications are
+trusted. Version 1.0 does not provide an operating-system sandbox. Users who open untrusted
+projects need an outside disposable environment.
 
-## 14. Cross-platform contract
+Git worktrees and Dagger-style build environments may improve change isolation or
+reproducibility. They are not treated as hostile-code security boundaries.
 
-Core is a small Go executable targeting native Windows, macOS, and mainstream Linux on x64 and arm64 where upstream provider tools support them.
+## 11. Cross-platform requirements
 
-Implementation requirements:
+Core uses Go's standard process, path, filesystem, signal, and SQLite libraries wherever
+possible. The default path cannot rely on:
 
-1. Invoke executable/argument arrays without shell interpolation.
-2. Store canonical project paths with `/` and convert only at I/O boundaries.
-3. Use short branch and worktree names.
-4. Parse machine-readable Git output.
-5. Keep local state out of synchronized or network directories by default.
-6. Terminate full process trees on cancellation and timeout, including Windows Job Objects or a validated fallback.
-7. Never mix native and compatibility-layer paths in one project.
-8. Test spaces, Unicode, apostrophes, CRLF, case-only changes, dirty trees, crashes, and timeouts on all three systems from the first commit.
+- Bash or PowerShell scripts;
+- WSL;
+- Docker or another container runtime;
+- Unix sockets;
+- symlinks or case-sensitive paths;
+- a writable installation directory; or
+- a database or service running elsewhere.
 
-Core requires no Docker, WSL, Bash, tmux, Unix socket, symlink, native add-on, database service, or hosted account.
+Continuous integration tests Windows, macOS, and Linux. Test paths include spaces, Unicode,
+long names, mixed separators, and case collisions. Provider and local-model adapters must
+pass the same cancellation, timeout, and output tests on every supported platform.
 
-## 15. Failure behavior
+## 12. Planned source layout
 
-| Failure | Required behavior |
+```text
+cmd/peerfoil/              command-line entry point
+internal/controller/       state transitions and policy
+internal/project/          accepted project state
+internal/pack/             pack loading and validation
+internal/provider/         Claude, Codex, and local-model adapters
+internal/capability/       skills and MCP selection
+internal/workspace/        Git branches and worktrees
+internal/evidence/         commands and evidence records
+internal/review/           findings, limits, and repair decisions
+internal/memory/           context and reviewed lessons
+internal/store/            journal and SQLite cache
+schemas/                   versioned JSON schemas
+skills/                    portable workflow and review skills
+agents/                    fresh role definitions
+packs/                     built-in project packs
+templates/                 human-readable project files
+fixtures/                  cross-platform reference projects
+docs/                      project documentation
+```
+
+Packages depend on small interfaces near the caller. Provider-specific code stays behind
+adapters. Project packs use data and templates, not compiled controller extensions.
+
+## 13. Release boundaries
+
+| Release | Architecture delivered |
 |---|---|
-| Missing tool or authentication | Stop with one exact next action |
-| Unsupported model or effort | Stop or use only a declared visible fallback |
-| Malformed model output | One bounded repair request, then stop |
-| Task validator failure | Retry within policy; never integrate failing work |
-| Required MCP source unavailable | Block the dependent task |
-| Adapter cannot isolate requested MCP access | Reject that capability; block if required, otherwise omit and record |
-| Unexpected live-workspace mutation | Stop and preserve evidence |
-| Timeout or cancellation | Terminate process tree and record interrupted status |
-| Review disagreement | Continue only within pass budget, then pause with the disagreement |
-| Required evidence missing | Block acceptance |
-| State corruption | Reconstruct from accepted Git state or stop; never guess |
-| Version/schema incompatibility | Run an explicit migration or refuse to continue |
+| Skills 0.1 | Guided workflow, file state, Software and Generic packs, Documentation fixture |
+| Core Alpha 0.2 | One enforced software path, direct Claude/Codex calls, evidence, task recovery |
+| Reliable Core | Durable journal, SQLite cache, stronger process control and recovery |
+| Review Beta | Frozen review packages, full limits, repair selection, focused reviewers |
+| Planning Beta | Change impact, selective rework, traceability, early non-coding packs |
+| Provider Beta | Local models, provider certification, capability checks, cost limits |
+| Release Beta | Mature packs, installers, updates, custom-pack kit |
+| PeerFoil 1.0 | Hardened three-platform release with complete documented scope |
 
-## 16. Release evolution
+## 14. Decisions deferred until implementation
 
-| Release | Deadline | Architecture boundary |
-|---|---:|---|
-| PeerFoil Skills 0.1 | Day 5 | Guided plugin/Markdown workflow; Software, Generic, and small Documentation reference packs; official Codex plugin; file-based state |
-| PeerFoil Core Alpha 0.2 | Day 13 | Go state loop; Software-first pack enforcement; sequential tasks; worktrees; authoritative evidence; task-boundary recovery; one dual-family review/repair path |
-| PeerFoil 1.0 | Week 26 | Mature review and change control, memory, deterministic skill routing, MCP, qualified local models, mature built-in packs, quality/release gates, and native packaging |
+The design intentionally waits for evidence before fixing:
 
-The schemas, skills, pack contract, artifacts, and role boundaries remain shared across releases. Core strengthens enforcement without replacing the Skills workflow or making accepted projects dependent on a service.
+- the exact Go SQLite library;
+- the final schema library;
+- the package and signing process for each operating system;
+- the stable event format exposed by each model adapter;
+- which local-model endpoints qualify for each role; and
+- the final PeerFoil Claude Code marketplace name.
 
-## 17. Open-source and licensing boundary
+These choices can be made during the phase that first needs them. They do not change the
+main workflow or user experience.
 
-The combined PeerFoil software distribution is intended to remain compatible with `GPL-3.0-or-later`. Source, tests, skills, agent definitions, packs, templates, schemas, plugin metadata, configuration, and executable or machine-consumed Markdown are software or operational artifacts under that license. Human-facing prose documentation uses `GFDL-1.3-or-later` unless a file carries another SPDX identifier; an explicit file identifier wins over its path. Existing capabilities are reused through reviewed dependencies or external process boundaries:
+## Conclusion
 
-- the official [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc);
-- [Codex CLI](https://github.com/openai/codex);
-- [Agent Skills](https://agentskills.io/specification);
-- [Model Context Protocol](https://modelcontextprotocol.io/);
-- Git and project-native validators;
-- optional compatible scanners and local-model runtimes.
+PeerFoil is a local coordinator built around tools developers already use. Its controller
+keeps the workflow honest: important decisions come first, production stays small, tests
+and other evidence match the reviewed version, and another model family checks the work.
 
-A process boundary does not erase license obligations. Distributed modules, copied templates or skills, release archives, and model artifacts are audited independently. Required notices, complete license texts, and an SBOM accompany applicable releases.
+Project packs allow the same architecture to support non-coding work without weakening
+the software-first design. Accepted information remains readable in Git, and advanced
+model coordination stays out of the normal user's way.
 
-## 18. Architecture acceptance criteria
-
-The architecture is preserved only if:
-
-1. Software remains the best-supported default without software-only controller assumptions.
-2. Packs can change domain artifacts and evidence without changing governance invariants.
-3. No authoring agent can independently approve its own artifact or change set.
-4. Required executable evidence is produced by Core, not accepted from model narration.
-5. Every accepted state and its reviewer-lineage eligibility can be reconstructed from Git without raw transcripts, provider sessions, or private payloads.
-6. Provider, skill, MCP, memory, pack, and fallback choices are visible and attributable.
-7. Normal operation requires no hand-edited configuration.
-8. Windows, macOS, and Linux behavior is tested continuously.
-9. No non-LLM paid service or hosted component is required.
-10. Skills, Core, and future packs use the same lifecycle and durable artifacts.
-11. Failure, uncertainty, reduced assurance, and accepted risk are never relabeled as success.
-
-## Primary references
+## Additional Resources
 
 - [PeerFoil method](PeerFoil-Method.md)
-- [High-level implementation plan](implementation-plan.md)
-- [Claude Code documentation](https://code.claude.com/docs)
-- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
-- [Codex CLI](https://developers.openai.com/codex/cli)
-- [Agent Skills specification](https://agentskills.io/specification)
+- [PeerFoil implementation plan](implementation-plan.md)
+- [PeerFoil repository](https://github.com/gabrielmongefranco/peerfoil)
+- [Git worktree documentation](https://git-scm.com/docs/git-worktree)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Git worktrees](https://git-scm.com/docs/git-worktree)
+- [Agent Skills specification](https://agentskills.io/specification)
+- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+
+[Return to the PeerFoil README](../README.md)

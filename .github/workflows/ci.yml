@@ -1,7 +1,7 @@
 # Project:  PeerFoil  |  File: .github/workflows/ci.yml
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco)
 # Created:  2026-09-04  |  Modified: 2026-09-04
-# Summary:  Validates PeerFoil's initial documentation and metadata on Linux, macOS, and Windows.
+# Summary:  Checks PeerFoil's documentation and repository rules on Linux, macOS, and Windows.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: CI
@@ -30,6 +30,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Repository contract
+      - name: Check repository files
         shell: bash
         run: bash .github/scripts/conformance.sh
