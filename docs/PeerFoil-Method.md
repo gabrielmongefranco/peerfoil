@@ -109,10 +109,10 @@ The default hosted setup is:
 
 | Role | Preferred model | Fallback |
 |---|---|---|
-| Evaluator and architect | Claude Code with Fable | Claude Code with Opus |
-| Planner and change steward | Claude Code with Fable | Claude Code with Opus |
-| Software producer | Codex 6 | GPT-5.6 Sol |
-| Phase reviewers | One Claude reviewer and one Codex reviewer | Strongest qualified models from different families |
+| Evaluator and architect | Claude Code with Fable | Claude Code with Opus, then GPT-6, then Sonnet, then GPT-5.6 Sol |
+| Planner and change steward | Claude Code with Fable | Codex 6 or GPT-6, then Claude Code with Opus, then Sonnet, then GPT-5.6 Sol |
+| Software producer | Codex 6 | GPT-5.6 Sol then Claude Sonnet then Claude Haiku |
+| Phase reviewers | One Claude reviewer and one Codex/GPT reviewer | Strongest qualified models from different families |
 
 PeerFoil checks which models and effort settings are actually available. It records any
 fallback. It does not quietly substitute a different model or lower effort.
