@@ -34,17 +34,17 @@ PeerFoil will say so instead of presenting a guided step as an enforced safeguar
 
 The day count starts when implementation begins.
 
-| Release | Target | What the user gets |
-|---|---:|---|
-| PeerFoil Skills 0.1 | Day 5 | A complete guided workflow inside Claude Code |
-| PeerFoil Core Alpha 0.2 | Day 13 | A local command-line application that runs one software phase and records its evidence |
-| Reliable Core | Week 4 | Safer recovery, clearer errors, and the first document workflow |
-| Review Beta | Week 8 | Bounded two-family review and one independently checked repair cycle |
-| Planning Beta | Week 12 | Plan updates that preserve unaffected work when requirements change |
-| Context Beta | Week 16 | Focused skills, MCP access, shared context, and reviewed lessons |
-| Model Beta | Week 20 | Qualified local models and provider-neutral model settings |
-| Release Beta | Week 24 | Finished built-in project packs and easier installation |
-| PeerFoil 1.0 | Week 26 | The complete, tested cross-platform product |
+| Phase | Release | Schedule | What the user gets |
+|---:|---|---:|---|
+| Phase 1 | PeerFoil Skills 0.1 | Days 1–5 | A complete guided workflow inside Claude Code |
+| Phase 2 | PeerFoil Core Alpha 0.2 | Days 6–13 | A local command-line application that runs one software phase and records its evidence |
+| Phase 3 | Reliable Core | Weeks 3–4 | Safer recovery, clearer errors, and the first document workflow |
+| Phase 4 | Review Beta | Weeks 5–8 | Bounded two-family review and one independently checked repair cycle |
+| Phase 5 | Planning Beta | Weeks 9–12 | Plan updates that preserve unaffected work when requirements change |
+| Phase 6 | Context Beta | Weeks 13–16 | Focused skills, MCP access, shared context, and reviewed lessons |
+| Phase 7 | Model Beta | Weeks 17–20 | Qualified local models and provider-neutral model settings |
+| Phase 8 | Release Beta | Weeks 21–24 | Finished built-in project packs and easier installation |
+| Phase 9 | PeerFoil 1.0 | Weeks 25–26 | The complete, tested cross-platform product |
 
 ## 2. Rules that apply to every release
 
@@ -105,7 +105,7 @@ Define → Architect → Plan → Produce → Validate → Review → Repair →
 A pack may choose artifacts, checks, evidence, skills, and review lenses. It may not grant
 itself credentials, weaken `AGENTS.md`, hide failed checks, or allow self-approval.
 
-## 5. Days 1–5: PeerFoil Skills 0.1
+## Phase 1 — PeerFoil Skills 0.1 (Days 1–5)
 
 ### What the user can do
 
@@ -132,15 +132,17 @@ and resume from files stored in the repository.
 - Installation and fresh-session checks on Windows, macOS, and Linux.
 - Complete license notices and a clear path-based license policy.
 
-### Five-day sequence
+### Phase 1 stages
 
-| Day | Main result |
+Each stage is planned for one day.
+
+| Stage | Main result |
 |---:|---|
-| 1 | Plugin skeleton, project-pack format, settings, and decision interview |
-| 2 | Architect, planner, evaluator, quality contract, and Software Pack |
-| 3 | Codex delegation, one-task production, change intake, status, resume, and plan updates |
-| 4 | Fresh Claude review, two-family phase review, repair choice, lessons, and specialist checks |
-| 5 | Documentation example, two software examples, plugin validation, three-OS checks, and user documentation |
+| Stage 1 | Plugin skeleton, project-pack format, settings, and decision interview |
+| Stage 2 | Architect, planner, evaluator, quality contract, and Software Pack |
+| Stage 3 | Codex delegation, one-task production, change intake, status, resume, and plan updates |
+| Stage 4 | Fresh Claude review, two-family phase review, repair choice, lessons, and specialist checks |
+| Stage 5 | Documentation example, two software examples, plugin validation, three-OS checks, and user documentation |
 
 ### Release check
 
@@ -166,7 +168,7 @@ provide mechanical state control, controller-run evidence, crash recovery, direc
 processes, automatic pass limits, local-model routing, or MCP routing. The interface will
 show **Guided** so users understand that boundary.
 
-## 6. Days 6–13: PeerFoil Core Alpha 0.2
+## Phase 2 — PeerFoil Core Alpha 0.2 (Days 6–13)
 
 ### What the user can do
 
@@ -218,7 +220,7 @@ On all three operating systems, Core Alpha must:
 Core Alpha is a developer preview. It does not claim to contain the complete six-month
 product.
 
-## 7. Weeks 3–4: Reliable Core
+## Phase 3 — Reliable Core (Weeks 3–4)
 
 PeerFoil will handle common command, provider, timeout, path, output, and restart failures
 safely. It will either recover or tell the user exactly what to do next.
@@ -238,7 +240,7 @@ The release check will inject common failures on all three operating systems. Ea
 must recover predictably or stop with a useful message. Adding a normal project pack must
 not require a controller change.
 
-## 8. Weeks 5–8: Review Beta
+## Phase 4 — Review Beta (Weeks 5–8)
 
 Every phase will receive limited, evidence-based review from fresh Claude and Codex model
 families. Reviewers will work independently first, then compare specific findings. One
@@ -259,7 +261,7 @@ Main work:
 Seeded code defects and unsupported document claims must block approval, receive an
 explicit decision, and be checked again after repair.
 
-## 9. Weeks 9–12: Planning Beta
+## Phase 5 — Planning Beta (Weeks 9–12)
 
 PeerFoil will accept a new request while work is in progress. It will decide whether the
 request belongs now, later in the current phase, in a later phase, in the backlog, or
@@ -279,7 +281,7 @@ The release check will add an important change to a software example and a non-c
 example. PeerFoil must reopen affected work, keep unrelated work, and prevent stale work
 from being approved.
 
-## 10. Weeks 13–16: Context Beta
+## Phase 6 — Context Beta (Weeks 13–16)
 
 PeerFoil will give each role only the approved context, skills, knowledge sources, and
 lessons it needs. Personal and work information will remain separate.
@@ -300,7 +302,7 @@ A required MCP outage must block only the dependent task. Unapproved MCP tools m
 unavailable, private content must stay out of Git, and a repeated problem must be promoted
 to the right durable project file.
 
-## 11. Weeks 17–20: Model Beta
+## Phase 7 — Model Beta (Weeks 17–20)
 
 Advanced settings will allow qualified local models to replace hosted model seats without
 changing PeerFoil's project files or review rules.
@@ -319,7 +321,7 @@ Main work:
 Models derived from the same base model will count as the same family for independent
 review. A fully local setup will still require two qualified families for normal approval.
 
-## 12. Weeks 21–24: Release Beta
+## Phase 8 — Release Beta (Weeks 21–24)
 
 Fresh users should be able to install PeerFoil, complete setup in about five minutes, and
 choose a finished built-in project pack.
@@ -340,7 +342,7 @@ changes, cancellation, damaged local state, reconstruction from Git, package ins
 offline local-model operation, and every built-in project pack on all three operating
 systems.
 
-## 13. Weeks 25–26: PeerFoil 1.0
+## Phase 9 — PeerFoil 1.0 (Weeks 25–26)
 
 The final two weeks are reserved for fixes, usability, release checks, and documentation.
 They are not available for adding major features.
@@ -356,7 +358,7 @@ Version 1.0 must include:
 
 Any capability that does not meet its acceptance check will remain clearly unshipped.
 
-## 14. Quality gates
+## Quality gates
 
 Every release must meet these conditions:
 
@@ -372,7 +374,7 @@ Every release must meet these conditions:
 | Generality | Software remains best supported while other packs use the same controller |
 | Scope | Deferred features do not quietly enter the release |
 
-## 15. Main risks
+## Main risks
 
 | Risk | Response |
 |---|---|
@@ -390,7 +392,7 @@ Every release must meet these conditions:
 | Advanced machinery makes daily use confusing | Keep five normal actions and test them with new users |
 | Six months of ideas become six years of scope | Cut optional integrations before weakening the release checks |
 
-## 16. Definition of done
+## Definition of done
 
 PeerFoil 1.0 is complete only when:
 
