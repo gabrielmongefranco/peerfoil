@@ -109,10 +109,10 @@ The default hosted setup is:
 
 | Role | Preferred model | Fallback |
 |---|---|---|
-| Evaluator and architect | Claude Code with Fable | Claude Code with Opus, then GPT-6, then Sonnet, then GPT-5.6 Sol |
-| Planner and change steward | Claude Code with Fable | Codex 6 or GPT-6, then Claude Code with Opus, then Sonnet, then GPT-5.6 Sol |
-| Software producer | Codex 6 | GPT-5.6 Sol then Claude Sonnet then Claude Haiku |
-| Phase reviewers | One Claude reviewer and one Codex/GPT reviewer | Strongest qualified models from different families |
+| Evaluator and architect | Claude Code with Fable | Claude Code with Opus |
+| Planner and change steward | Claude Code with Fable | Claude Code with Opus |
+| Software producer | Codex 6 | GPT-5.6 Sol |
+| Phase reviewers | One Claude reviewer and one Codex reviewer | Strongest qualified models from different families |
 
 PeerFoil checks which models and effort settings are actually available. It records any
 fallback. It does not quietly substitute a different model or lower effort.
@@ -165,6 +165,12 @@ Project → Phase → Stage → Task
 For software, the first phase must produce a small working path that installs, starts, and
 completes one real user action. For another type of project, the first phase must produce a
 small but complete deliverable that can go through the same validation and review process.
+
+Start each phase in a new chat by default. Keep one chat through the stages in that phase
+unless its context becomes confusing or the agent begins to drift. Before changing chats,
+save the current decisions, plan, evidence, TODOs, deferrals, and lessons in the repository.
+Use the [Phase Prompt Template](phase-prompt-template.md) to give the new agent a consistent
+reading order and handoff.
 
 ## 5. Important decisions come first
 
@@ -568,6 +574,7 @@ knowledge, and non-coding project packs without changing the basic experience.
 
 - [PeerFoil architecture](architecture.md)
 - [PeerFoil implementation plan](implementation-plan.md)
+- [PeerFoil phase prompt template](phase-prompt-template.md)
 - [PeerFoil repository](https://github.com/gabrielmongefranco/peerfoil)
 - [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
 - [Claude Code documentation](https://code.claude.com/docs)

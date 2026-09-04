@@ -28,6 +28,7 @@ metadata_files=(
   docs/PeerFoil-Method.md
   docs/architecture.md
   docs/implementation-plan.md
+  docs/phase-prompt-template.md
   .github/FUNDING.yml
   .github/copilot-instructions.md
   .github/scripts/conformance.sh

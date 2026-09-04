@@ -64,6 +64,8 @@ controls will stay under Advanced settings.
   how its parts work together.
 - **[Implementation Plan](docs/implementation-plan.md):** What will be built first, what
   will come later, and how each release will be checked.
+- **[Phase Prompt Template](docs/phase-prompt-template.md):** A prompt you can paste into
+  a new chat before starting a phase or stage.
 
 ## Status
 

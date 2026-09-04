@@ -19,6 +19,7 @@ required=(
   docs/PeerFoil-Method.md
   docs/architecture.md
   docs/implementation-plan.md
+  docs/phase-prompt-template.md
 )
 
 for path in "${required[@]}"; do
