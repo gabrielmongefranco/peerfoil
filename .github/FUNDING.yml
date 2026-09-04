@@ -1,4 +1,10 @@
-# These are supported funding model platforms
+# Project:  PeerFoil  |  File: .github/FUNDING.yml
+# Authors:  Gabriel Mongefranco (@gabrielmongefranco)
+# Created:  2026-09-04  |  Modified: 2026-09-04
+# Summary:  Configures supported funding links for PeerFoil.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Supported funding platforms
 
 github: gabrielmongefranco # Replace with up to 4 GitHub Sponsors-enabled usernames e.g., [user1, user2]
 patreon: # Replace with a single Patreon username

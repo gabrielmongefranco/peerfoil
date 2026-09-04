@@ -1,0 +1,75 @@
+# Project:  PeerFoil  |  File: .gitignore
+# Authors:  Gabriel Mongefranco (@gabrielmongefranco)
+# Created:  2026-09-04  |  Modified: 2026-09-04
+# Summary:  Excludes local tools, credentials, build output, and reconstructible PeerFoil state.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# AI-tool local configuration; AGENTS.md remains tracked
+.claude/
+.claudecode/
+.gemini/
+.github-copilot/
+.kimi/
+CLAUDE.md
+CLAUDECODE.md
+GEMINI.md
+KIMI.md
+CODEX.md
+CHATGPT.md
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Logs, caches, coverage, and temporary files
+*.log
+logs/
+*.cache
+.cache/
+coverage/
+.coverage
+tmp/
+temp/
+
+# Go
+/peerfoil
+/peerfoil.exe
+/bin/
+/dist/
+/coverage.out
+/vendor/
+
+# Node-based plugin tooling
+node_modules/
+.npm/
+.pnpm-store/
+
+# Python-based validation helpers
+__pycache__/
+*.py[cod]
+.venv/
+
+# Reconstructible PeerFoil operational state. Accepted Markdown, JSON, evidence,
+# decisions, plans, and reviews under .peerfoil/ remain trackable.
+.peerfoil/state.db
+.peerfoil/state.db-*
+.peerfoil/worktrees/
+.peerfoil/tmp/
+.peerfoil/logs/
+.peerfoil/sessions/
