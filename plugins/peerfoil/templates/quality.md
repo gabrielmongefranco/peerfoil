@@ -10,17 +10,34 @@ Project: `{{project_id}}` · Assurance: Guided · Revision: {{quality_revision}}
 - **Architecture revision:** {{architecture_revision}}
 
 This contract lists the evidence the project needs before work is accepted. Required
-evidence blocks completion when it is missing or failed. A model's statement that a check
-passed is a claim, not evidence.
+evidence blocks completion when it is missing or failed. Recommended evidence is run when
+practical and its absence is recorded. Not-applicable evidence names the reason it does
+not apply. A model's statement that a check passed is a claim, not evidence.
 
-## Evidence items
+## Required evidence
 
-| Name | Kind | Level | Procedure |
-|---|---|---|---|
-| {{name}} | {{executable | inspection | human}} | {{required | recommended | not-applicable}} | {{command as an argument list with its working directory, or the steps to follow}} |
+| Name | Kind | Procedure |
+|---|---|---|
+| {{name}} | {{executable | inspection | human}} | {{command as an argument list with its working directory, or the steps to follow}} |
+
+## Recommended evidence
+
+| Name | Kind | Procedure |
+|---|---|---|
+| {{name}} | {{executable | inspection | human}} | {{command as an argument list with its working directory, or the steps to follow}} |
+
+## Not applicable
+
+| Name | Reason |
+|---|---|
+| {{name, or "None"}} | {{why this pack evidence does not apply to this project}} |
 
 ## Review lenses
 
 | Lens | Focus |
 |---|---|
 | {{lens id}} | {{what reviewers look for through this lens}} |
+
+## Completion requirements
+
+{{The pack's completion requirements, plus any project-specific requirement the architecture adds, as a numbered list.}}

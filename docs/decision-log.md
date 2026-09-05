@@ -42,6 +42,12 @@ that supersedes the old one, never by editing history.
 | D-0010 | Template files carry a sibling notice instead of a PeerFoil header | Accepted | Phase 1, Stage 1 |
 | D-0011 | Identifier and revision conventions | Accepted | Phase 1, Stage 1 |
 | D-0012 | Static checks use Python 3 with no third-party packages | Accepted | Phase 1, Stage 1 |
+| D-0013 | Architecture and plan reviews run through the Codex plugin's rescue agent, fresh and read-only | Accepted | Phase 1, Stage 2 |
+| D-0014 | Reduced-assurance fallback when no different-family reviewer is available | Accepted | Phase 1, Stage 2 |
+| D-0015 | Drafts carry the next revision number; accepted revisions live in `project.json` | Accepted | Phase 1, Stage 2 |
+| D-0016 | Packs may declare evidence command hints | Accepted | Phase 1, Stage 2 |
+| D-0017 | Architect defaults to high effort and every other role to medium | Accepted | Phase 1, Stage 2 |
+| D-0018 | Agents declare turn limits and reviewers cap their findings | Accepted | Phase 1, Stage 2 |
 
 ## D-0001 — Plugin location
 
@@ -201,10 +207,113 @@ that supersedes the old one, never by editing history.
 - **Consequences:** The schema checker supports a documented subset of JSON Schema. Core
   Alpha selects its own Go schema library in Phase 2.
 
+## D-0013 — Architecture and plan review transfer
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A Claude-authored architecture or plan draft is reviewed by Codex through
+  the official Codex plugin's `codex:codex-rescue` agent, launched with the `Agent` tool.
+  The request is a self-contained, read-only review packet that names the frozen files
+  and requires one JSON block of findings. The run uses `--fresh`, the reviewer seat's
+  effort, and no `--write`, so it is a new read-only thread whose thread identifier is
+  recorded as the reviewer's session. Each draft receives at most three passes before
+  PeerFoil asks the user.
+- **Options considered:** The plugin's `/codex:review` and `/codex:adversarial-review`
+  commands; running Codex CLI directly; the plugin's `/codex:transfer` command.
+- **Reason:** The review commands inspect Git diffs, not records, and cannot carry a
+  PeerFoil packet. Running Codex CLI directly would duplicate the plugin's bridge.
+  Transfer would hand Codex the Claude conversation, which the method forbids for a
+  reviewer. The rescue agent is the plugin's documented delegation path and already
+  runs read-only unless asked to write.
+- **Consequences:** The packet, output contract, validation, and pass limit live in
+  `plugins/peerfoil/references/review.md`. Stage 4 extends the same contract to phase
+  reviews. The Codex plugin version tested with this transfer is recorded in Stage 5.
+
+## D-0014 — Reduced-assurance fallback
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** When no different-family reviewer is available for an architecture or
+  plan draft, PeerFoil pauses and offers two choices: wait for an independent reviewer,
+  which is recommended, or accept **Reduced assurance** for that one draft. On
+  acceptance a fresh `peerfoil:claude-reviewer` session reviews the draft, the review
+  records `independence: secondary` with the user's acceptance and its time, the history
+  record repeats the acceptance, and status shows "Reduced assurance" for the artifact.
+- **Options considered:** Always pausing; using a fresh Claude session silently.
+- **Reason:** The method lets the user accept the limitation or wait. Pausing only would
+  make the workflow untestable on a machine without Codex; silent substitution would hide
+  the loss of independence.
+- **Consequences:** Acceptance never carries over to a later draft. Phase review in Stage
+  4 applies the same rule item by item.
+
+## D-0015 — Draft revision numbering
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A draft architecture, Quality Contract, or plan carries the next number
+  after the last accepted revision. Rewrites of the draft before acceptance keep that
+  number, and each review pass records a `pass` counter. `project.json` `revisions`
+  holds only accepted revisions and changes when the user accepts the draft.
+- **Options considered:** Numbering every rewrite; numbering drafts as revision 0.
+- **Reason:** Reviews and tasks must name the revision they were written against, and
+  the accepted revision must be readable from one place without opening every draft.
+- **Consequences:** Reviews freeze a revision plus a pass number and, when committed, a
+  Git hash. This build cannot make a working-tree draft tamper-proof; Core adds that.
+
+## D-0016 — Pack evidence hints
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A pack manifest may declare `evidence_hints`: a marker file, an evidence
+  name it declares, a command as an argument list, and a purpose. The architect uses the
+  hints that match the repository to fill executable procedures in the Quality Contract,
+  and the repository's own declared scripts take precedence. Packs without hints declare
+  an empty list.
+- **Options considered:** Leaving commands entirely to the architect; hard-coding
+  toolchain commands in the architect role.
+- **Reason:** Practical checks belong to the pack, not to the controller or the role
+  prompt, and the Go and Node.js fixtures in Stage 5 need real commands.
+- **Consequences:** `schemas/pack.schema.json` requires the field, and the static checks
+  reject a hint that names undeclared evidence.
+
+## D-0017 — Default effort
+
+- **Status:** Accepted on 2026-09-05. Supersedes the extra-high defaults that the method
+  gave the evaluator, architect, change steward, and reviewers.
+- **Decision:** The architect defaults to `high` effort because the architecture shapes
+  every later task. The evaluator, planner, change steward, producer, repair producer,
+  and both phase reviewers default to `medium`. `low` is an allowed value only for small,
+  reversible, low-risk work and never for a repair. `high` and `xhigh` remain allowed
+  values that a user can set for a seat under `/peerfoil:settings`, with a warning that
+  the step becomes slower.
+- **Options considered:** Keeping extra high for decisions, architecture, and review;
+  high for every role.
+- **Reason:** Stage 2 measurements showed that extra-high reviewers reading every record
+  and returning ten findings per pass made one architecture-and-plan pass take twenty to
+  thirty minutes, which is too slow for normal use. The owner chose medium as the normal
+  level and reserved high for the architecture, where a weak result costs the most.
+- **Consequences:** The method, architecture, implementation plan, Phase 1 and 2 plans,
+  `AGENTS.md` rule 7, templates, agents, schemas, and settings skill say so. The
+  independence and evidence rules do not change; effort never substitutes for review.
+
+## D-0018 — Turn limits and finding caps
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A reviewer run uses at most ten turns; an evaluator, architect, or planner
+  run uses at most six. Every PeerFoil agent declares that limit as `maxTurns`, and a
+  Codex review request states it in its text. A reviewer returns at most ten findings
+  with short evidence and recommendation fields, and on a later pass reports only new
+  blocking or major findings after confirming the earlier repairs. The coordinating skill
+  budgets about ten of its own turns to write a draft, ten per review pass, and five to
+  record acceptance.
+- **Options considered:** No limits; limiting only review passes.
+- **Reason:** Stage 2 runs used more than one hundred coordinator turns and ten to
+  fifteen turns per reviewer, which drove both time and cost. Claude Code enforces an
+  agent's `maxTurns`; the coordinator budget and the finding cap are guided.
+- **Consequences:** The static checks require `maxTurns` within the limit on every
+  agent. A run that stops at its limit without a result is rerun once, then the user is
+  asked.
+
 ## Conclusion
 
-These entries settle the layout, formats, names, and conventions that Phase 1 builds on.
-Later stages add entries for their own required decisions.
+These entries settle the layout, formats, names, conventions, review mechanics, effort,
+and turn limits that Phase 1 builds on. Later stages add entries for their own required decisions.
 
 ## Additional Resources
 

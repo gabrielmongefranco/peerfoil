@@ -42,7 +42,7 @@ A user with Git, Claude Code, Codex, and the required project tools can:
 5. delegate one small production task at a time;
 6. run and retain appropriate evidence;
 7. receive independent Claude and Codex phase reviews;
-8. guide one high-effort repair when needed;
+8. guide one repair when needed;
 9. update the plan after a change or deferral; and
 10. resume in a fresh chat from repository files.
 
@@ -315,6 +315,46 @@ production.
 - the Quality Contract selects evidence appropriate to the fixture; and
 - no production task can begin before the reviewed plan is accepted.
 
+### Stage 2 status
+
+Built on 2026-09-05 and awaiting its independent different-family review. Decisions made
+during the build are D-0013 to D-0016 in the [decision log](../decision-log.md).
+Deviations from the layout in section 4: `references/review.md` now exists with the
+architecture and plan review transfer, and Stage 4 extends it to phase review;
+`references/architecture.md` and `references/planning.md` hold the shared architecture
+and planning procedures so `start` and `resume` stay short; and
+`agents/claude-reviewer.md` exists now, limited to the reduced-assurance fallback, and
+Stage 4 extends it to phase review.
+
+Checks that ran on Windows with Claude Code 2.1.260, using a scratch Go command-line
+fixture with four resolved decisions and no Codex plugin installed:
+
+| Check | Result |
+|---|---|
+| Static checks, the conformance script, and the strict plugin validator on the marketplace and plugin | Pass |
+| Plugin loaded from its local directory in fresh sessions; the architect, planner, and Claude reviewer launch as `peerfoil:` agents with distinct session identifiers | Pass |
+| Seeded open privacy decision: `resume` stayed in `define`, wrote nothing, and named the open decision as the blocker | Pass |
+| Seeded reversible naming choice recorded as `assumed` without blocking; the architect's own reversible assumptions recorded the same way | Pass |
+| Seeded architecture inconsistency: the reviewer returned a blocking finding naming the offline decision and the `AGENTS.md` rule; the architect revised the draft; pass 2 approved | Pass |
+| Seeded plan without required accessibility evidence: the reviewer returned a blocking finding; the planner revised the plan; pass 2 approved; stage order approved | Pass |
+| Full decision-to-approved-plan path in a fresh chat: `define` to `architect` to `plan`, architecture and plan accepted, `project.json`, `plan.json`, and every history line valid against the schemas, no placeholders left | Pass |
+| Plan describes outcomes, not model activity, in every phase and stage title | Pass |
+| Production stays blocked: the state remained `plan` and `status` reported production as not yet available | Pass |
+| No different-family reviewer available: the run recorded the user's acceptance of Reduced assurance, `independence: secondary`, and the time, in the review and in the history | Pass |
+| Generated records: one task `scope` exceeded 1,000 characters and one history line used an invented `refs` key | Fixed in the planner and references; not re-run |
+| Timing: the runs took 12 to 30 minutes at extra-high effort with 48 to 140 coordinator turns | Led to D-0017 and D-0018; not re-run |
+
+The reduced-assurance path stood in for the Codex reviewer in every review above.
+
+Not run in this build: the Codex side of the review transfer, because Node.js, Codex CLI,
+and the Codex plugin are not installed on the build machine; macOS and Linux sessions;
+an interactive answer path; and a complete re-run at the medium-effort, turn-limited
+defaults that D-0017 and D-0018 introduced after the runs above, which used the earlier
+extra-high settings. The owner stopped the seeded-inconsistency run during its plan
+review after its architecture checks had passed. The Codex transfer follows the plugin's
+documented rescue path and must be exercised in Stage 5 with the plugin installed. Those
+checks belong to the Stage 5 platform matrix and to the reviewer of this stage.
+
 ## 9. Stage 3 — Production, changes, status, and recovery
 
 ### Outcome
@@ -374,7 +414,7 @@ chat.
 ### Outcome
 
 A complete phase receives fresh Claude and Codex reviews of the same frozen material. One
-high-effort repair can be guided and checked by an eligible different model family.
+repair can be guided and checked by an eligible different model family.
 
 ### Tasks
 
@@ -397,7 +437,7 @@ high-effort repair can be guided and checked by an eligible different model fami
    - maintainability, documentation, licensing, and release readiness.
 7. Guide the configured six-pass default and eight-pass ceiling. State plainly that
    Phase 1 cannot enforce these limits mechanically.
-8. Select an eligible high-effort repairer without allowing the author of the repair to
+8. Select an eligible repairer without allowing the author of the repair to
    approve it.
 9. Allow one guided repair cycle, rerun affected evidence, and obtain a fresh
    different-family verification.

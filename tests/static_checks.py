@@ -5,8 +5,8 @@
 # Created: 2026-09-05
 # Last Modified: 2026-09-05
 # Summary: Runs PeerFoil's static repository checks: required files, JSON and schema validity,
-#          skill and agent frontmatter, relative links, file notices, manifests, packs, and stale
-#          project names.
+#          skill and agent frontmatter, relative links, plugin path references, file notices,
+#          manifests, packs, and stale project names.
 # Notes: Uses only the Python 3 standard library so it runs from a clean checkout on Windows,
 #        macOS, and Linux. Run it from any directory: python tests/static_checks.py
 # Copyright © 2026 Gabriel Mongefranco
@@ -37,7 +37,7 @@ SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", ".claude", ".idea", ".vscode",
     "tmp", "temp", "dist", "bin", "coverage", "worktrees",
 }
-CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml"}
+CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml", ".svg"}
 CHECKED_NAMES = {".gitignore", ".gitattributes", "NOTICE"}
 
 # Files that legitimately carry no PeerFoil header of their own.
@@ -61,9 +61,11 @@ REQUIRED_FILES = [
     ".claude-plugin/marketplace.json", ".claude-plugin/NOTICE.md",
     "plugins/peerfoil/.claude-plugin/plugin.json", "plugins/peerfoil/README.md",
     "plugins/peerfoil/LICENSE",
-    "plugins/peerfoil/agents/evaluator.md",
+    "plugins/peerfoil/agents/evaluator.md", "plugins/peerfoil/agents/architect.md",
+    "plugins/peerfoil/agents/planner.md", "plugins/peerfoil/agents/claude-reviewer.md",
     "plugins/peerfoil/references/workflow.md", "plugins/peerfoil/references/records.md",
-    "plugins/peerfoil/references/lineage.md",
+    "plugins/peerfoil/references/lineage.md", "plugins/peerfoil/references/architecture.md",
+    "plugins/peerfoil/references/planning.md", "plugins/peerfoil/references/review.md",
     "plugins/peerfoil/templates/README.md",
     "schemas/README.md", "schemas/common.schema.json", "schemas/project.schema.json",
     "schemas/plan.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",
@@ -89,7 +91,22 @@ AGENT_FRONTMATTER_FIELDS = {
     "name", "description", "model", "effort", "maxTurns", "tools", "disallowedTools",
     "skills", "memory", "background", "isolation",
 }
+AGENT_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+# Every agent proposes and the coordinating skill writes, so each agent body must carry one
+# of these sentences.
+AGENT_NO_WRITE_SENTENCES = (
+    "Do not write, create, or edit any file.",
+    "Do not modify, create, or delete any file.",
+)
+# Evidence the Software Pack must declare so the Quality Contract can cover every area the
+# implementation plan names for it.
+SOFTWARE_EVIDENCE = {
+    "build", "unit-tests", "lint", "dependency-audit", "security-scan",
+    "failure-handling-check", "user-journey", "privacy-check", "accessibility-check",
+    "maintainability-review", "documentation-check", "license-check", "release-check",
+}
 SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+PLUGIN_ROOT_REF = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([A-Za-z0-9_./-]+)")
 FRONTMATTER_LINE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$")
 STALE_IDENTITY = re.compile(
     r"(^# Crosscut|Project:  (Crosscut|Privatium)|github\.com/gabrielmongefranco/crosscut)",
@@ -406,8 +423,32 @@ def check_agents(problems: Problems) -> None:
             problems.add(path, f"frontmatter name must equal file name '{path.stem}'")
         if not fields.get("description"):
             problems.add(path, "description is required")
+        if fields.get("effort") not in AGENT_EFFORTS:
+            problems.add(path, f"effort must be one of {sorted(AGENT_EFFORTS)}")
+        expected_effort = "high" if path.stem == "architect" else "medium"
+        if fields.get("effort") != expected_effort:
+            problems.add(path, f"default effort must be '{expected_effort}'; higher effort is an Advanced setting")
+        if not fields.get("tools"):
+            problems.add(path, "tools must list the read-only tools the role may use")
+        max_turns = fields.get("maxTurns", "")
+        limit = 10 if path.stem.endswith("reviewer") else 6
+        if not max_turns.isdigit() or not 1 <= int(max_turns) <= limit:
+            problems.add(path, f"maxTurns must be an integer from 1 to {limit} so a role cannot run unbounded")
         if "This file is part of PeerFoil." not in body:
             problems.add(path, "agent body must carry the PeerFoil header comment after the frontmatter")
+        if not any(sentence in body for sentence in AGENT_NO_WRITE_SENTENCES):
+            problems.add(path, "agent body must forbid writing files; the coordinating skill writes")
+
+
+def check_plugin_references(files: list[Path], problems: Problems) -> None:
+    """Every ${CLAUDE_PLUGIN_ROOT}/... path a plugin file names must exist in the plugin."""
+    for path in files:
+        if path.suffix != ".md" or not relative(path).startswith("plugins/peerfoil/"):
+            continue
+        for match in PLUGIN_ROOT_REF.finditer(read_text(path)):
+            target = match.group(1).rstrip(".,;:")
+            if not (PLUGIN_DIR / target).exists():
+                problems.add(path, f"plugin path does not exist: {target}")
 
 
 def check_markdown_links(files: list[Path], problems: Problems) -> None:
@@ -518,10 +559,22 @@ def check_packs(problems: Problems) -> None:
             problems.add(pack_path, f"pack id must equal directory name '{name}'")
         if pack.get("_file") != relative(pack_path):
             problems.add(pack_path, "_file must name the manifest's repository path")
-        for probe in pack.get("tools", []) + pack.get("project_tool_hints", []):
+        for probe in pack.get("tools", []) + pack.get("project_tool_hints", []) + pack.get("evidence_hints", []):
             command = probe.get("command", [])
             if any(any(char in part for char in ";&|`$<>") for part in command):
                 problems.add(pack_path, f"tool command must be a plain argument list: {command}")
+        evidence_names = [item.get("name") for item in pack.get("evidence", [])]
+        if len(evidence_names) != len(set(evidence_names)):
+            problems.add(pack_path, "evidence names must be unique")
+        lens_ids = [lens.get("id") for lens in pack.get("review_lenses", [])]
+        if len(lens_ids) != len(set(lens_ids)):
+            problems.add(pack_path, "review lens identifiers must be unique")
+        for hint in pack.get("evidence_hints", []):
+            if hint.get("evidence") not in evidence_names:
+                problems.add(pack_path, f"evidence hint names undeclared evidence '{hint.get('evidence')}'")
+        if name == "software":
+            for missing in sorted(SOFTWARE_EVIDENCE - set(evidence_names)):
+                problems.add(pack_path, f"software pack must declare evidence '{missing}'")
         if not (packs_dir / name / "README.md").is_file():
             problems.add(packs_dir / name / "README.md", "pack README is missing")
 
@@ -536,6 +589,7 @@ def main() -> int:
     check_skills(problems)
     check_agents(problems)
     check_markdown_links(files, problems)
+    check_plugin_references(files, problems)
     check_notices(files, problems)
     check_templates(problems)
     check_stale_identity(files, problems)

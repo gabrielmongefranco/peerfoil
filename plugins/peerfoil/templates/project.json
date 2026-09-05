@@ -46,16 +46,16 @@
   },
   "settings": {
     "roles": {
-      "evaluator": { "tool": "claude-code", "model": "default", "effort": "xhigh" },
-      "architect": { "tool": "claude-code", "model": "default", "effort": "xhigh" },
-      "planner": { "tool": "claude-code", "model": "default", "effort": "high" },
-      "change_steward": { "tool": "claude-code", "model": "default", "effort": "high" },
-      "producer": { "tool": "codex-cli", "model": "default", "effort": "high" },
-      "repair_producer": { "tool": "codex-cli", "model": "default", "effort": "high" }
+      "evaluator": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "architect": { "tool": "claude-code", "model": "default", "effort": "high" },
+      "planner": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "change_steward": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "producer": { "tool": "codex-cli", "model": "default", "effort": "medium" },
+      "repair_producer": { "tool": "codex-cli", "model": "default", "effort": "medium" }
     },
     "phase_reviewers": [
-      { "tool": "claude-code", "model": "default", "effort": "xhigh" },
-      { "tool": "codex-cli", "model": "default", "effort": "xhigh" }
+      { "tool": "claude-code", "model": "default", "effort": "medium" },
+      { "tool": "codex-cli", "model": "default", "effort": "medium" }
     ],
     "review": {
       "default_passes": 6,

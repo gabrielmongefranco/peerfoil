@@ -42,5 +42,6 @@
   "tools": [
     { "name": "git", "command": ["git", "--version"], "required": true, "purpose": "Version history for the deliverable and the PeerFoil records." }
   ],
-  "project_tool_hints": []
+  "project_tool_hints": [],
+  "evidence_hints": []
 }

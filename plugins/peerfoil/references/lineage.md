@@ -55,7 +55,7 @@ actor:
   "role": "evaluator",
   "tool": "claude-code",
   "model": "default",
-  "effort": "xhigh",
+  "effort": "medium",
   "lineage_root": "anthropic-claude",
   "session": null
 }
@@ -66,7 +66,7 @@ actor:
   Code session that runs the PeerFoil skills and writes the project files.
 - `model` is the model identifier when known, or `default` when the tool's default model
   was used and its exact name is not available.
-- `effort` is `medium`, `high`, `xhigh`, or `null` when the tool did not expose it.
+- `effort` is `low`, `medium`, `high`, `xhigh`, or `null` when the tool did not expose it.
 - `session` is the provider's own session identifier when one exists, or `null`. It is
   never a token or credential.
 
@@ -87,6 +87,13 @@ For each material artifact, patch, or repair:
 
 Record the outcome in each review as `independence: independent`, `secondary`, or
 `reduced`.
+
+When no eligible different-family reviewer is available, PeerFoil does not guess. It
+stops and lets the user either wait for one or accept **Reduced assurance** for that
+artifact. An accepted reduced-assurance review by a fresh same-family session is recorded
+with `independence: secondary`, the user's acceptance and its time in the review record
+and in `history.jsonl`, and the words "Reduced assurance" wherever the artifact's status
+is shown. The acceptance covers one artifact draft; a later artifact needs its own.
 
 ## 5. Default arrangement
 

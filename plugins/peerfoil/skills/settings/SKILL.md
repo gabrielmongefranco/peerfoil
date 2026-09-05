@@ -46,7 +46,7 @@ Present two tables in plain language:
 Role seats
 | Role | Tool | Model | Effort |
 |---|---|---|---|
-| evaluator | claude-code | default | xhigh |
+| evaluator | claude-code | default | medium |
 | ...
 
 Review limits
@@ -66,7 +66,7 @@ When the user asks for a change:
 2. Validate it:
    - `tool` is `claude-code` or `codex-cli`;
    - `model` is a non-empty model identifier or `default`;
-   - `effort` is `medium`, `high`, or `xhigh`;
+   - `effort` is `low`, `medium`, `high`, or `xhigh`;
    - the two phase reviewers use different tools;
    - `default_passes` and `max_passes` are 1 to 8 and `default_passes` is not above
      `max_passes`;
@@ -74,8 +74,10 @@ When the user asks for a change:
      ordering rule; and
    - `repair_cycles` is 0 or 1.
 3. Warn before accepting these changes, then accept them only if the user confirms:
-   - `producer` or `repair_producer` effort below `high`, which the method allows only
-     for small, reversible, low-risk work; and
+   - any seat raised to `xhigh`, or a seat other than the architect raised to `high`,
+     which makes that role's step noticeably slower;
+   - `producer` effort set to `low`, which the method allows only for small, reversible,
+     low-risk work; refuse `low` for `repair_producer`; and
    - a change that leaves any authoring role and its normal reviewer on the same tool,
      which reduces assurance for that role.
 4. Refuse a change that cannot be expressed in the allowed values, and say why.

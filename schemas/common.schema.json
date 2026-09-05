@@ -43,7 +43,7 @@
     },
     "effort": {
       "type": ["string", "null"],
-      "enum": ["medium", "high", "xhigh", null]
+      "enum": ["low", "medium", "high", "xhigh", null]
     },
     "lineage_root": {
       "type": "string",
@@ -69,7 +69,7 @@
       "properties": {
         "tool": { "type": "string", "enum": ["claude-code", "codex-cli"] },
         "model": { "type": "string", "minLength": 1 },
-        "effort": { "type": "string", "enum": ["medium", "high", "xhigh"] }
+        "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh"] }
       }
     },
     "evidence_kind": {

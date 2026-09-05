@@ -4,7 +4,7 @@
   "_authors": "Gabriel Mongefranco (@gabrielmongefranco)",
   "_created": "2026-09-05",
   "_modified": "2026-09-05",
-  "_summary": "Declares the Software project pack: artifacts, evidence, review lenses, completion requirements, and tool probes for software projects.",
+  "_summary": "Declares the Software project pack: artifacts, evidence, evidence command hints, review lenses, completion requirements, and tool probes for software projects.",
   "_copyright": "Copyright © 2026 Gabriel Mongefranco",
   "_license": "SPDX-License-Identifier: GPL-3.0-or-later",
   "record_type": "pack",
@@ -28,15 +28,19 @@
     "Packaging and release"
   ],
   "evidence": [
-    { "name": "build", "kind": "executable", "default_level": "required", "description": "The project's build command exits successfully." },
-    { "name": "unit-tests", "kind": "executable", "default_level": "required", "description": "The project's automated test command exits successfully." },
-    { "name": "lint", "kind": "executable", "default_level": "recommended", "description": "The project's formatter or linter reports no errors." },
-    { "name": "dependency-audit", "kind": "executable", "default_level": "recommended", "description": "A dependency vulnerability and license check reports no unresolved problem." },
-    { "name": "security-scan", "kind": "executable", "default_level": "recommended", "description": "A security scanner already used by the project reports no unresolved high finding." },
-    { "name": "user-journey", "kind": "human", "default_level": "required", "description": "A person completes the phase's main user action and records the result." },
-    { "name": "accessibility-check", "kind": "inspection", "default_level": "recommended", "description": "User-facing screens and output are checked against WCAG 2.2 Level AA where applicable." },
-    { "name": "documentation-check", "kind": "inspection", "default_level": "recommended", "description": "Setup and usage documentation match the behavior shipped in the phase." },
-    { "name": "license-check", "kind": "inspection", "default_level": "required", "description": "New dependencies and copied material are compatible with the project's license and carry their notices." }
+    { "name": "build", "kind": "executable", "default_level": "required", "description": "The project's build command exits successfully on the revision under review." },
+    { "name": "unit-tests", "kind": "executable", "default_level": "required", "description": "The project's automated test command exits successfully; new behavior and its failure paths have tests." },
+    { "name": "lint", "kind": "executable", "default_level": "recommended", "description": "The project's formatter, linter, or static analyzer reports no error." },
+    { "name": "dependency-audit", "kind": "executable", "default_level": "recommended", "description": "A dependency vulnerability check reports no unresolved high or critical finding, and every new dependency has a compatible license." },
+    { "name": "security-scan", "kind": "executable", "default_level": "recommended", "description": "A security scanner already used by the project reports no unresolved high finding; secrets are absent from the tree." },
+    { "name": "failure-handling-check", "kind": "inspection", "default_level": "recommended", "description": "Invalid input, missing files, timeouts, interruption, and restart produce a clear error or a safe recovery instead of silent damage." },
+    { "name": "user-journey", "kind": "human", "default_level": "required", "description": "A person installs or starts the software, completes the phase's main user action, and records the exact steps and result." },
+    { "name": "privacy-check", "kind": "inspection", "default_level": "recommended", "description": "Personal data collected, stored, logged, or sent is listed and limited to what the task needs; logs and error output are redacted." },
+    { "name": "accessibility-check", "kind": "inspection", "default_level": "recommended", "description": "User-facing screens, terminal output, and documentation are checked against WCAG 2.2 Level AA where applicable, including keyboard use and non-color status cues." },
+    { "name": "maintainability-review", "kind": "inspection", "default_level": "recommended", "description": "New code has clear names, small functions, current comments, required file headers, and no unused flags or placeholder extension points." },
+    { "name": "documentation-check", "kind": "inspection", "default_level": "recommended", "description": "Setup, usage, and help text match the behavior shipped in the phase, and every unavailable feature is marked as not yet available." },
+    { "name": "license-check", "kind": "inspection", "default_level": "required", "description": "New dependencies and copied material are compatible with the project's license and carry their notices; changed files keep their headers." },
+    { "name": "release-check", "kind": "inspection", "default_level": "recommended", "description": "A clean checkout installs, builds, and starts by following the documentation on the operating systems the project supports." }
   ],
   "review_lenses": [
     { "id": "correctness-reliability", "name": "Correctness and reliability", "focus": "Behavior matches the accepted decisions and plan; failure handling, recovery, and edge cases are covered by evidence." },
@@ -62,5 +66,24 @@
     { "marker": "*.csproj", "command": ["dotnet", "--version"], "purpose": ".NET SDK for build and tests." },
     { "marker": "pom.xml", "command": ["mvn", "--version"], "purpose": "Maven for build and tests." },
     { "marker": "build.gradle", "command": ["gradle", "--version"], "purpose": "Gradle for build and tests." }
+  ],
+  "evidence_hints": [
+    { "marker": "go.mod", "evidence": "build", "command": ["go", "build", "./..."], "purpose": "Build every Go package." },
+    { "marker": "go.mod", "evidence": "unit-tests", "command": ["go", "test", "./..."], "purpose": "Run every Go test." },
+    { "marker": "go.mod", "evidence": "lint", "command": ["go", "vet", "./..."], "purpose": "Static analysis shipped with the Go toolchain." },
+    { "marker": "go.mod", "evidence": "dependency-audit", "command": ["govulncheck", "./..."], "purpose": "Known-vulnerability check; install with go install golang.org/x/vuln/cmd/govulncheck@latest when missing." },
+    { "marker": "package.json", "evidence": "build", "command": ["npm", "run", "build", "--if-present"], "purpose": "Run the build script when the project declares one." },
+    { "marker": "package.json", "evidence": "unit-tests", "command": ["npm", "test"], "purpose": "Run the project's test script." },
+    { "marker": "package.json", "evidence": "lint", "command": ["npm", "run", "lint", "--if-present"], "purpose": "Run the lint script when the project declares one." },
+    { "marker": "package.json", "evidence": "dependency-audit", "command": ["npm", "audit", "--audit-level=high"], "purpose": "Known-vulnerability check for installed packages." },
+    { "marker": "pyproject.toml", "evidence": "unit-tests", "command": ["python", "-m", "pytest"], "purpose": "Run pytest; python3 is the alternative command name." },
+    { "marker": "pyproject.toml", "evidence": "lint", "command": ["python", "-m", "ruff", "check", "."], "purpose": "Run ruff when the project uses it; otherwise substitute the project's declared linter." },
+    { "marker": "pyproject.toml", "evidence": "dependency-audit", "command": ["python", "-m", "pip_audit"], "purpose": "Known-vulnerability check; install pip-audit when missing." },
+    { "marker": "Cargo.toml", "evidence": "build", "command": ["cargo", "build"], "purpose": "Build the Rust crate." },
+    { "marker": "Cargo.toml", "evidence": "unit-tests", "command": ["cargo", "test"], "purpose": "Run the Rust tests." },
+    { "marker": "Cargo.toml", "evidence": "lint", "command": ["cargo", "clippy", "--all-targets"], "purpose": "Lint with clippy when installed." },
+    { "marker": "Cargo.toml", "evidence": "dependency-audit", "command": ["cargo", "audit"], "purpose": "Known-vulnerability check; install cargo-audit when missing." },
+    { "marker": "*.csproj", "evidence": "build", "command": ["dotnet", "build"], "purpose": "Build the .NET project." },
+    { "marker": "*.csproj", "evidence": "unit-tests", "command": ["dotnet", "test"], "purpose": "Run the .NET tests." }
   ]
 }

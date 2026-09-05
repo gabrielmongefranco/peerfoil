@@ -29,19 +29,29 @@ written instructions, and nothing here enforces a step mechanically.
 
 ## What this build can do
 
-This build is the first of five Phase 1 stages. Today it can:
+This build covers the first two of five Phase 1 stages. Today it can:
 
 - check your prerequisites with `/peerfoil:setup`;
 - start a project, choose a pack and profile, and create the project records with
   `/peerfoil:start`;
 - run the decision interview with a fresh evaluator role;
+- write an architecture and Quality Contract from the recorded decisions with a fresh
+  architect role, have Codex review them in a fresh read-only session, and ask you to
+  accept them;
+- write an ordered plan of phases, stages, and small tasks with a fresh planner role,
+  have Codex review it, and ask you to approve the stage order;
 - show the project's state with `/peerfoil:status`;
-- continue the decision interview in a fresh chat with `/peerfoil:resume`; and
+- continue any of those steps in a fresh chat with `/peerfoil:resume`; and
 - view and change Advanced settings with `/peerfoil:settings`.
 
-Architecture, planning, production with Codex, change placement, phase review, repair,
-and lessons are **Coming soon** in later stages. The commands for them exist so that they
-can explain the boundary honestly.
+Production with Codex, change placement into the plan, phase review, repair, and lessons
+are **Coming soon** in later stages. The commands for them exist so that they can explain
+the boundary honestly. Production never starts before the reviewed plan is approved.
+
+When the Codex plugin is not installed, PeerFoil does not review your architecture or
+plan with the same model family and call it independent. It pauses and lets you either
+install the plugin or accept **Reduced assurance** for that one draft, which a fresh
+Claude reviewer then checks with the reduced label recorded.
 
 ## Prerequisites
 
@@ -49,7 +59,8 @@ can explain the boundary honestly.
 - Claude Code. The tested version is 2.1.260.
 - Node.js 18.18 or later, Codex CLI, and the official
   [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc). These are
-  needed for production and review; the decision interview works without them.
+  needed for independent review and production; the decision interview works without
+  them.
 - Your project's own development tools.
 
 ## Load the plugin for testing
@@ -70,9 +81,9 @@ on Windows, macOS, and Linux.
 | Command | What it does |
 |---|---|
 | `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, Node.js, Codex CLI, the Codex plugin, your profile, and pack tools |
-| `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, and runs the decision interview |
+| `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, runs the decision interview, and continues through the reviewed architecture and plan |
 | `/peerfoil:change <request>` | Adds a request to the decision interview; plan placement is Coming soon |
-| `/peerfoil:status` | Reports assurance, state, quality state, blocker, pending decisions, and next action |
+| `/peerfoil:status` | Reports assurance, state, architecture and plan status, quality state, blocker, pending decisions, and next action |
 | `/peerfoil:resume` | Continues the project from repository files in a fresh chat |
 | `/peerfoil:review-phase` | Coming soon: independent Claude and Codex review of a completed phase |
 | `/peerfoil:remember <lesson>` | Coming soon: candidate lessons that are checked before they become guidance |
@@ -81,15 +92,20 @@ on Windows, macOS, and Linux.
 ## Files the plugin creates
 
 The plugin writes only inside your repository, under `.peerfoil/`. This build creates
-`project.json`, `decisions.md`, and `history.jsonl`. These files belong to you. They hold
-decisions, workflow state, and small redacted transition records. They never hold
-provider tokens, raw prompts, or full conversations.
+`project.json`, `decisions.md`, `history.jsonl`, `architecture.md`, `quality.md`,
+`plan.json`, `plan.md`, and review records under `reviews/`. These files belong to you.
+They hold decisions, the architecture, the evidence contract, the plan, small redacted
+transition records, and review findings with the author and reviewer of each. They never
+hold provider tokens, raw prompts, or full conversations.
 
 ## Privacy
 
-The evaluator role receives a compact packet: the goal, pack, profile, a summary of your
-repository rules and README, and observable repository facts. It does not receive your
-chat history. Setup records tool versions only, never paths or user names.
+Each role receives a compact packet, never your chat history. The evaluator and
+architect receive the goal, pack, profile, a summary of your repository rules and README,
+observable repository facts, and the recorded decisions. The planner receives the
+accepted architecture and Quality Contract. A reviewer receives only the names of the
+frozen files to read and the questions to answer. Setup records tool versions only,
+never paths or user names.
 
 ## Layout
 
@@ -98,7 +114,10 @@ plugins/peerfoil/
   .claude-plugin/plugin.json   plugin manifest
   skills/<command>/SKILL.md    one skill per command
   agents/evaluator.md          fresh evaluator role
-  references/                  workflow, records, and lineage rules shared by skills
+  agents/architect.md          fresh architect role
+  agents/planner.md            fresh planner role
+  agents/claude-reviewer.md    fresh Claude reviewer for the reduced-assurance case
+  references/                  workflow, records, lineage, architecture, planning, and review rules shared by skills
   packs/<pack>/pack.json       Software, Generic, and Documentation packs
   templates/                   starting points for the .peerfoil/ project files
   LICENSE                      GNU General Public License, version 3
@@ -113,9 +132,10 @@ repository [NOTICE](../../NOTICE) for the complete notices.
 
 ## Conclusion
 
-This build proves the front of the workflow: prerequisites, a recorded goal, and a
-decision interview that a fresh chat can resume. Later stages add the architecture,
-plan, production, review, and lesson steps on the same records.
+This build proves the front half of the workflow: prerequisites, a recorded goal, a
+decision interview, and an architecture and plan that another model family reviews
+before you accept them. Later stages add production, phase review, repair, and lessons
+on the same records.
 
 ## Additional Resources
 

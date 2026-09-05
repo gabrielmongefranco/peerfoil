@@ -31,7 +31,7 @@ review, and do not approve or mark anything as reviewed.
 3. Tell the user, in plain language:
    - The completed workflow freezes the phase's decisions, architecture, plan, change
      sets, deliverables, evidence, and known risks, then gives that same frozen material
-     to one fresh Claude reviewer and one fresh Codex reviewer at high effort.
+     to one fresh Claude reviewer and one fresh Codex reviewer at medium effort.
    - Each reviewer works independently first. Findings are then compared, duplicates are
      combined without hiding disagreement, and a failed required check can never be
      dismissed by reviewer agreement.

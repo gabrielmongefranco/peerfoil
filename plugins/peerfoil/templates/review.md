@@ -5,11 +5,11 @@
 Project: `{{project_id}}` · Assurance: Guided
 
 - **Kind:** {{architecture | plan | change | phase | repair}}
-- **Frozen material:** source revision {{full Git commit hash | null}}, plan revision {{plan_revision}}, architecture revision {{architecture_revision}}
+- **Frozen material:** source revision {{full Git commit hash | null}}, plan revision {{plan_revision}}, architecture revision {{architecture_revision}}, quality revision {{quality_revision}}, pass {{pass}}
 - **Reviewer:** {{reviewer}} ({{tool}}, {{model}}, {{effort}}, {{lineage_root}}, session {{session | null}})
-- **Author under review:** {{role}} ({{tool}}, {{lineage_root}})
-- **Independence:** {{independent | secondary | reduced}} — {{one-line reason}}
-- **Passes used:** {{1}} of {{default 6, maximum 8}}
+- **Author under review:** {{role}} ({{tool}}, {{lineage_root}}, session {{session | null}})
+- **Independence:** {{independent | secondary | reduced}} — {{one-line reason, including the user's acceptance and its time for a reduced-assurance review}}
+- **Passes used:** {{1}} of {{the limit for this kind of review}}
 - **Reviewed at:** {{timestamp}}
 - **Decision:** {{approve | repair | block | undecided}}
 

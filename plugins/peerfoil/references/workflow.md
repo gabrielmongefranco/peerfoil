@@ -68,8 +68,8 @@ it to the user.
 |---|---|
 | Start → `define` | `project.json` exists with a pack, profile, and goal |
 | `define` → `architect` | Every decision is `answered` or `assumed`; no decision is `open` |
-| `architect` → `plan` | A different model family reviewed the architecture and the user accepted it |
-| `plan` → `produce` | A different model family reviewed the plan and the user approved the stage order |
+| `architect` → `plan` | A different model family reviewed the architecture and the user accepted it, or the user accepted a recorded reduced-assurance review |
+| `plan` → `produce` | A different model family reviewed the plan and the user approved the stage order; this build records the approval but cannot enter `produce` |
 | `produce` → `validate` | The change set and its author are recorded |
 | `validate` → `produce` | A required check failed |
 | `validate` → `review` | Required evidence matches the exact revision under review |
@@ -81,6 +81,15 @@ it to the user.
 
 No transition changes the model, effort, pack, evidence method, or repository rules
 silently.
+
+Inside `architect` and `plan`, the skill works through smaller steps that the files
+record: a draft is written, reviewed, revised when findings require it, and then accepted
+by the user. The steps are defined in [`architecture.md`](architecture.md),
+[`planning.md`](planning.md), and [`review.md`](review.md). A fresh chat finds the
+current step from the draft's status and the latest review, never from an old chat.
+
+Production may never begin while any decision is `open` or any `blocking` finding in the
+latest review of the architecture or plan has the disposition `open`.
 
 ## 5. When to stop and ask the user
 
@@ -110,8 +119,9 @@ Do not invent an answer, guess a credential, or mark a check complete to keep mo
 7. Use plain language with the user. Show the goal, the current state, the quality state,
    any blocker, and the next action. Keep model routing, effort, review limits, and other
    controls under `/peerfoil:settings`.
-8. Use high effort for production and repairs unless the user lowers it under Advanced
-   settings for small, reversible, low-risk work.
+8. Use each role's configured effort: high for the architect and medium for every other
+   role by default. Low effort is allowed only for small, reversible, low-risk work and
+   only when chosen under Advanced settings; repairs never run at low effort.
 
 ## 7. Build boundary
 
@@ -126,8 +136,11 @@ available** and a skill must say so instead of improvising it.
 | Status for a project in the `define` state | Yes |
 | Resuming the decision interview in a fresh chat | Yes |
 | Viewing and changing Advanced settings | Yes |
-| Architecture, Quality Contract, and plan creation with different-family review | Not yet |
-| Delegating a production task to Codex and recording its authorship | Not yet |
+| Architecture and Quality Contract creation, different-family review, and user acceptance | Yes |
+| Plan creation, different-family review, and stage-order approval | Yes |
+| Resuming architecture or planning in a fresh chat | Yes |
+| Status for a project in the `architect` or `plan` state | Yes |
+| Entering `produce` and delegating a task to Codex with recorded authorship | Not yet |
 | Placing a change request into the plan | Not yet |
 | Phase review, guided repair, and lessons | Not yet |
 

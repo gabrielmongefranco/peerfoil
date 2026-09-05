@@ -288,7 +288,7 @@ redacted before storage.
 At the end of each phase, the review coordinator freezes the deliverables, changes,
 evidence, requirements, plans, and known risks.
 
-Claude and Codex review that same package independently at extra-high effort. Findings are
+Claude and Codex review that same package independently at medium effort. Findings are
 normalized by location, requirement, severity, evidence, and proposed action. Duplicate
 findings are combined without hiding disagreement.
 

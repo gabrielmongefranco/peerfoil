@@ -54,8 +54,11 @@ Rules:
 
 - `architecture_revision`, `quality_revision`, and `plan_revision` are integers. They start
   at `0` before the record exists, become `1` when the record is first accepted, and
-  increase by one on every accepted change. The current values live in
+  increase by one on every accepted change. The current accepted values live in
   `project.json` under `revisions`.
+- A draft carries the next number after the last accepted revision. Every rewrite of that
+  draft before acceptance keeps the same number; the review record of each pass carries a
+  `pass` counter. `project.json` `revisions` changes only when the user accepts the draft.
 - Every task records the `plan_revision` and `architecture_revision` that created it. A
   task whose recorded revisions are older than the current ones is `stale` until the plan
   re-ties it.
@@ -105,7 +108,7 @@ File: `.peerfoil/project.json`. Validated by `schemas/project.schema.json`.
 
 Setting values:
 
-- `settings.roles.<role>`: `{ "tool": "claude-code" | "codex-cli", "model": "<id>" | "default", "effort": "medium" | "high" | "xhigh" }` for `evaluator`, `architect`, `planner`, `change_steward`, `producer`, and `repair_producer`.
+- `settings.roles.<role>`: `{ "tool": "claude-code" | "codex-cli", "model": "<id>" | "default", "effort": "low" | "medium" | "high" | "xhigh" }` for `evaluator`, `architect`, `planner`, `change_steward`, `producer`, and `repair_producer`.
 - `settings.phase_reviewers`: a list of exactly two seats with the same shape. The two
   seats must use different tools so the two families stay separate.
 - `settings.review`: `default_passes` (default 6), `max_passes` (default 8, never above 8),
@@ -134,18 +137,43 @@ File: `.peerfoil/decisions.md`, one section per decision.
 
 File: `.peerfoil/architecture.md`.
 
-Minimum content: revision, status (`draft`, `reviewed`, `accepted`, `superseded`), author
-actor, goals, users, boundaries, decisions applied, risks, a pointer to the Quality
-Contract, open decisions, and review references. Stage 2 of Phase 1 completes the section
-list.
+| Field | Content |
+|---|---|
+| `revision` | Architecture revision |
+| `status` | `draft`, `reviewed`, `accepted`, or `superseded` |
+| `author` | Actor record for the architect, including its session |
+| `written_at` | Timestamp |
+| `decisions_applied` | Decision identifiers the architecture relies on |
+| `quality_contract` | The Quality Contract revision written with this architecture |
+| `reviews` | Review identifiers, or none yet |
+| Sections | `Goals`, `Users`, `Boundaries`, `Dependencies`, `Data`, `Risks`, `Accessibility`, `Security`, `Privacy`, `Licensing`, and `Open decisions`, in that order |
+
+Every section holds substantive text or an explicit "None" with the reason. The
+`Dependencies` table names each dependency's license. The `Open decisions` section lists
+assumed and open decision identifiers.
 
 ### Quality Contract
 
 File: `.peerfoil/quality.md`.
 
-Minimum content: revision, status, author actor, and a list of evidence items. Each item
-has a `name`, a `kind` (`executable`, `inspection`, or `human`), a `level` (`required`,
-`recommended`, or `not-applicable`), and the procedure or command that produces it.
+| Field | Content |
+|---|---|
+| `revision` | Quality revision |
+| `status` | `draft`, `reviewed`, `accepted`, or `superseded` |
+| `author` | Actor record for the architect |
+| `written_at` | Timestamp |
+| `pack` | Pack identifier and version the contract was selected from |
+| `architecture_revision` | Architecture revision the contract belongs to |
+| `evidence` | Every evidence item declared by the pack, listed exactly once under `Required evidence`, `Recommended evidence`, or `Not applicable` |
+| `review_lenses` | The pack's lenses plus at most two project-specific lenses the user approved |
+| `completion` | The pack's completion requirements plus any project-specific requirement |
+
+Each evidence item has a `name` (as declared by the pack), a `kind` (`executable`,
+`inspection`, or `human`), a `level` (`required`, `recommended`, or `not-applicable`),
+and a procedure. An executable procedure is a command written as an argument list with
+its working directory. An inspection or human procedure is the list of steps and the
+expected result. A pack item whose default level is `required` may become
+`not-applicable` only with a stated reason; it is never lowered to `recommended`.
 
 ### Plan
 
@@ -243,14 +271,22 @@ File: `.peerfoil/reviews/rv-NNNN.md`.
 |---|---|
 | `id` | Review identifier |
 | `kind` | `architecture`, `plan`, `change`, `phase`, or `repair` |
-| `frozen` | `source_revision`, `plan_revision`, and `architecture_revision` reviewed |
+| `frozen` | `source_revision`, `plan_revision`, `architecture_revision`, and `quality_revision` reviewed |
+| `pass` | Review pass number for this artifact draft, starting at 1 |
 | `reviewer` | Actor record |
+| `author` | Actor record of the author under review |
 | `independence` | `independent`, `secondary`, or `reduced` |
 | `passes_used` | Number of review passes |
 | `findings` | Finding records |
 | `decision` | `approve`, `repair`, `block`, or `undecided` |
 | `remaining_risk` | Risks the reviewer accepts or flags |
 | `reviewed_at` | Timestamp |
+
+`approve` means no `blocking` finding remains. `repair` means the findings are specific
+and a revision by the author can resolve them. `block` means a decision or requirement
+must change first, so the user decides. The review transfer, the fallback when no
+different-family reviewer is available, and the pass limits are defined in
+[`review.md`](review.md).
 
 ### Lesson
 
@@ -281,11 +317,11 @@ File: `.peerfoil/history.jsonl`, one JSON object per line. Validated by
 | `transition_id` | Transition identifier |
 | `project_id` | Project identifier |
 | `at` | Timestamp |
-| `from_state`, `to_state` | Workflow states; `from_state` is `null` at project start |
+| `from_state`, `to_state` | Workflow states; `from_state` is `null` at project start. An accepted record that does not change the state, such as plan approval in a build without production, is recorded with the same state on both sides |
 | `actor` | Actor record for the coordinator that recorded the move |
 | `plan_revision` | Plan revision in effect |
 | `source_revision` | Git commit hash or `null` |
-| `refs` | Optional identifiers involved, such as `{ "decisions": ["d-0001"] }` |
+| `refs` | Optional identifiers involved, using only the keys `decisions`, `tasks`, `change_sets`, `evidence`, `reviews`, and `lessons`, for example `{ "decisions": ["d-0001"] }` |
 | `summary` | One redacted sentence |
 
 History lines never contain prompts, transcripts, tokens, or personal data.

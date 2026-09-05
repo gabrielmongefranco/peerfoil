@@ -53,7 +53,7 @@ PeerFoil must:
 - work natively on Windows, macOS, and Linux;
 - require no paid non-LLM service or hosted control plane;
 - keep normal setup simple and place detailed controls under Advanced settings;
-- use high effort for software work by default;
+- use bounded effort by default: high for architecture and medium for every other role;
 - prevent an agent from approving its own work;
 - prefer a different model family for independent review;
 - check every repair again with an independent model;
@@ -204,7 +204,7 @@ peerfoil resume
 - Authorship and review records that remain understandable after a fresh clone.
 - Redacted workflow history and task-boundary recovery.
 - One Claude and Codex phase review.
-- One guided high-effort repair with fresh different-family verification.
+- One guided repair with fresh different-family verification.
 - Native Windows, macOS, and Linux continuous integration.
 
 ### Release check
@@ -218,7 +218,7 @@ On all three operating systems, Core Alpha must:
 5. Resume safely after an interruption between tasks.
 6. Block an out-of-scope change or a change made directly in the user's checkout.
 7. Run a two-family review without allowing self-approval.
-8. Guide one high-effort repair and have another family check it.
+8. Guide one repair and have another family check it.
 9. Process the Documentation example without special document-only controller code.
 
 Core Alpha is a developer preview. It does not claim to contain the complete six-month
@@ -248,7 +248,7 @@ not require a controller change.
 
 Every phase will receive limited, evidence-based review from fresh Claude and Codex model
 families. Reviewers will work independently first, then compare specific findings. One
-accepted repair cycle may run at high effort, followed by a fresh independent check.
+accepted repair cycle may run, followed by a fresh independent check.
 
 Main work:
 

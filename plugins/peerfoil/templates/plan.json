@@ -11,7 +11,7 @@
     "role": "planner",
     "tool": "claude-code",
     "model": "default",
-    "effort": "high",
+    "effort": "medium",
     "lineage_root": "anthropic-claude",
     "session": null
   },

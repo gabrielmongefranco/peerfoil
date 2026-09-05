@@ -54,6 +54,10 @@ This build cannot place a change into a plan yet. Tell the user honestly:
   later stage of the current phase, a later phase, or the backlog, or should be declined,
   and every placement creates a new plan revision.
 - That capability is listed as "Not yet" in the workflow reference, section 7.
+- While the project is in `architect` or `plan` and the draft is not yet accepted, the
+  request can be raised when `/peerfoil:resume` asks the user to accept the architecture
+  or approve the stage order: choose "Change something" and describe it. The author
+  revises the draft and it is reviewed again.
 - Until then, keep the request in your own notes or as a repository issue. Do not edit
   `.peerfoil/` files by hand to record it.
 

@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/PeerFoil-Method.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-04
+Last Modified: 2026-09-05
 Summary: Defines the PeerFoil workflow, its safeguards, and its planned releases.
 Notes: See README for an overview and full license information.
 
@@ -97,13 +97,13 @@ the context and tools it needs.
 
 | Role | What it does | Default effort |
 |---|---|---:|
-| Evaluator | Finds the important unanswered questions | Extra high |
-| Architect | Turns approved decisions into an architecture and quality requirements | Extra high |
-| Planner | Divides the architecture into phases, stages, and small tasks | High |
-| Change steward | Places new requests into the current stage, a later stage, or the backlog | High; extra high for architecture changes |
-| Producer | Writes code or creates another project artifact | High |
-| Reviewers | Check the work independently and compare findings | Extra high |
-| Repair producer | Applies the fixes accepted by the reviewers | High |
+| Evaluator | Finds the important unanswered questions | Medium |
+| Architect | Turns approved decisions into an architecture and quality requirements | High |
+| Planner | Divides the architecture into phases, stages, and small tasks | Medium |
+| Change steward | Places new requests into the current stage, a later stage, or the backlog | Medium |
+| Producer | Writes code or creates another project artifact | Medium |
+| Reviewers | Check the work independently and compare findings | Medium |
+| Repair producer | Applies the fixes accepted by the reviewers | Medium |
 
 The default hosted setup is:
 
@@ -117,10 +117,20 @@ The default hosted setup is:
 PeerFoil checks which models and effort settings are actually available. It records any
 fallback. It does not quietly substitute a different model or lower effort.
 
-Production uses high effort by default. Medium effort is allowed only for work that is
-small, reversible, low risk, and easy to check. Security, personal data, migrations,
-permissions, uploads, public interfaces, new dependencies, concurrency, architecture,
-published claims, important financial assumptions, and every repair use high effort.
+The architect uses high effort because the architecture shapes every later task. Every
+other role uses medium effort by default. Low effort is allowed only for work that is
+small, reversible, low risk, and easy to check. High and extra-high effort are available
+for any seat under Advanced settings when a project needs them; they make a step
+noticeably slower.
+
+Every model call is also bounded. A reviewer run uses at most ten turns and returns at
+most ten findings; an evaluator, architect, planner, or change-steward run uses at most
+six turns. A run that reaches its limit without a result is retried once, then PeerFoil
+asks the user.
+
+Security, personal data, migrations, permissions, uploads, public interfaces, new
+dependencies, concurrency, architecture, published claims, important financial
+assumptions, and every repair never use low effort.
 
 ## 4. The complete workflow
 

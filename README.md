@@ -92,12 +92,15 @@ controls will stay under Advanced settings.
   respect.
 - **[Plugin README](plugins/peerfoil/README.md):** What the current build of the Claude
   Code plugin can do and how to load it for testing.
+- **[Brand Set](docs/branding.md):** PeerFoil's artwork, colors, placement, and reuse
+  terms.
 
 ## Status
 
-**Phase 1 in progress.** Stage 1 of PeerFoil Skills 0.1 is built and awaiting its
-independent review. It provides the plugin skeleton, the project-file formats, setup
-checks, Advanced settings, and the decision interview. Nothing has been released yet.
+**Phase 1 in progress.** Stages 1 and 2 of PeerFoil Skills 0.1 are built and awaiting
+their independent review. They provide the plugin skeleton, the project-file formats,
+setup checks, Advanced settings, the decision interview, and the reviewed architecture,
+Quality Contract, and plan. Nothing has been released yet.
 
 | Release | Target | What you will be able to do |
 |---|---:|---|

@@ -1,6 +1,6 @@
 ---
 name: status
-description: This skill should be used when the user runs /peerfoil:status or asks where a PeerFoil project stands, what is blocking it, or what to do next. It reads the accepted files under .peerfoil and reports the assurance level, state, quality state, blocker, pending decisions, and next action in plain language without calling a model or changing any file.
+description: This skill should be used when the user runs /peerfoil:status or asks where a PeerFoil project stands, what is blocking it, or what to do next. It reads the accepted files under .peerfoil and reports the assurance level, state, architecture and plan status, quality state, blocker, pending decisions, and next action in plain language without calling a model or changing any file.
 license: GPL-3.0-or-later
 allowed-tools: Read, Glob, Grep, Bash(git rev-parse *), Bash(git status *), Bash(git log *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *)
 ---
@@ -24,14 +24,16 @@ state. Change nothing. Do not reconstruct state from this chat.
 
 ## Read
 
-1. `${CLAUDE_PLUGIN_ROOT}/references/workflow.md`, sections 1, 3, and 7.
+1. `${CLAUDE_PLUGIN_ROOT}/references/workflow.md`, sections 1, 3, 4, and 7.
 2. The repository root from `git rev-parse --show-toplevel`. If it fails, say that the
    current folder is not inside a Git repository and suggest `/peerfoil:setup`. Stop.
 3. `.peerfoil/project.json`. If it is missing, say that this repository has no PeerFoil
    project yet and that `/peerfoil:start <idea>` creates one. Stop.
-4. `.peerfoil/decisions.md`, the last line of `.peerfoil/history.jsonl`, and
-   `.peerfoil/plan.json` when it exists.
-5. `git status --porcelain --branch` for the branch name and whether the tree is clean.
+4. `.peerfoil/decisions.md` and the last line of `.peerfoil/history.jsonl`.
+5. The header lines of `.peerfoil/architecture.md`, `.peerfoil/quality.md`, and
+   `.peerfoil/plan.json`, and the header lines of the highest-numbered file under
+   `.peerfoil/reviews/`, when they exist.
+6. `git status --porcelain --branch` for the branch name and whether the tree is clean.
 
 ## Check the project record
 
@@ -51,7 +53,9 @@ PeerFoil status — Assurance: Guided
 Project:   <name> (<project_id>) · Pack: <pack id> · Profile: <profile>
 State:     <state> — <one-line meaning from the workflow reference>
 Phase / stage / task: <ids and titles, or "none yet">
-Quality:   <evidence summary, or "No evidence yet">
+Architecture: <revision and status, and the latest review's decision and independence, or "none yet">
+Plan:      <revision and status, and the latest review's decision and independence, or "none yet">
+Quality:   <Quality Contract counts of required, recommended, and not-applicable items, and the evidence summary, or "No Quality Contract yet">
 Decisions: <answered> answered · <assumed> assumed · <open> open
 Blocker:   <blocker, or "none">
 Needs you: <what the user must decide or do, or "nothing">
@@ -63,10 +67,17 @@ Repository: <branch>, <clean | N changed files>
 Rules:
 
 - Always print `Guided`. Never print `Enforced` for this release, even if a file says so.
-- In the `define` state, `Next` is `/peerfoil:resume` when decisions are open. When every
-  decision is answered or assumed, say that the decisions are complete and that
-  architecture is not yet available in this build, as listed in the workflow reference,
-  section 7.
+- When a review's independence is `secondary` or `reduced`, print "Reduced assurance"
+  next to that artifact.
+- In the `define` state, `Next` is `/peerfoil:resume` whether decisions are open or the
+  interview is complete; say which.
+- In the `architect` and `plan` states, name the current sub-step from the draft's
+  status and the latest review: writing the draft, awaiting review, revising after
+  findings, awaiting the user's acceptance, or approved. `Next` is `/peerfoil:resume`
+  unless the plan is `accepted`; then say that the plan is approved and that production
+  is not yet available in this build, as listed in the workflow reference, section 7.
+- `Blocker` names an `open` decision, an open `blocking` finding, or the `paused_for`
+  reason when one exists.
 - For any capability the workflow reference marks "Not yet", say so instead of inventing
   a next step.
 - Keep the report under thirty lines. Do not paste file contents.

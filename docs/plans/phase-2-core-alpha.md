@@ -54,7 +54,7 @@ For one supported software project, Core Alpha then:
 6. ties evidence to the exact Git revision;
 7. integrates only in-scope work with passing required evidence;
 8. runs one fresh Claude and Codex phase review;
-9. guides one high-effort repair and independent verification when needed; and
+9. guides one repair and independent verification when needed; and
 10. resumes safely after an interruption at a completed task boundary.
 
 ## 2. Start gate from Phase 1
@@ -93,7 +93,7 @@ the new version.
 - A small redacted transition history.
 - Recovery at completed task boundaries.
 - One fixed Claude and Codex phase-review round.
-- One guided, high-effort repair and fresh different-family verification.
+- One guided repair and fresh different-family verification.
 - Processing of the Phase 1 Documentation fixture through the same controller contracts.
 
 ### Not included
@@ -475,7 +475,7 @@ accepted integration-branch change. This is the first end-to-end enforced PeerFo
    - writable local state and temporary directories.
 3. Implement `start` for one already-architected and planned software phase.
 4. Keep task selection deterministic. Do not let a model choose an ineligible task.
-5. Use high effort for the coding producer by default.
+5. Use the producer seat's configured effort, medium by default, for the coding producer.
 6. Require an accepted, different-family-reviewed architecture and plan before production.
 7. Stop after one task if the next transition needs a user decision or falls outside the
    Alpha path.
@@ -505,7 +505,7 @@ accepted integration-branch change. This is the first end-to-end enforced PeerFo
 ### Outcome
 
 Core freezes the completed phase, starts fresh Claude and Codex review sessions, records
-their findings, blocks self-approval, and guides one high-effort repair with fresh
+their findings, blocks self-approval, and guides one repair with fresh
 different-family verification.
 
 ### Tasks
@@ -517,7 +517,7 @@ different-family verification.
    - current evidence;
    - known risks, TODOs, deviations, and deferrals; and
    - artifact- and patch-level authorship.
-2. Start one fresh Claude reviewer and one fresh Codex reviewer at extra-high effort when
+2. Start one fresh Claude reviewer and one fresh Codex reviewer at medium effort when
    supported.
 3. Give both reviewers the same bundle and no producer transcript.
 4. Validate findings and normalize their location, requirement, severity, evidence,
@@ -526,7 +526,7 @@ different-family verification.
 6. Block an author's session and model family from satisfying independent approval of its
    own work.
 7. Implement one fixed review round. Do not add Phase 4's multi-pass reconciliation.
-8. When both reviews identify an accepted repair, prepare one high-effort repair task.
+8. When both reviews identify an accepted repair, prepare one repair task.
 9. Capture repair authorship, rerun affected evidence, and start a fresh eligible reviewer
    from another family.
 10. Stop for the user when the reviewers disagree materially or one repair does not clear
@@ -613,7 +613,7 @@ feature remains clearly labeled.
 | P2-05 | Completed task boundaries survive interruption | Recovery test matrix |
 | P2-06 | Out-of-scope and live-checkout mutations block | Seeded mutation tests |
 | P2-07 | One Claude and Codex phase review preserves independence | Frozen bundle and lineage matrix |
-| P2-08 | One high-effort repair receives independent verification | Repair commit, evidence, and review |
+| P2-08 | One repair receives independent verification | Repair commit, evidence, and review |
 | P2-09 | Documentation fixture uses shared controller code | Fixture trace and coverage review |
 | P2-10 | Accepted state reconstructs from Git after a fresh clone | Reconstruction test |
 | P2-11 | Windows, macOS, and Linux pass the Alpha matrix | CI and manual smoke-test record |
@@ -729,7 +729,7 @@ Phase 2 is complete only when:
 4. Required failures, stale plans, malformed output, and out-of-scope changes stop safely.
 5. Artifact- and patch-level authorship survives integration and reconstruction.
 6. No agent or model family independently approves its own material work.
-7. One repair completes at high effort with fresh different-family verification.
+7. One repair completes at the repair producer's effort with fresh different-family verification.
 8. The accepted project state survives a fresh clone without private transcripts or local
    provider sessions.
 9. Windows, macOS, and Linux pass the supported matrix.

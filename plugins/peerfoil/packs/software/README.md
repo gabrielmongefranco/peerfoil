@@ -26,13 +26,35 @@ The pack declares, in `pack.json`:
 - the artifacts a software project produces: source, tests, packaging, and documentation;
 - the typical stages, starting with a first working path that installs, starts, and
   completes one real user action;
-- the evidence a Quality Contract can select, such as builds, tests, linting, dependency
-  and security checks, a human user-journey check, and license checks;
+- the evidence a Quality Contract can select, covering correctness, reliability,
+  security, privacy, accessibility, maintainability, documentation, licensing, and
+  release readiness;
+- command hints for common toolchains, so the architect can fill in real build, test,
+  lint, and dependency-audit commands for Go, Node.js, Python, Rust, and .NET projects;
 - the four default review lenses; and
 - the tools that setup checks: Git always, plus the toolchain suggested by files such as
   `go.mod` or `package.json`.
 
+## Evidence at a glance
+
+| Area | Evidence | Kind | Default level |
+|---|---|---|---|
+| Correctness | `build`, `unit-tests` | executable | required |
+| Correctness | `user-journey` | human | required |
+| Reliability | `failure-handling-check` | inspection | recommended |
+| Security | `security-scan`, `dependency-audit` | executable | recommended |
+| Privacy | `privacy-check` | inspection | recommended |
+| Accessibility | `accessibility-check` | inspection | recommended |
+| Maintainability | `lint` | executable | recommended |
+| Maintainability | `maintainability-review` | inspection | recommended |
+| Documentation | `documentation-check` | inspection | recommended |
+| Licensing | `license-check` | inspection | required |
+| Release readiness | `release-check` | inspection | recommended |
+
+The architect may raise a recommended item to required for a project, and may mark an
+item not applicable with a stated reason. A required item cannot be lowered to
+recommended. Command hints are suggestions that the architect confirms against the
+repository; a project's own declared commands take precedence.
+
 The pack contains no executable logic. It cannot run commands itself, change repository
 rules, hide a failed check, or allow a model to approve its own work.
-
-This is the pack's first version. Phase 1, Stage 2 completes its practical checks.

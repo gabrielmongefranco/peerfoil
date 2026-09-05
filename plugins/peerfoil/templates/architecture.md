@@ -12,21 +12,47 @@ Project: `{{project_id}}` · Assurance: Guided · Revision: {{architecture_revis
 
 ## Goals
 
-{{What the project must achieve, in plain language.}}
+{{What the project must achieve, in plain language, and what a finished first phase looks like.}}
 
 ## Users
 
-{{Who uses the result and what they need from it.}}
+{{Who uses the result, what they need from it, and what they must not be exposed to.}}
 
 ## Boundaries
 
-{{What is inside the project, what is outside, and which existing tools or services it relies on.}}
+{{What is inside the project, what is outside, and which existing tools or services it relies on instead of rebuilding.}}
+
+## Dependencies
+
+| Dependency | Purpose | License | Notes |
+|---|---|---|---|
+| {{name and version, or "None"}} | {{why it is needed}} | {{license identifier}} | {{compatibility, maintenance, or alternative}} |
+
+## Data
+
+{{What data the project reads, stores, and sends; where it lives; its grain and keys when structured; and how missing values, encoding, time zones, and deletion are handled. Say "None" when the project handles no data of its own.}}
 
 ## Risks
 
 | Risk | Response |
 |---|---|
 | {{risk}} | {{response}} |
+
+## Accessibility
+
+{{The user-facing surfaces, the WCAG 2.2 Level AA requirements that apply to them, and how they will be checked. Say why when no surface applies.}}
+
+## Security
+
+{{Trust boundaries, inputs that must be validated, commands and queries that must be parameterized, permissions, and the actions that need explicit user approval.}}
+
+## Privacy
+
+{{Personal or sensitive data the project may touch, what is collected and retained, what leaves the computer and to whom, and what is redacted from logs and records. Say "No personal data" when true.}}
+
+## Licensing
+
+{{The project's own license, the license policy for dependencies and copied material, and the notices that must be kept.}}
 
 ## Open decisions
 
