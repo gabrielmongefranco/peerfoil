@@ -117,9 +117,10 @@ controls will stay under Advanced settings.
 
 ## Status
 
-**Phase 1 in progress.** Stage 1 of PeerFoil Skills 0.1 is built and awaiting its
-independent review. It provides the plugin skeleton, the project-file formats, setup
-checks, Advanced settings, and the decision interview. Nothing has been released yet.
+**Phase 1 in progress.** Stages 1 and 2 of PeerFoil Skills 0.1 are built, and Stage 2
+has received its independent Codex review. They provide the plugin skeleton, the
+project-file formats, setup checks, Advanced settings, the decision interview, and the
+reviewed architecture, Quality Contract, and plan. Nothing has been released yet.
 
 | Release | Target | What you will be able to do |
 |---|---:|---|
