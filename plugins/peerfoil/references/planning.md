@@ -40,6 +40,8 @@ Build a compact packet. Include only:
 - the pack's artifacts and typical stages;
 - the full text of `.peerfoil/architecture.md` and `.peerfoil/quality.md`;
 - every decision from `decisions.md` with its identifier, question, answer, and status;
+- every finding with disposition `deferred` in the architecture reviews, each of which
+  the plan must carry as a task or a requirement;
 - repository facts: toolchain markers, top-level directories, and whether tests exist;
 - the identifier and revision rules from
   `${CLAUDE_PLUGIN_ROOT}/references/records.md`, section 1, and the highest existing

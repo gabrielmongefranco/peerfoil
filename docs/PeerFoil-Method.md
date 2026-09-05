@@ -262,6 +262,9 @@ Review is intentionally limited:
 - One pass is saved for checking the repaired result.
 - Choosing the exact repair producer uses three passes by default and four at most.
 - PeerFoil allows one automatic repair cycle.
+- After the first pass, a reviewer decides on blocking findings only and only on the
+  material that changed; anything less severe goes to the user as a deferred item, and
+  a finding on unchanged material the reviewer already cleared is declined.
 - If serious disagreement remains, the user decides.
 
 ## 8. Evidence and quality checks

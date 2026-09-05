@@ -53,6 +53,7 @@ that supersedes the old one, never by editing history.
 | D-0021 | Wall-clock limits: ten minutes for a review, draft, or task; five for small steps | Accepted | Phase 1, Stage 2 |
 | D-0022 | Two-stage deadlines: an "answer now" nudge, then a kill one minute later | Accepted; Skills half narrowed by D-0023 | Phase 1, Stage 2 |
 | D-0023 | In Skills 0.1 the nudge exists only on the `codex exec` path; lineage comes from the model identifier | Accepted | Phase 1, Stage 2 |
+| D-0024 | Later review passes decide on blocking findings only, on changed material only | Accepted | Phase 1, Stage 2 |
 
 ## D-0001 — Plugin location
 
@@ -413,6 +414,25 @@ that supersedes the old one, never by editing history.
   independent, and that the pass limit could defer a blocking finding.
 - **Consequences:** The Codex, review, lineage, architecture, and planning references
   and the review output contract say so. Core implements the MCP nudge itself.
+
+## D-0024 — Convergence of later review passes
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** Pass 1 of a review may report any severity. Passes 2 and 3 confirm the
+  earlier repairs and decide on `blocking` findings only, and only on the material the
+  revision changed, which the author lists in its notes. A `major`, `minor`, or `note`
+  finding returned on a later pass is recorded as `deferred` for the user and handed to
+  the planner as a task or requirement. A later-pass finding on material that was not
+  changed and that no earlier pass flagged is recorded as `declined`, because the
+  earlier pass cleared it and the new finding is a sign of an unreliable reviewer.
+  When only deferred or declined findings remain, the decision is `approve`.
+- **Options considered:** Letting every pass raise any severity, which is how the Stage
+  2 reviews ran; limiting only the number of passes.
+- **Reason:** Both Stage 2 reviews consumed all three passes because each revision drew
+  new major findings, some on material the earlier pass had accepted. Under that
+  behavior the pass and time limits cannot be met, and the reviews never converged.
+- **Consequences:** The review reference, the Claude reviewer, the planner packet, and
+  the method say so. Phase review in Stage 4 applies the same rule per pass.
 
 ## Conclusion
 

@@ -51,7 +51,8 @@ source for findings.
   finding to look thorough. An empty findings list with `approve` is a valid result.
 - Be brief. Report at most ten findings, most severe first, with one or two sentences of
   evidence and one or two of recommendation each. On a later pass, confirm the earlier
-  repairs and report only new blocking or major findings.
+  repairs and report only new `blocking` findings on the material the revision changed;
+  material you did not flag before and that has not changed is already cleared.
 - You have at most ten turns and about ten minutes. Read each file once, in the order
   given, and answer; do not explore beyond the files the packet names unless a finding
   depends on it.
