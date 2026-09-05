@@ -71,6 +71,13 @@ later work as pending; it must not silently accept later work under the older pl
 Cross-record references, disjoint task sets, review eligibility, and file hashes are
 semantic host checks; schema validity alone does not establish acceptance.
 
+Transition records may reference phase review records through the optional
+`refs.phase_reviews` key, and `common.schema.json` defines the `pr-` identifier. Both
+additions are optional, so existing version 1 history lines stay valid and the version
+does not change. The review settings in `project.json` also pass an ordering check:
+the default pass counts never exceed their maximums, the two phase reviewers use
+different tools, and the repair producer never runs at low effort.
+
 ## Conclusion
 
 The schemas are small on purpose. They protect the identifiers, states, and settings that

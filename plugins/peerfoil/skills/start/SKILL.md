@@ -187,8 +187,8 @@ Show the user, in plain language:
 - the files written; and
 - `Assurance: Guided`.
 
-Then state the current task, evidence, blocker, and next action. Phase review, guided
-repair, and lessons remain Coming soon. When decisions remain open or a step stopped, say that
+Then state the current task, evidence, blocker, and next action. At the phase boundary,
+name `/peerfoil:review-phase`. When decisions remain open or a step stopped, say that
 `/peerfoil:resume` continues from the files. In every case say that a fresh chat can
 resume from the files under `.peerfoil/` without this conversation.
 

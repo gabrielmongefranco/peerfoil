@@ -111,4 +111,6 @@ the substantive content the reviewer inspected.
 If paused, retain the recoverable prior state in history. Resume only after the reason
 is resolved, the accepted revision chain is coherent, and production gates pass again.
 For affected work, collect new capture/evidence before reporting current validation.
-Stop at the phase review boundary; change intake does not implement Stage 4 repairs.
+Stop at the phase review boundary. A repair enters the plan through [repair.md](repair.md),
+which uses this intake with both reviewers' recorded agreement standing in for a
+separate plan review.

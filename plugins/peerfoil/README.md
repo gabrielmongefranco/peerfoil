@@ -29,7 +29,7 @@ written instructions, and nothing here enforces a step mechanically.
 
 ## What this build can do
 
-This build covers the first three of five Phase 1 stages. Today it can:
+This build covers the first four of five Phase 1 stages. Today it can:
 
 - check your prerequisites with `/peerfoil:setup`;
 - start a project, choose a pack and profile, and create the project records with
@@ -45,12 +45,20 @@ This build covers the first three of five Phase 1 stages. Today it can:
 - place changes and discovered work with `/peerfoil:change`, revising the plan while
   preserving unrelated completed work;
 - show the project's state, current evidence, and blockers with `/peerfoil:status`;
+- review a completed phase with `/peerfoil:review-phase`: one fresh Claude reviewer
+  and one fresh Codex reviewer read the same frozen bundle, their findings are merged
+  without hiding disagreement, and the phase is approved, repaired once, or handed to
+  you;
+- guide that one repair with an eligible repairer, rerun the affected checks, and
+  obtain fresh verification from a different model family;
+- keep a lesson with `/peerfoil:remember` as a candidate that the next phase review
+  verifies, and promote it without editing `AGENTS.md`;
 - continue any of those steps in a fresh chat with `/peerfoil:resume`; and
 - view and change Advanced settings with `/peerfoil:settings`.
 
-Phase review, guided repair, and lessons are **Coming soon** in later stages. Their
-commands exist so that they can explain
-the boundary honestly. Production never starts before the reviewed plan is approved.
+Production never starts before the reviewed plan is approved, and a phase is approved
+only after both reviewers and you have seen every finding. Mechanical enforcement,
+controller-run evidence, and crash recovery remain **Coming soon** in PeerFoil Core.
 
 When Codex is not available, PeerFoil does not review your architecture or plan with
 the same model family and call it independent. It pauses and lets you either
@@ -89,8 +97,8 @@ on Windows, macOS, and Linux.
 | `/peerfoil:change <request>` | Places a request or discovered work and records a plan revision with affected tasks and evidence |
 | `/peerfoil:status` | Reports assurance, state, architecture and plan status, quality state, blocker, pending decisions, and next action |
 | `/peerfoil:resume` | Continues the project from repository files in a fresh chat |
-| `/peerfoil:review-phase` | Coming soon: independent Claude and Codex review of a completed phase |
-| `/peerfoil:remember <lesson>` | Coming soon: candidate lessons that are checked before they become guidance |
+| `/peerfoil:review-phase` | Freezes the phase, runs fresh Claude and Codex reviews, merges findings, and approves, repairs once, or stops for you |
+| `/peerfoil:remember <lesson>` | Records a candidate lesson with its trigger, scope, evidence, and conflicts; promotes it only after verification and your approval |
 | `/peerfoil:settings` | Views and changes Advanced settings: role seats and review limits |
 
 ## Files the plugin creates
@@ -99,7 +107,8 @@ The coordinator writes project records under `.peerfoil/`. Codex writes only tas
 deliverables inside your repository. This build creates
 `project.json`, `decisions.md`, `history.jsonl`, `architecture.md`, `quality.md`,
 `plan.json`, `plan.md`, prior plans under `plans/`, captures, patches, and check results
-under `evidence/`, and review records under `reviews/`. These files belong to you.
+under `evidence/`, reviewer findings and phase review records under `reviews/`, and
+lessons under `lessons/`. These files belong to you.
 They hold decisions, the architecture, the evidence contract, the plan, small redacted
 transition records, and review findings with the author and reviewer of each. They never
 hold provider tokens, raw prompts, or full conversations.
@@ -119,8 +128,12 @@ into Git. Captures and logs are inspected for private content before retention.
 ## Production and recovery limits
 
 A task reaches `validated` when the host retains passing required checks for its exact
-inputs. It is still awaiting independent review. This build stops at phase review and
-never calls a phase approved. Missing required evidence stays blocking.
+inputs. It is accepted only when the phase review approves the phase. A phase review
+records what each reviewer saw and where they disagreed; a required check that failed
+or went stale is never cleared by reviewer agreement. One repair cycle is allowed per
+review round, and its verification comes from a different model family than the
+repairer. Pass limits are stated and recorded, not enforced. Missing required
+evidence stays blocking.
 
 Use `/peerfoil:resume` in a fresh chat to continue from project files. Uncommitted
 captures include file hashes so the host can detect changed inputs. A pending capture,
@@ -143,8 +156,9 @@ plugins/peerfoil/
   agents/evaluator.md          fresh evaluator role
   agents/architect.md          fresh architect role
   agents/planner.md            fresh planner role
-  agents/claude-reviewer.md    fresh Claude reviewer for the reduced-assurance case
-  references/                  workflow, records, lineage, codex, architecture, planning, and review rules shared by skills
+  agents/claude-reviewer.md    fresh Claude reviewer for drafts, phase bundles, and repairs
+  agents/repair-coordinator.md fresh role that proposes bounded repair tasks from agreed findings
+  references/                  workflow, records, lineage, codex, architecture, planning, production, evidence, changes, review, phase-review, repair, and lessons rules shared by skills
   packs/<pack>/pack.json       Software, Generic, and Documentation packs
   templates/                   starting points for the .peerfoil/ project files
   LICENSE                      GNU General Public License, version 3
@@ -160,8 +174,9 @@ repository [NOTICE](../../NOTICE) for the complete notices.
 ## Conclusion
 
 This build guides decisions, reviewed planning, bounded production, project checks,
-change intake, and fresh-chat continuation. Later stages add phase review, repair, and
-lessons on the same records. The complete release still needs its three-platform checks.
+change intake, two-family phase review, one guided repair, lessons, and fresh-chat
+continuation. The complete release still needs its worked examples and
+three-platform checks.
 
 ## Additional Resources
 

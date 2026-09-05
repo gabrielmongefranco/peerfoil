@@ -460,8 +460,8 @@ chat.
 ### Stage 3 implementation and verification status
 
 Implemented on 2026-09-05 on `phase-1-stage-3`. The implementation received independent repair verification; stage acceptance remains
-pending the live checks listed below. Phase 1 is not complete. Stage 4 has
-not begun. D-0025 in the [decision log](../decision-log.md) records the production and
+pending the live checks listed below. Phase 1 is not complete. Stage 4 is
+implemented and recorded in section 10. D-0025 in the [decision log](../decision-log.md) records the production and
 revision choices.
 
 The implementation adds shared production, evidence, and change references; connects
@@ -590,6 +590,102 @@ repair can be guided and checked by an eligible different model family.
 - self-approval is visibly blocked in the records;
 - exhausted or unresolved review stops for the user instead of inventing consensus; and
 - lessons survive the chat without silently changing `AGENTS.md`.
+
+### Stage 4 implementation and verification status
+
+Implemented on 2026-09-05 on `phase-1-stage-4` by Claude Code (`anthropic-claude`),
+reviewed independently by Codex in three passes as recorded below, and exercised in
+fresh sessions on a seeded fixture. Stage acceptance remains pending the live checks
+listed at the end. Phase 1 is not complete. Stage 5 has not begun. D-0026 to D-0028 in
+the [decision log](../decision-log.md) record the phase review record, the repair
+selection rule, and the lesson lifecycle.
+
+The implementation adds `references/phase-review.md`, `references/repair.md`, and
+`references/lessons.md`; the `templates/phase-review.md` record; the fresh
+`agents/repair-coordinator.md` role; the phase and repair review guidance in
+`agents/claude-reviewer.md`; working `review-phase` and `remember` skills; the
+`review`, `repair`, and `approve` states in `resume` and `status`; the `pr-` identifier
+and the optional `refs.phase_reviews` key in the schemas; `Item` and `Lens` lines in
+the review template and `Verification` and `Promoted to` lines in the lesson template;
+a review-settings ordering check in the static checks; and `tests/stage4_checks.py`.
+Deviations from the layout in section 4: the phase review record `pr-NNNN` was added
+because the shared finding list and item-level independence needed a record of their
+own; `references/phase-review.md`, `repair.md`, and `lessons.md` hold the procedures
+so `review.md` stays the transfer contract; and repair selection is a rule rather than
+model passes, as D-0027 explains.
+
+Corrections to the merged Stage 3 work, found while reviewing it: the planning
+reference now tells the coordinator to write the plan's empty `changes` list that the
+template and records reference require; the review reference now selects the primary
+reviewer by lineage root rather than by tool, as D-0023 requires; the change skill's
+tool list gained the read-only `git log` probe that resume and start already allow;
+and the decision log index gained its missing D-0025 row.
+
+Checks that ran on Windows with Claude Code 2.1.260, Codex CLI 0.153.0 from the VS
+Code extension with its MCP server registered, and Python 3.14:
+
+| Check | Result |
+|---|---|
+| `python tests/static_checks.py`, `python tests/stage3_checks.py`, `python tests/stage4_checks.py` | Pass; 88 files; 6 and 18 tests |
+| `bash .github/scripts/conformance.sh` using Git for Windows Bash | Pass; includes the three Python checks |
+| `claude plugin validate --strict .` and `claude plugin validate --strict plugins/peerfoil` | Pass |
+| Fresh `/peerfoil:status` on the seeded fixture in the `review` state | Pass, 88 seconds, 25 turns; read-only; reported the seeded evidence record that claims a pass without retained output as the blocker and named `/peerfoil:review-phase` as the next step after reconciliation |
+| Fresh `/peerfoil:remember` on the fixture | Pass, 104 seconds, 24 turns; wrote `ls-0002` as a `candidate` with rule, trigger, scope, evidence, conflicts, and destination, the user as its author, and a valid `refs.lessons` transition; changed nothing else |
+| Fresh `/peerfoil:review-phase` on the fixture with a seeded missing-argument defect and a seeded false inspection pass | Ran 21 minutes and 97 turns to a paused repair. Froze fifteen items with a bundle digest and item-level primary reviewers; ran the Claude reviewer (82 seconds) and the Codex MCP reviewer (199 seconds) on the identical packet; both returned `repair` with the seeded defect and the false evidence record as agreed `blocking` findings; merged nine rows without dropping any; ran the comparison pass; decided `repair`; the repair coordinator proposed one task; change intake recorded `cr-0001`, plan revision 2, and `tk-002`; the Codex repair producer launch failed on the account's usage limit and the run recorded the change set as `blocked` with no edits, paused with the recovery action, and started no substitute writer. Both reviewers verified lesson `ls-0001` |
+
+The fixture is a one-file Python greeting command whose task is `validated` with four
+required evidence records, one of which claims a pass with no retained output. Its
+architecture and plan acceptances are seeded synthetic preconditions. Raw prompts,
+provider events, and stream transcripts remain outside Git.
+
+Defects the live run showed, fixed in the references and not re-run: the coordinator
+tried to continue the pass-1 Claude agent and the pass-1 Codex thread for the
+comparison pass, which D-0023 forbids, so `phase-review.md` section 9 now requires a
+fresh reviewer run per pass; the Codex comparison pass returned `block` without naming
+a decision, so a comparison decision is now `approve` or `repair` and a bare `block` is
+rejected; and human-authored items were marked reduced under the first draft of the
+manifest rule, which now gives them the first eligible seat.
+
+### Stage 4 independent review
+
+Reviewer: Codex CLI 0.153.0 through `codex exec` in a read-only sandbox at medium
+effort, seat model `gpt-6-astra`, lineage `openai-gpt`, reading the working tree on
+2026-09-05. Author of the reviewed material: Claude Code (`anthropic-claude`).
+Independence: independent. The reviewer self-reported its model as unknown, recorded as
+an absent cross-check.
+
+| Pass | Thread | Duration | Decision | Result |
+|---:|---|---:|---|---|
+| 1 | `01a071d7-c630-7df1-ab22-fecd09800ace` | 280 s | `repair` | Six blocking findings: a repair could approve a phase without refreshing retained tasks' evidence; a verified repair skipped the disposition and change-intake gate; a disputed blocking finding could enter repair without the user; the repair state sequence bypassed repair recovery on resume; unknown lineage had no acceptance path; conflicting lesson verdicts could verify a lesson. Four major: repair tasks depended on tasks made stale; resume tables missed interruption points; pass counts reset across rounds; the repair verification did not identify the repaired snapshot |
+| 2 | `01a071df-97f6-77f3-93ea-b4ea819edf54` | 134 s | `repair` | Seven findings confirmed repaired, three partial, and one new blocking finding: the review-state resume checked the original bundle digest before dispatching a repair, which would close a legitimately repaired round |
+| 3 | `01a071e5-654a-7163-8bbe-d22d1fd95551` | 60 s | `approve` | All remaining findings confirmed repaired; no blocking finding |
+
+Every finding was addressed in `phase-review.md`, `repair.md`, `lessons.md`,
+`workflow.md`, `records.md`, the resume skill, and the review template. The comparison
+decision rule added after the live run has not been reviewed by Codex, because the
+three-pass limit applied to this review too. The reviewer's remaining risk stands:
+these are guided procedures whose runtime enforcement the text cannot establish.
+
+After the Codex usage limit was lifted the same day, two fresh `/peerfoil:resume`
+sessions completed the cycle on the same fixture:
+
+| Check | Result |
+|---|---|
+| Fresh `/peerfoil:resume` with Codex access restored | Pass, 9 minutes, 73 turns; returned from `paused` to `repair`, sent `tk-002` to the Codex repair producer as `cs-0003` (attempt 2, with `cs-0002` retained as the blocked attempt), captured a patch touching only `hello.py` and `check.py`, reran unit-tests, license-check, and failure-handling-check with retained output, recorded the human user-journey item as `not-run`, and paused for the person instead of supplying it |
+| Fresh `/peerfoil:resume` with the user's journey result in the request | Pass, 10 minutes, 72 turns; recorded `ev-0008` with the human actor, validated the repair on a recomputed snapshot, froze the second manifest with a repair digest, launched a fresh Claude verifier (independent of the Codex repairer) that confirmed all five findings repaired, deferred the four minor and note rows into the plan as `cr-0002` at plan revision 3, and approved `ph-01` with `pr-0001` `approved` and the `review` to `approve` transition recorded |
+
+Remaining checks: the `approve` to `produce` handoff into a second phase, which the
+fixture's single-phase plan could not exercise; a disputed blocking finding reaching the user; a bundle digest
+mismatch closing a round; a reviewer reaching its pass limit; promotion of a verified
+lesson and an unverified hint; the Codex `exec` fallback for a phase review; macOS and
+Linux sessions; and human keyboard and screen-reader review. These remain visible
+verification gaps for the Stage 5 platform matrix; no three-platform release or
+completed Phase 1 is claimed. Plain-text status and review reports use named states
+and dispositions without color dependence.
+
+Durable lesson: a comparison pass that reuses a reviewer's earlier session looks
+cheaper but breaks the fresh-session rule silently; state the fresh launch explicitly
+wherever a later pass is described, and name the tools a skill must not call.
 
 ## 11. Stage 5 — Examples, platform checks, and release
 

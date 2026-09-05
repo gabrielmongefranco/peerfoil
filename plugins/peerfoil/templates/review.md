@@ -5,7 +5,7 @@
 Project: `{{project_id}}` · Assurance: Guided
 
 - **Kind:** {{architecture | plan | change | phase | repair}}
-- **Frozen material:** source revision {{full Git commit hash | null}}, plan revision {{plan_revision}}, architecture revision {{architecture_revision}}, quality revision {{quality_revision}}, pass {{pass}}
+- **Frozen material:** source revision {{full Git commit hash | null}}, plan revision {{plan_revision}}, architecture revision {{architecture_revision}}, quality revision {{quality_revision}}, pass {{pass}}, digest {{bundle or repair digest for a phase or repair review | —}}, change set {{cs-NNNN for a repair review | —}}
 - **Reviewer:** {{reviewer}} ({{tool}}, {{model}}, {{effort}}, {{lineage_root}}, session {{session | null}})
 - **Author under review:** {{role}} ({{tool}}, {{lineage_root}}, session {{session | null}})
 - **Independence:** {{independent | secondary | reduced}} — {{one-line reason, including the user's acceptance and its time for a reduced-assurance review}}
@@ -19,6 +19,8 @@ Project: `{{project_id}}` · Assurance: Guided
 ### {{fd-0001}} — {{short title}}
 
 - **Location:** {{file, section, or path}}
+- **Item:** {{bundle item identifier for a phase or repair review | —}}
+- **Lens:** {{review lens identifier for a phase or repair review | —}}
 - **Requirement:** {{rule, decision, or contract item}}
 - **Severity:** {{blocking | major | minor | note}}
 - **Evidence:** {{what the reviewer observed}}

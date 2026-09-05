@@ -4,7 +4,7 @@ description: This skill should be used when the user runs /peerfoil:change or as
 argument-hint: "[the request or change]"
 license: GPL-3.0-or-later
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git ls-files *), Bash(git ls-tree *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(Get-Date *)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git ls-files *), Bash(git ls-tree *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(git log *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *), PowerShell(Get-Date *)
 ---
 <!--
 This file is part of PeerFoil.

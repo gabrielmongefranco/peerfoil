@@ -76,7 +76,8 @@ it to the user.
 | `review` → `approve` | No blocking finding remains |
 | `review` → `repair` | Findings are specific and both reviewers agree on the repair |
 | `repair` → `validate` | Affected checks ran again |
-| `repair` → `approve` | Another model family verified the repair |
+| `repair` → `approve` | Reached through `validate` and `review`: affected checks ran again and another model family verified the repair; `workflow.state` stays `repair` while the repair is produced and captured |
+| `approve` → `produce` | The user authorized the next phase in this chat; its first task is dependency-ready; production gates pass |
 | Any → `paused` | The user must decide, authenticate, approve, or accept a risk |
 
 No transition changes the model, effort, pack, evidence method, or repository rules
@@ -85,8 +86,10 @@ silently.
 Inside `architect` and `plan`, the skill works through smaller steps that the files
 record: a draft is written, reviewed, revised when findings require it, and then accepted
 by the user. The steps are defined in [`architecture.md`](architecture.md),
-[`planning.md`](planning.md), and [`review.md`](review.md). A fresh chat finds the
-current step from the draft's status and the latest review, never from an old chat.
+[`planning.md`](planning.md), and [`review.md`](review.md). Inside `review` and
+`repair`, the phase review record and [`phase-review.md`](phase-review.md) and
+[`repair.md`](repair.md) define the steps. A fresh chat finds the current step from
+the records' status and the latest review, never from an old chat.
 
 Production may never begin while any decision is `open` or any `blocking` finding in the
 latest review of the architecture or plan has the disposition `open`.
@@ -144,10 +147,14 @@ available** and a skill must say so instead of improvising it.
 | Entering `produce` and delegating one task to Codex with recorded authorship | Yes |
 | Host-run evidence, production status, and task-boundary resume | Yes |
 | Placing a change request into the plan with revision traceability | Yes |
-| Phase review, guided repair, and lessons | Not yet |
+| Phase review by fresh Claude and Codex reviewers of one frozen bundle, with merged findings | Yes |
+| One guided repair cycle with an eligible repairer and fresh different-family verification | Yes |
+| Candidate lessons, their verification at phase review, and promotion without editing rules | Yes |
+| Starting the next phase after approval, with the user's authorization | Yes |
 
-When a user asks for a capability marked "Not yet", explain what the completed workflow
-will do, point to the files where its records will live, and stop.
+Mechanical enforcement, controller-run evidence, crash recovery, direct provider
+processes, and MCP or local-model routing belong to PeerFoil Core. When a user asks
+for one of them, explain what Core will do and stop.
 
 ## 8. Project files
 
@@ -164,7 +171,7 @@ Accepted project information lives under `.peerfoil/` in the user's repository:
   history.jsonl     small, redacted records of accepted transitions
   plans/           immutable prior accepted plan revisions
   evidence/         evidence records, change sets, captured patches, and snapshots
-  reviews/          findings, decisions, repairs, and approvals
+  reviews/          reviewer findings, phase review records, repairs, and approvals
   lessons/          candidate and accepted lessons
 ```
 

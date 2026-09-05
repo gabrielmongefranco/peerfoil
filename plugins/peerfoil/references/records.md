@@ -36,6 +36,7 @@ assigned in creation order. A number is never reused, even after an item is remo
 | Evidence | `ev-` | `ev-0001` | `^ev-[0-9]{4,}$` |
 | Finding | `fd-` | `fd-0001` | `^fd-[0-9]{4,}$` |
 | Review | `rv-` | `rv-0001` | `^rv-[0-9]{4,}$` |
+| Phase review | `pr-` | `pr-0001` | `^pr-[0-9]{4,}$` |
 | Lesson | `ls-` | `ls-0001` | `^ls-[0-9]{4,}$` |
 | Transition | `tr-` | `tr-0001` | `^tr-[0-9]{4,}$` |
 
@@ -286,6 +287,8 @@ Inside a review record.
 |---|---|
 | `id` | Finding identifier |
 | `location` | File, section, or path |
+| `item` | The bundle item identifier, for phase and repair reviews; `—` otherwise |
+| `lens` | The review lens identifier, for phase and repair reviews; `—` otherwise |
 | `requirement` | The rule, decision, or contract item it concerns |
 | `severity` | `blocking`, `major`, `minor`, or `note` |
 | `evidence` | What the reviewer observed |
@@ -301,7 +304,7 @@ File: `.peerfoil/reviews/rv-NNNN.md`.
 |---|---|
 | `id` | Review identifier |
 | `kind` | `architecture`, `plan`, `change`, `phase`, or `repair` |
-| `frozen` | `source_revision`, `plan_revision`, `architecture_revision`, and `quality_revision` reviewed |
+| `frozen` | `source_revision`, `plan_revision`, `architecture_revision`, and `quality_revision` reviewed; for a phase or repair review also the bundle or repair digest and, for a repair, the change set |
 | `pass` | Review pass number for this artifact draft, starting at 1 |
 | `reviewer` | Actor record |
 | `author` | Actor record of the author under review |
@@ -317,7 +320,35 @@ File: `.peerfoil/reviews/rv-NNNN.md`.
 and a revision by the author can resolve them. `block` means a decision or requirement
 must change first, so the user decides. The review transfer, the fallback when no
 different-family reviewer is available, and the pass limits are defined in
-[`review.md`](review.md).
+[`review.md`](review.md). A `phase` review is one reviewer's pass over a frozen
+bundle and belongs to a phase review record; a `repair` review is the verification
+of one repair. Both are coordinated by [`phase-review.md`](phase-review.md) and
+[`repair.md`](repair.md).
+
+### Phase review
+
+File: `.peerfoil/reviews/pr-NNNN.md`, one per review round of a phase.
+
+| Field | Content |
+|---|---|
+| `id` | Phase review identifier |
+| `phase` | Phase identifier |
+| `status` | `open`, `repair`, `approved`, `paused`, or `closed-without-approval` |
+| `round` | Review round for the phase, starting at 1 |
+| `frozen_at`, `source_revision` | When the bundle was frozen and the commit, or `null` for an uncommitted tree |
+| `plan_revision`, `architecture_revision`, `quality_revision` | Accepted revisions in the bundle |
+| `bundle_digest` | SHA-256 of the manifest rows, computed with the evidence snapshot recipe |
+| `reviewers` | The two phase reviewer seats with passes used and the limits |
+| `reviews` | Every `rv-` record of the round, by reviewer and pass |
+| `manifest` | One row per bundle item: identifier, kind, path, SHA-256, author, primary reviewer |
+| `required_evidence` | Evidence records of the phase and whether each is current |
+| `open_items` | Backlog and declined changes, deferred findings and tasks, skipped or limited checks |
+| `shared_findings` | The merged finding list: both identifiers, both severities, agreement, disposition |
+| `repair` | The repair change request, task, repairer, evidence rerun, and verification, or none |
+| `decision`, `independence` | `pending`, `approve`, `repair`, or `user-decision`; `independent` or `reduced` with the reason |
+
+The manifest and shared list are inspectable evidence of what the reviewers saw and
+where they disagreed. They are not tamper-proof in this release.
 
 ### Lesson
 
@@ -334,7 +365,9 @@ File: `.peerfoil/lessons/ls-NNNN.md`.
 | `destination` | `decision`, `test`, `skill`, `agents-md-proposal`, `pack-rule`, or `hint` |
 | `status` | `candidate`, `verified`, `promoted`, or `rejected` |
 | `expires_at` | Required for `hint`; otherwise `null` |
-| `recorded_by` | Actor record |
+| `verification` | `none yet`, or the review identifiers and verdict that verified it |
+| `promoted_to` | The decision, change request, or destination name once promoted; otherwise `null` |
+| `recorded_by` | Actor record; the user for a lesson the user gave |
 
 ### Transition
 
@@ -352,7 +385,7 @@ File: `.peerfoil/history.jsonl`, one JSON object per line. Validated by
 | `actor` | Actor record for the coordinator that recorded the move |
 | `plan_revision` | Plan revision in effect |
 | `source_revision` | Git commit hash or `null` |
-| `refs` | Optional identifiers involved, using only the keys `decisions`, `tasks`, `change_sets`, `evidence`, `reviews`, and `lessons`, for example `{ "decisions": ["d-0001"] }` |
+| `refs` | Optional identifiers involved, using only the keys `decisions`, `tasks`, `change_sets`, `evidence`, `reviews`, `phase_reviews`, and `lessons`, for example `{ "decisions": ["d-0001"] }` |
 | `summary` | One redacted sentence |
 
 History lines never contain prompts, transcripts, tokens, or personal data.

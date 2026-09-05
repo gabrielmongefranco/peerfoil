@@ -117,11 +117,13 @@ controls will stay under Advanced settings.
 
 ## Status
 
-**Phase 1 in progress.** Stages 1–3 of PeerFoil Skills 0.1 are built, and Stage 2
-has received its independent Codex review. They provide the plugin skeleton, the
-project-file formats, setup checks, Advanced settings, the decision interview, and the
-reviewed architecture, Quality Contract, and plan. Stage 3 adds bounded production,
-retained authorship and checks, plan changes, and file-based status and resume. See the
+**Phase 1 in progress.** Stages 1–4 of PeerFoil Skills 0.1 are built, and Stages 2
+and 4 have received their independent Codex reviews. They provide the plugin skeleton,
+the project-file formats, setup checks, Advanced settings, the decision interview, and
+the reviewed architecture, Quality Contract, and plan. Stage 3 adds bounded production,
+retained authorship and checks, plan changes, and file-based status and resume. Stage 4
+adds the two-family phase review with a merged finding list, one guided repair with
+fresh verification, and candidate lessons. See the
 [detailed plan](docs/plans/phase-1-skills.md) for verification limits. Nothing has been
 released yet.
 

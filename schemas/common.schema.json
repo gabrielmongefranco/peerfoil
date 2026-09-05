@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/common.schema.json",
-  "$comment": "This file is part of PeerFoil. schemas/common.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Shared definitions for identifiers, timestamps, actors, and model seats used by every PeerFoil record schema. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "$comment": "This file is part of PeerFoil. schemas/common.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Shared definitions for identifiers, including phase reviews and lessons, timestamps, actors, and model seats used by every PeerFoil record schema. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
   "title": "PeerFoil shared definitions",
   "$defs": {
     "project_id": {
@@ -18,6 +18,7 @@
     "evidence_id": { "type": "string", "pattern": "^ev-[0-9]{4,}$" },
     "finding_id": { "type": "string", "pattern": "^fd-[0-9]{4,}$" },
     "review_id": { "type": "string", "pattern": "^rv-[0-9]{4,}$" },
+    "phase_review_id": { "type": "string", "pattern": "^pr-[0-9]{4,}$" },
     "lesson_id": { "type": "string", "pattern": "^ls-[0-9]{4,}$" },
     "transition_id": { "type": "string", "pattern": "^tr-[0-9]{4,}$" },
     "timestamp": {

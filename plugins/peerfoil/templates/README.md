@@ -42,6 +42,7 @@ The generated project files belong to the user. PeerFoil claims no rights in the
 | `evidence.md` | `.peerfoil/evidence/ev-NNNN.md` | Markdown |
 | `change-set.md` | `.peerfoil/evidence/cs-NNNN.md` | Markdown |
 | `review.md` | `.peerfoil/reviews/rv-NNNN.md` | Markdown |
+| `phase-review.md` | `.peerfoil/reviews/pr-NNNN.md` | Markdown |
 | `lesson.md` | `.peerfoil/lessons/ls-NNNN.md` | Markdown |
 
 ## Placeholders

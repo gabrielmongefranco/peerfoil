@@ -65,6 +65,6 @@ Required missing, blocked, stale, or failed evidence blocks completion. Record e
 skipped check, deviation, bug, or repair need through [changes.md](changes.md), including
 recommended checks intentionally skipped. A deferral or reviewer vote cannot change a
 required failure into success. A required-check correction returns to production only
-after a recorded plan revision and bounded task; every repair needs fresh different-family
-verification. Guided repair coordination is Coming soon in Stage 4, so pause for that
-path instead of inventing approval. Evidence remains available for later review.
+after a recorded plan revision and bounded task; every repair follows [repair.md](repair.md)
+and needs fresh different-family verification. Evidence remains available for the phase
+review in [phase-review.md](phase-review.md).

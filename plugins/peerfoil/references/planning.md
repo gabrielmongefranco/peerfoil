@@ -108,7 +108,7 @@ Do not include this chat's history, the architect's packet, or the evaluator's p
    `architecture_revision` and `quality_revision`, status `draft`, `revised_at` now,
    `revised_by` the planner actor, `revision_reason` "Initial plan written from
    architecture revision N." or the revision's reason, the validated phases and
-   requirements, and an empty backlog.
+   requirements, an empty `changes` list, and an empty backlog.
 4. Regenerate `.peerfoil/plan.md` from `plan.json` using
    `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`. `plan.json` is authoritative.
 5. Update `updated_at` in `project.json`. Leave `revisions.plan` unchanged until

@@ -1,6 +1,6 @@
 ---
 name: resume
-description: This skill should be used when the user runs /peerfoil:resume or asks to continue a PeerFoil project in a new chat. It reads the accepted files under .peerfoil instead of any earlier conversation, works out the current state and sub-step, and continues the next allowed step, including decisions, reviewed planning, production, changes, and validation.
+description: This skill should be used when the user runs /peerfoil:resume or asks to continue a PeerFoil project in a new chat. It reads the accepted files under .peerfoil instead of any earlier conversation, works out the current state and sub-step, and continues the next allowed step, including decisions, reviewed planning, production, changes, validation, phase review, repair, and starting the next phase with the user's authorization.
 license: GPL-3.0-or-later
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git ls-files *), Bash(git ls-tree *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(git log *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *), PowerShell(Get-Date *)
@@ -34,8 +34,10 @@ handoff.
 6. `.peerfoil/project.json`. If it is missing, say that there is nothing to resume and
    that `/peerfoil:start <idea>` creates a project. Stop.
 7. `.peerfoil/decisions.md` and the last line of `.peerfoil/history.jsonl`.
-8. `.peerfoil/architecture.md`, `.peerfoil/quality.md`, `.peerfoil/plan.json`, and the
-   latest review of each kind under `.peerfoil/reviews/`, when they exist.
+8. `.peerfoil/architecture.md`, `.peerfoil/quality.md`, `.peerfoil/plan.json`, the
+   latest review of each kind under `.peerfoil/reviews/`, the newest phase review
+   record for the active phase, and the lessons under `.peerfoil/lessons/`, when they
+   exist.
    Also read accepted plan snapshots, pending change entries, active change sets, and
    linked evidence. Validate revision links and the last transition before any write.
 9. `git status --porcelain --branch`. If files under `.peerfoil/` have uncommitted
@@ -60,11 +62,26 @@ Read `workflow.state` from `project.json`.
   planning reference, section 1, and continue from there. When `plan.json` is already
   `accepted`, follow the production reference from its readiness gate. A candidate
   revision with `changes` uses `${CLAUDE_PLUGIN_ROOT}/references/changes.md` first.
-- **`produce` or `validate`.** Read `${CLAUDE_PLUGIN_ROOT}/references/production.md`
+- **`produce` or `validate`.** If the newest phase review record for the active phase
+  has status `repair`, read `${CLAUDE_PLUGIN_ROOT}/references/repair.md` and continue
+  from its section 7 instead. Otherwise read
+  `${CLAUDE_PLUGIN_ROOT}/references/production.md`
   and `${CLAUDE_PLUGIN_ROOT}/references/evidence.md`. Follow production section 5,
   checking capture status, writer termination, revisions, and hashes before continuing.
   A pending change candidate must complete change intake before new production.
-- **`review`.** Report retained validation and phase review Coming soon. Change nothing.
+- **`review`.** Read `${CLAUDE_PLUGIN_ROOT}/references/review.md`,
+  `${CLAUDE_PLUGIN_ROOT}/references/phase-review.md`, and
+  `${CLAUDE_PLUGIN_ROOT}/references/repair.md` in full. Find the current step with the
+  phase review reference, section 13, and continue from there, exactly as
+  `/peerfoil:review-phase` would.
+- **`repair`.** Read the same three references and
+  `${CLAUDE_PLUGIN_ROOT}/references/production.md`. Find the current step with the
+  repair reference, section 7, and continue from there.
+- **`approve`.** The phase is approved. Read
+  `${CLAUDE_PLUGIN_ROOT}/references/production.md`. Name the next phase and its first
+  stage and ask with `AskUserQuestion` whether to start it now. On yes, follow
+  production section 1, step 3, and continue; otherwise stop with the status report.
+  When no phase remains, say the plan is complete and stop.
 - **`paused`.** Read `workflow.paused_for` and tell the user what is needed. The state to
   return to is the `from_state` of the last `history.jsonl` line whose `to_state` is
   `paused` and whose `from_state` is not `paused`. If none exists, report inconsistent

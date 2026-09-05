@@ -34,7 +34,10 @@ state. Change nothing. Do not reconstruct state from this chat.
 5. `.peerfoil/architecture.md`, `.peerfoil/quality.md`, and the full
    `.peerfoil/plan.json` (including task revisions and change entries), and, under `.peerfoil/reviews/`, the latest review of kind
    `architecture` and the latest of kind `plan`, including their findings'
-   dispositions, when they exist.
+   dispositions, and the newest phase review record `pr-NNNN.md` for the active
+   phase with its shared findings, when they exist.
+5a. `.peerfoil/lessons/`, when it exists, for the counts of candidate, verified, and
+   promoted lessons and the active hints.
 6. Active change sets, plan snapshots, and linked evidence. Follow
    `${CLAUDE_PLUGIN_ROOT}/references/evidence.md` to compare current input hashes using
    read-only host commands. If hashing is unavailable, report evidence Not verified.
@@ -61,6 +64,8 @@ Phase / stage / task: <ids and titles, or "none yet">
 Architecture: <revision and status, and the latest review's decision and independence, or "none yet">
 Plan:      <revision and status, and the latest review's decision and independence, or "none yet">
 Quality:   <Quality Contract counts of required, recommended, and not-applicable items, and the evidence summary, or "No Quality Contract yet">
+Review:    <phase review record, its status, passes used per reviewer, open blocking and major findings, independence, or "none yet">
+Lessons:   <candidate, verified, and promoted counts and active hints, or "none">
 Decisions: <answered> answered · <assumed> assumed · <open> open
 Blocker:   <blocker, or "none">
 Needs you: <what the user must decide or do, or "nothing">
@@ -85,12 +90,17 @@ Rules:
   passed, failed, missing, stale, or Not verified. A producer claim is not a pass. Task
   `validated` means checks passed, not independently approved. A stale task tied to an
   old plan cannot be reported as current; retained work needs the change-entry chain
-  and unchanged input hashes. At the phase boundary, say phase review Coming soon.
+  and unchanged input hashes. At the phase boundary, `Next` is `/peerfoil:review-phase`.
+- In `review` and `repair`, name the current step from the phase review reference,
+  section 13, or the repair reference, section 7, and show "Reduced assurance" for
+  any item without an eligible primary reviewer. A disputed or unresolved finding
+  waiting for the user is the blocker. In `approve`, say the phase is approved, name
+  the next phase, and give `/peerfoil:resume` as `Next`.
 - A pending capture means the producer may still be running; next is safe reconciliation
   through `/peerfoil:resume`, never another writer. Do not call any model for status.
 - `Blocker` names a revision/hash mismatch, missing capture or evidence, an `open`
   decision, an open `blocking` finding, or the `paused_for`
   reason when one exists.
-- For any capability the workflow reference marks "Not yet", say so instead of inventing
-  a next step.
+- For anything the workflow reference leaves to PeerFoil Core, say so instead of
+  inventing a next step.
 - Keep the report under thirty lines. Do not paste file contents.

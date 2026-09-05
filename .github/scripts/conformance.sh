@@ -80,5 +80,6 @@ done
 
 "$python_bin" tests/static_checks.py
 "$python_bin" tests/stage3_checks.py
+"$python_bin" tests/stage4_checks.py
 
 echo "conformance: PeerFoil repository checks pass"
