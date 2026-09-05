@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/implementation-plan.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-04
+Last Modified: 2026-09-05
 Summary: Explains what PeerFoil will deliver, when it will arrive, and how each release will be checked.
 Notes: See README for an overview and full license information.
 
@@ -107,6 +107,8 @@ itself credentials, weaken `AGENTS.md`, hide failed checks, or allow self-approv
 
 ## Phase 1 — PeerFoil Skills 0.1 (Days 1–5)
 
+[Open the detailed Phase 1 implementation plan](plans/phase-1-skills.md)
+
 ### What the user can do
 
 A user who already has Git, Claude Code, Codex, and model authentication can install the
@@ -169,6 +171,8 @@ processes, automatic pass limits, local-model routing, or MCP routing. The inter
 show **Guided** so users understand that boundary.
 
 ## Phase 2 — PeerFoil Core Alpha 0.2 (Days 6–13)
+
+[Open the detailed Phase 2 implementation plan](plans/phase-2-core-alpha.md)
 
 ### What the user can do
 
@@ -424,6 +428,8 @@ the simple experience promised in the first release.
 
 - [PeerFoil method](PeerFoil-Method.md)
 - [PeerFoil architecture](architecture.md)
+- [Detailed Phase 1 implementation plan](plans/phase-1-skills.md)
+- [Detailed Phase 2 implementation plan](plans/phase-2-core-alpha.md)
 - [Official Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html)

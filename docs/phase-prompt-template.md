@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/phase-prompt-template.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-04
+Last Modified: 2026-09-05
 Summary: Provides a copy-and-paste prompt for starting a PeerFoil phase in a new AI chat.
 Notes: See README for an overview and full license information.
 
@@ -54,7 +54,8 @@ Read these files before changing anything, in this order:
 
 2. docs/implementation-plan.md
    Identify the requested phase and stage, its user-visible result, included work, release
-   check, dependencies, and anything explicitly deferred.
+   check, dependencies, and anything explicitly deferred. Then read the corresponding
+   detailed plan in docs/plans/ when one exists.
 
 3. docs/PeerFoil-Method.md
    Follow the complete workflow, role separation, model-family independence, evidence,
