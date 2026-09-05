@@ -666,9 +666,16 @@ decision rule added after the live run has not been reviewed by Codex, because t
 three-pass limit applied to this review too. The reviewer's remaining risk stands:
 these are guided procedures whose runtime enforcement the text cannot establish.
 
-Remaining checks: repair production, evidence rerun, and the reserved verification
-pass live, which the Codex usage limit prevented; approval and the `approve` to
-`produce` handoff; a disputed blocking finding reaching the user; a bundle digest
+After the Codex usage limit was lifted the same day, two fresh `/peerfoil:resume`
+sessions completed the cycle on the same fixture:
+
+| Check | Result |
+|---|---|
+| Fresh `/peerfoil:resume` with Codex access restored | Pass, 9 minutes, 73 turns; returned from `paused` to `repair`, sent `tk-002` to the Codex repair producer as `cs-0003` (attempt 2, with `cs-0002` retained as the blocked attempt), captured a patch touching only `hello.py` and `check.py`, reran unit-tests, license-check, and failure-handling-check with retained output, recorded the human user-journey item as `not-run`, and paused for the person instead of supplying it |
+| Fresh `/peerfoil:resume` with the user's journey result in the request | Pass, 10 minutes, 72 turns; recorded `ev-0008` with the human actor, validated the repair on a recomputed snapshot, froze the second manifest with a repair digest, launched a fresh Claude verifier (independent of the Codex repairer) that confirmed all five findings repaired, deferred the four minor and note rows into the plan as `cr-0002` at plan revision 3, and approved `ph-01` with `pr-0001` `approved` and the `review` to `approve` transition recorded |
+
+Remaining checks: the `approve` to `produce` handoff into a second phase, which the
+fixture's single-phase plan could not exercise; a disputed blocking finding reaching the user; a bundle digest
 mismatch closing a round; a reviewer reaching its pass limit; promotion of a verified
 lesson and an unverified hint; the Codex `exec` fallback for a phase review; macOS and
 Linux sessions; and human keyboard and screen-reader review. These remain visible
