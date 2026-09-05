@@ -37,7 +37,9 @@ Read the files, not the chat:
 | No `architecture.md` | Section 3 |
 | `architecture.md` status `draft`, no review at its revision and pass | Section 5 |
 | Latest architecture review decision `repair` with an open `blocking` or `major` finding | Section 6 |
+| Latest architecture review decision `repair`, no open `blocking` or `major` finding, and the draft's `Written at` later than that review's `Reviewed at` | Section 5, as the next pass |
 | Latest architecture review decision `block` | Show the findings and the `paused_for` reason; stop |
+| Latest architecture review decision `approve` whose frozen architecture and quality revisions equal the draft's and whose `Reviewed at` is later than the draft's `Written at`, while the draft's status is still `draft` | Set both files to `reviewed`, add the review identifier, then section 7 |
 | `architecture.md` status `reviewed` | Section 7 |
 | `architecture.md` status `accepted` | Section 8 already ran; continue with [`planning.md`](planning.md) |
 
@@ -111,7 +113,8 @@ the `Reviews` line.
    its `notes` how each finding identifier was handled.
 3. Validate as in section 4 and rewrite both files at the same revision number and
    status `draft`, with a new `Written at` time.
-4. Set each addressed finding's disposition to `repaired` in the review record.
+4. Only after both files are written, set each addressed finding's disposition to
+   `repaired` in the review record. The next pass number is that review's pass plus one.
 5. Return to section 5 for the next pass, within the limit in `review.md`, section 10.
 
 ## 7. Acceptance
@@ -126,9 +129,10 @@ Show the user, in plain language and under twenty-five lines:
 
 Then ask with `AskUserQuestion`:
 
-1. **Accept the architecture.** Recommended when the review approved it and no `major`
-   finding is open. Accepting with an open `major` finding records it as `deferred` with
-   the user's reason in the review.
+1. **Accept the architecture.** Offered only when no `blocking` finding is open.
+   Recommended when the review approved it and no `major` finding is open. Accepting
+   with an open `major` finding records it as `deferred` with the user's reason in the
+   review.
 2. **Revise first.** Recommended when the review left a `major` finding open. Return to
    section 6 with the open findings; the revised draft is reviewed again within the pass
    limit.

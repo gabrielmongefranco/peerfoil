@@ -132,7 +132,14 @@ and ask it for the decision list in the format its instructions define.
 Validate every returned item before recording it. Each item must have a question, two to
 four options with one-line consequences, a recommended option with a reason, an effect
 statement, a `needs_answer` value, and a category from the records reference. Ask the
-agent once to fix a malformed item; if it is still malformed, drop it and tell the user.
+agent once to fix a malformed item. If it is still malformed and its `needs_answer` is
+`true` or its category is `privacy`, `data`, `cost`, `ownership`, or `deployment`,
+record it anyway as an `open` decision with the question text and the note "raised by
+the evaluator in an incomplete form; needs rewording", so it keeps blocking
+architecture until the user answers it. Such an item is recorded with `needs_answer`
+`yes` whatever the evaluator said, so it is never turned into an assumption. Drop only a
+malformed item that is a reversible assumption outside those categories, and tell the
+user.
 
 Record the decisions:
 

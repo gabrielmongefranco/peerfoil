@@ -62,7 +62,12 @@ found file with `--version` as its own command.
    `/peerfoil:setup` again. The tested version is 0.153.0.
 6. **Codex login.** Run `codex login status` with the same program. Pass when it reports
    a login. Fail otherwise, with the next step: run `codex login`, then `/peerfoil:setup`
-   again. Never read or record credentials.
+   again. Never read or record credentials. Then read the `model` line of the user's
+   Codex configuration file (`~/.codex/config.toml`, or `%USERPROFILE%\.codex\config.toml`
+   on Windows), show the identifier, and, when a project record exists and the user
+   confirms, record it as the `model` of every `codex-cli` seat in `settings`, so that
+   reviewer lineage derives from a known identifier rather than `default`. Read nothing
+   else from that file.
 7. **Codex MCP server.** Check whether the `mcp__codex__codex` tool is available in this
    session.
    - If it is, report Pass. When the `MCP_TOOL_TIMEOUT` environment variable is not

@@ -34,6 +34,15 @@ Another family may be recorded as a lowercase slug such as `meta-llama` once a l
 release qualifies it. Do not guess a family. Record `unknown` when the base model is not
 documented.
 
+The family comes from the model identifier, never from the application that ran it,
+because Codex CLI and Claude Code can be pointed at other providers. Map identifiers
+this way: `claude-*` is `anthropic-claude`; `gpt-*`, `codex-*`, and `o1`, `o3`, or `o4`
+identifiers are `openai-gpt`; anything else is `unknown`. The identifier that counts is
+the seat's configured model, which setup records from the tool's own configuration; a
+seat left at `default` has `unknown` lineage. A reviewer's self-reported identifier is a
+claim used only as a cross-check: when it disagrees with the seat model, record
+`unknown`.
+
 ## 2. Tools
 
 The `tool` field records the application that ran the model:

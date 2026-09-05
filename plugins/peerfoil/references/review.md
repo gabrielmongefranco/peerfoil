@@ -112,6 +112,7 @@ Return exactly one fenced JSON block and nothing after it:
     }
   ],
   "remaining_risk": "risks you accept or flag, or \"None\"",
+  "model": "the exact model identifier you are running as, or \"unknown\"",
   "notes": ""
 }
 
@@ -177,11 +178,19 @@ other bridge.
    - the fenced JSON block, which is the review; and
    - the thread identifier, which becomes the reviewer actor's `session`, or `null`
      when the fallback reports none.
-4. Build the reviewer actor: `role` `reviewer`, `tool` `codex-cli`, `model` the seat
-   model, `effort` the seat effort, `lineage_root` `openai-gpt`, `session` as above.
-5. If the call times out, send the one "answer now" nudge that `codex.md` describes and
-   wait one more minute. If the output still has no valid JSON block, or Codex stopped
-   without answering, launch one more fresh run with the same packet. If that also
+4. Build the reviewer actor: `role` `reviewer`, `tool` `codex-cli`, `model` the model
+   identifier the reviewer reported in its JSON (or the seat model when that is not
+   `default`), `effort` the seat effort, `lineage_root` from the seat's configured
+   model identifier as [`lineage.md`](lineage.md) section 1 maps it, and `session` as
+   above. When the seat model is `default`, or the reviewer's self-reported identifier
+   disagrees with the seat model, the lineage is `unknown` and the review is `reduced`,
+   which the user must accept or decline; `/peerfoil:setup` records the configured Codex
+   model so the seat is not `default`.
+5. If the fallback call times out, send the one "answer now" nudge that `codex.md`
+   describes and wait one more minute. A timed-out MCP call returns no thread
+   identifier, so it cannot be nudged in this release and counts as no result at once.
+   If the output still has no valid JSON block, or Codex stopped without answering,
+   launch one more fresh run with the same packet. If that also
    fails, stop, tell the user that the review returned no usable result, keep the draft
    as `draft`, and suggest `/peerfoil:setup` and then `/peerfoil:resume`.
 
@@ -250,8 +259,10 @@ Apply these corrections without asking the reviewer:
   accept it as `deferred` with a reason recorded in the review, or send the draft back.
 - **Limit:** an architecture or plan draft receives at most three passes. When the third
   pass does not return `approve`, stop and ask the user whether to change a decision,
-  accept the draft with the open findings recorded as `deferred`, or stop. This build
-  states the limit; it cannot enforce it mechanically.
+  allow one more revise-and-review round, or stop. A draft with an open `blocking`
+  finding is never accepted: only `major`, `minor`, and `note` findings can be deferred,
+  and a `blocking` finding clears only when a later independent pass reports it
+  repaired. This build states the limit; it cannot enforce it mechanically.
 
 ## 11. Turn and time budgets
 
@@ -268,10 +279,11 @@ end time when the result arrives, and write the difference as the review's `Dura
 Limits are two-stage. When the time limit passes without a result, the reviewer is asked
 once to stop and answer now with what it has, and given one more minute; only then does
 the run count as no result, after which it is retried once and then the user is asked.
-For Codex the nudge is a `codex-reply` on the same thread, or an `exec resume` in the
-fallback, as [`codex.md`](codex.md) describes. A Claude Code agent cannot be nudged while
-it runs in this release, so its `maxTurns` is its only hard stop and the time limit is
-guided; Core adds the nudge for both families. Claude Code enforces an agent's
+In this release the nudge exists only on the `codex exec` fallback, as an `exec resume`
+on the same thread, as [`codex.md`](codex.md) describes. A timed-out MCP call returns no
+thread identifier and a running Claude Code agent cannot be messaged, so those runs
+count as no result at the limit; their `maxTurns` and host timeouts are the hard stops,
+and Core adds the nudge for both. Claude Code enforces an agent's
 `maxTurns` and a command's timeout; the other budgets are guided, like every limit in
 this release.
 

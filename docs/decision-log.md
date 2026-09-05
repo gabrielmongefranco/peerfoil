@@ -51,7 +51,8 @@ that supersedes the old one, never by editing history.
 | D-0019 | Codex is reached through the Codex CLI's MCP server, with `codex exec` as fallback | Accepted | Phase 1, Stage 2 |
 | D-0020 | Setup finds Codex and Claude Code on the PATH or in IDE extension folders | Accepted | Phase 1, Stage 2 |
 | D-0021 | Wall-clock limits: ten minutes for a review, draft, or task; five for small steps | Accepted | Phase 1, Stage 2 |
-| D-0022 | Two-stage deadlines: an "answer now" nudge, then a kill one minute later | Accepted | Phase 1, Stage 2 |
+| D-0022 | Two-stage deadlines: an "answer now" nudge, then a kill one minute later | Accepted; Skills half narrowed by D-0023 | Phase 1, Stage 2 |
+| D-0023 | In Skills 0.1 the nudge exists only on the `codex exec` path; lineage comes from the model identifier | Accepted | Phase 1, Stage 2 |
 
 ## D-0001 — Plugin location
 
@@ -394,6 +395,24 @@ that supersedes the old one, never by editing history.
 - **Consequences:** The Codex and review references, the method, and the Phase 2 plan
   say so. The one-minute grace for the MCP nudge is guided in Skills 0.1 because the
   host applies one timeout to every MCP call.
+
+## D-0023 — Corrections from the Stage 2 independent review
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A timed-out MCP call returns no thread identifier, so the "answer now"
+  nudge of D-0022 applies in Skills 0.1 only to the `codex exec` fallback; a timed-out
+  MCP call counts as no result and is retried once. PeerFoil skills never call
+  `codex-reply`. A reviewer's `lineage_root` is derived from its model identifier, which
+  the review output must state, never from the application that ran it; an unknown
+  identifier gives `unknown` lineage and a `reduced` review. A draft with an open
+  `blocking` finding is never accepted, and the pass limit offers a further round or a
+  decision change instead.
+- **Options considered:** Keeping D-0022 as written; inferring lineage from the tool.
+- **Reason:** The Stage 2 Codex review found that the MCP nudge assumed an identifier
+  the timeout never delivers, that tool-based lineage could label an unverified model
+  independent, and that the pass limit could defer a blocking finding.
+- **Consequences:** The Codex, review, lineage, architecture, and planning references
+  and the review output contract say so. Core implements the MCP nudge itself.
 
 ## Conclusion
 

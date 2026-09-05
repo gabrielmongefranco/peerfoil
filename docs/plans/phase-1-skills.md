@@ -372,7 +372,29 @@ CLI 0.153.0 from the VS Code extension and its MCP server registered in Claude C
 | Three architecture passes returned `repair`; the skill accepted at the pass limit with the open findings deferred; the plan was written; the plan's first Codex pass returned `repair`; the run then stopped when the Claude account's session limit was reached | Recorded. The fixture still carried `xhigh` reviewer seats, so its forty minutes for four Codex passes does not reflect the new defaults |
 
 Not run after D-0019: the "answer now" nudge inside a skill run, and a complete run at
-the medium-effort defaults with the time limits in force.
+the medium-effort defaults with the time limits in force. A small run at those defaults
+did measure one step: a fresh session in the `architect` state reached its first
+independent Codex review of the architecture two minutes and five seconds after launch.
+
+### Stage 2 independent review
+
+Reviewer: Codex CLI 0.153.0 through `codex exec` in a read-only sandbox at medium
+effort, lineage `openai-gpt`, thread `01a07034-dd05-73b2-8256-d60006a82a24`, reading
+the working tree on 2026-09-05. Author of the reviewed material: Claude Code
+(`anthropic-claude`). Independence: independent.
+
+| Pass | Decision | Result |
+|---:|---|---|
+| 1 | `repair` | One blocking finding: the pass limit could accept a draft with an open blocking finding. Six major findings: lineage inferred from the tool rather than the model; interrupted repairs not resumable from files; malformed consequential evaluator items could be dropped; the MCP nudge assumed a thread identifier a timeout never returns; dependency validation ignored phase order; allowed-path containment undefined. One minor: status read only the newest review. |
+| 2 | `repair` | No new blocking or major findings. Four repairs confirmed, four partial, and one inconsistency in `review.md` section 11. |
+| 3 | `repair` | No new findings. All confirmed repaired except one partial: approval recovery relied on a pass identity the drafts do not store. |
+
+Every finding was addressed in the references, skills, and D-0023. The last partial
+item was resolved after pass 3 by comparing the review's frozen revisions and time with
+the draft's own revision and `Written at` or `revised_at`; that change has not been
+reviewed by Codex, because the three-pass limit applied to this review too. The
+reviewer's remaining risk stands: live interruption, timeout, and macOS and Linux
+behavior were not exercised.
 
 ## 9. Stage 3 — Production, changes, status, and recovery
 

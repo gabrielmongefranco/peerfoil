@@ -31,8 +31,9 @@ state. Change nothing. Do not reconstruct state from this chat.
    project yet and that `/peerfoil:start <idea>` creates one. Stop.
 4. `.peerfoil/decisions.md` and the last line of `.peerfoil/history.jsonl`.
 5. The header lines of `.peerfoil/architecture.md`, `.peerfoil/quality.md`, and
-   `.peerfoil/plan.json`, and the header lines of the highest-numbered file under
-   `.peerfoil/reviews/`, when they exist.
+   `.peerfoil/plan.json`, and, under `.peerfoil/reviews/`, the latest review of kind
+   `architecture` and the latest of kind `plan`, including their findings'
+   dispositions, when they exist.
 6. `git status --porcelain --branch` for the branch name and whether the tree is clean.
 
 ## Check the project record

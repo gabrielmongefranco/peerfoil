@@ -26,7 +26,9 @@ build.
 | No `plan.json` | Section 2 |
 | `plan.json` status `draft`, no review at its revision and pass | Section 4 |
 | Latest plan review decision `repair` with an open `blocking` or `major` finding | Section 5 |
+| Latest plan review decision `repair`, no open `blocking` or `major` finding, and `plan.json` `revised_at` later than that review's `Reviewed at` | Section 4, as the next pass |
 | Latest plan review decision `block` | Show the findings and the `paused_for` reason; stop |
+| Latest plan review decision `approve` whose frozen plan revision equals the draft's and whose `Reviewed at` is later than `plan.json` `revised_at`, while `plan.json` is still `draft` | Set it to `reviewed`, regenerate `plan.md`, then section 6 |
 | `plan.json` status `reviewed` | Section 6 |
 | `plan.json` status `accepted` | Section 8 |
 
@@ -67,10 +69,15 @@ Do not include this chat's history, the architect's packet, or the evaluator's p
       characters; detail that does not fit belongs in `acceptance` or `inputs`. Titles
       stay within 120 characters and outcomes within 500. A task that changes more than
       about five files or crosses several components must be split.
-   7. **Allowed paths.** Every task has at least one glob pattern. Patterns are relative
-      to the repository root, contain no `..` or absolute path, and never include
-      `AGENTS.md`, credential files, or `.peerfoil/**` unless the task's purpose is a
-      project record.
+   7. **Allowed paths.** Every task has at least one glob pattern using forward slashes
+      and only `*`, `**`, and `?` as wildcards. Reject a pattern that is absolute, starts
+      with `/`, `~`, or a drive letter, contains `..` or `\`, is `**` alone or otherwise
+      matches the whole repository, or matches `AGENTS.md`, `.git/**`, credential files
+      such as `.env` or `*.pem`, or `.peerfoil/**` unless the task's purpose is a project
+      record. Matching is case-insensitive so Windows and macOS cannot bypass a
+      protected name. When a task is produced, every changed path is rejected if any
+      component of it is a symbolic link or junction, and its resolved form must stay
+      inside the repository root; that check belongs to production in a later build.
    8. **Evidence.** Every entry in `required_evidence` names an item in the Quality
       Contract with the same `kind`, and its `level` is `required` or `recommended`,
       never `not-applicable`.
@@ -78,9 +85,11 @@ Do not include this chat's history, the architect's packet, or the evaluator's p
       `required_evidence` of at least one task in the first phase. Evidence produced at
       a phase boundary, such as a human user journey or a license check, is attached to
       the last task of that phase.
-   10. **Dependencies.** Every `depends_on` entry names an existing task with an earlier
-       or equal stage order, and the graph has no cycle. Stage `depends_on` entries name
-       existing stages with a lower order.
+   10. **Dependencies.** Every `depends_on` entry names an existing task that comes
+       earlier in the complete delivery sequence, ordered by phase `order`, then stage
+       `order`, then position within the stage, or an earlier task in the same stage; the
+       graph has no cycle. Stage `depends_on` entries name existing stages earlier in the
+       same sequence.
    11. **Acceptance.** Every task has at least one acceptance statement that a person or
        a command can check.
    12. **Revisions.** Every task carries `plan_revision` equal to the draft's revision
@@ -119,7 +128,8 @@ the change history table.
    `notes` how each finding identifier was handled.
 3. Validate as in section 3 and rewrite `plan.json` at the same revision number with
    status `draft`, a new `revised_at`, and a `revision_reason` naming the review.
-4. Set each addressed finding's disposition to `repaired` in the review record.
+4. Only after `plan.json` is written, set each addressed finding's disposition to
+   `repaired` in the review record. The next pass number is that review's pass plus one.
 5. Return to section 4 for the next pass, within the limit in `review.md`, section 10.
 
 ## 6. Stage-order approval
@@ -128,9 +138,9 @@ Show the user a table of phases and stages in order with their outcomes, followe
 the review outcome and any open `minor` or `note` findings. Then ask with
 `AskUserQuestion`:
 
-1. **Approve this order.** Recommended when the review approved it and no `major`
-   finding is open. Approving with an open `major` finding records it as `deferred` with
-   the user's reason in the review.
+1. **Approve this order.** Offered only when no `blocking` finding is open. Recommended
+   when the review approved it and no `major` finding is open. Approving with an open
+   `major` finding records it as `deferred` with the user's reason in the review.
 2. **Revise first.** Recommended when the review left a `major` finding open. Return to
    section 5 with the open findings; the revised plan is reviewed again within the pass
    limit.
