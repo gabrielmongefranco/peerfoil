@@ -130,7 +130,7 @@ available** and a skill must say so instead of improvising it.
 
 | Capability | Available in this build |
 |---|---|
-| Setup checks for Git, repository rules, Claude Code, Node.js, the Codex plugin, the profile, and pack tools | Yes |
+| Setup checks for Git, repository rules, Claude Code, the Codex CLI and login, the Codex MCP server, the profile, and pack tools | Yes |
 | Starting a project, creating `project.json`, `decisions.md`, and `history.jsonl` | Yes |
 | The decision interview with the evaluator role | Yes |
 | Status for a project in the `define` state | Yes |

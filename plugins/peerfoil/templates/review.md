@@ -11,6 +11,7 @@ Project: `{{project_id}}` · Assurance: Guided
 - **Independence:** {{independent | secondary | reduced}} — {{one-line reason, including the user's acceptance and its time for a reduced-assurance review}}
 - **Passes used:** {{1}} of {{the limit for this kind of review}}
 - **Reviewed at:** {{timestamp}}
+- **Duration (seconds):** {{seconds from launch to result | null}}
 - **Decision:** {{approve | repair | block | undecided}}
 
 ## Findings

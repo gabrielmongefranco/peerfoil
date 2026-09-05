@@ -34,7 +34,7 @@ that supersedes the old one, never by editing history.
 | D-0002 | Skills use Agent Skills-compatible `SKILL.md` directories | Accepted | Phase 1, Stage 1 |
 | D-0003 | Eight user command names | Accepted | Phase 1, Stage 1 |
 | D-0004 | Markdown for people, JSON only where validation needs it | Accepted | Phase 1, Stage 1 |
-| D-0005 | Detect and guide the Codex plugin instead of declaring a dependency | Accepted | Phase 1, Stage 1 |
+| D-0005 | Detect and guide the Codex plugin instead of declaring a dependency | Superseded by D-0019 | Phase 1, Stage 1 |
 | D-0006 | Ask `personal` or `work` and inherit the repository's `AGENTS.md` | Accepted | Phase 1, Stage 1 |
 | D-0007 | Skills 0.1 always shows `Guided` assurance | Accepted | Phase 1, Stage 1 |
 | D-0008 | Provisional marketplace identifier `peerfoil` | Provisional | Phase 1, Stage 1 |
@@ -42,12 +42,16 @@ that supersedes the old one, never by editing history.
 | D-0010 | Template files carry a sibling notice instead of a PeerFoil header | Accepted | Phase 1, Stage 1 |
 | D-0011 | Identifier and revision conventions | Accepted | Phase 1, Stage 1 |
 | D-0012 | Static checks use Python 3 with no third-party packages | Accepted | Phase 1, Stage 1 |
-| D-0013 | Architecture and plan reviews run through the Codex plugin's rescue agent, fresh and read-only | Accepted | Phase 1, Stage 2 |
+| D-0013 | Architecture and plan reviews run through the Codex plugin's rescue agent, fresh and read-only | Superseded by D-0019 | Phase 1, Stage 2 |
 | D-0014 | Reduced-assurance fallback when no different-family reviewer is available | Accepted | Phase 1, Stage 2 |
 | D-0015 | Drafts carry the next revision number; accepted revisions live in `project.json` | Accepted | Phase 1, Stage 2 |
 | D-0016 | Packs may declare evidence command hints | Accepted | Phase 1, Stage 2 |
 | D-0017 | Architect defaults to high effort and every other role to medium | Accepted | Phase 1, Stage 2 |
 | D-0018 | Agents declare turn limits and reviewers cap their findings | Accepted | Phase 1, Stage 2 |
+| D-0019 | Codex is reached through the Codex CLI's MCP server, with `codex exec` as fallback | Accepted | Phase 1, Stage 2 |
+| D-0020 | Setup finds Codex and Claude Code on the PATH or in IDE extension folders | Accepted | Phase 1, Stage 2 |
+| D-0021 | Wall-clock limits: ten minutes for a review, draft, or task; five for small steps | Accepted | Phase 1, Stage 2 |
+| D-0022 | Two-stage deadlines: an "answer now" nudge, then a kill one minute later | Accepted | Phase 1, Stage 2 |
 
 ## D-0001 — Plugin location
 
@@ -107,7 +111,7 @@ that supersedes the old one, never by editing history.
 
 ## D-0005 — Plugin dependency behavior
 
-- **Status:** Accepted on 2026-09-05.
+- **Status:** Accepted on 2026-09-05. Superseded by D-0019 on 2026-09-05.
 - **Decision:** The plugin manifest declares no plugin dependency. The `setup` skill
   detects whether the official Codex plugin is installed and guides the user through its
   documented installation when it is not.
@@ -209,7 +213,7 @@ that supersedes the old one, never by editing history.
 
 ## D-0013 — Architecture and plan review transfer
 
-- **Status:** Accepted on 2026-09-05.
+- **Status:** Accepted on 2026-09-05. Superseded by D-0019 on 2026-09-05.
 - **Decision:** A Claude-authored architecture or plan draft is reviewed by Codex through
   the official Codex plugin's `codex:codex-rescue` agent, launched with the `Agent` tool.
   The request is a self-contained, read-only review packet that names the frozen files
@@ -310,10 +314,91 @@ that supersedes the old one, never by editing history.
   agent. A run that stops at its limit without a result is rerun once, then the user is
   asked.
 
+## D-0019 — Codex access through the Codex MCP server
+
+- **Status:** Accepted on 2026-09-05. Supersedes D-0005 and D-0013.
+- **Decision:** PeerFoil reaches Codex through the Codex CLI's built-in MCP server,
+  registered once in Claude Code with `claude mcp add --scope user codex -- <codex>
+  mcp-server`. Every PeerFoil call starts a fresh thread with the `codex` tool, a
+  `read-only` sandbox for reviews, `approval-policy` `never`, the repository as `cwd`,
+  and the seat's effort passed as `model_reasoning_effort`; the returned thread
+  identifier is recorded as the session. When the server is not registered but the CLI
+  is present, PeerFoil runs `codex exec` with the packet on standard input, an ephemeral
+  read-only session, and the final message written to a temporary file. The official
+  Codex plugin for Claude Code is no longer used.
+- **Options considered:** Keeping the Codex plugin, which is a set of Node.js scripts;
+  calling `codex exec` only.
+- **Reason:** The owner does not want Node.js as a prerequisite, and neither Claude Code
+  nor Codex needs it. The MCP server is an official Codex feature, gives Claude Code a
+  native tool with sandbox and effort control, and returns a thread identifier. The
+  `exec` fallback keeps the workflow usable before registration.
+- **Consequences:** `AGENTS.md`, the method, the implementation plan, the Phase 1 plan,
+  the setup skill, the review and lineage references, and the plugin README say so.
+  `plugins/peerfoil/references/codex.md` holds the contract. The Phase 2 controller
+  calls the same two paths as processes.
+
+## D-0020 — Finding Codex and Claude Code
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** Setup looks for `codex` and `claude` on the `PATH` first. When either is
+  missing, it looks in the user's IDE extension folders, where the Codex and Claude Code
+  extensions bundle native binaries: on Windows
+  `.vscode/extensions/openai.chatgpt-*/bin/windows-x86_64/codex.exe` and the Claude Code
+  extension's `resources/native-binary/claude.exe`, with the matching `darwin-*` and
+  `linux-*` folders on macOS and Linux, plus the VS Code Insiders and Cursor folders.
+  The newest version wins, and a candidate counts only when it answers `--version`.
+  Project files record versions only; a found path is used to register the MCP server
+  in Claude Code's own user configuration and is otherwise re-detected each session.
+- **Options considered:** Requiring the programs on the `PATH`; storing the path in
+  `project.json`.
+- **Reason:** Many Windows users have Codex only through the VS Code extension. A path
+  under the home directory names the user, so it does not belong in a shared project
+  file.
+- **Consequences:** The patterns live in `plugins/peerfoil/references/codex.md` and are
+  used by setup and by the review transfer's fallback.
+
+## D-0021 — Time limits
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A review pass, an architecture or plan draft, and a production task may
+  each take at most ten minutes of wall-clock time. The evaluator, setup probes, and
+  status may take at most five. A run that passes its limit without a result counts as
+  no result: it is retried once, then the user is asked. Every review records its
+  duration in seconds. Where the host can enforce a limit it is used: the `codex exec`
+  fallback runs under a ten-minute command timeout, and setup tells the user how to set
+  Claude Code's `MCP_TOOL_TIMEOUT` to the same value. Agent runs have no host time
+  limit, so their budget is guided alongside `maxTurns`.
+- **Options considered:** Turn limits only; a single limit for everything.
+- **Reason:** Turn limits alone did not bound duration; a Codex review at extra-high
+  effort took about seven minutes, and the owner set an upper bound on what a user
+  should wait for one step.
+- **Consequences:** The method, review and Codex references, records, review template,
+  agents, and setup skill state the limits. Core enforces them mechanically.
+
+## D-0022 — Two-stage deadlines
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** A time limit from D-0021 is a soft deadline. When it passes, PeerFoil asks
+  the model once to stop and answer now with what it has, and gives it one more minute;
+  at that hard deadline the run is killed and counts as no result. In Skills 0.1 the
+  nudge is implemented for Codex only: `codex-reply` on the same thread for the MCP
+  path, and `exec resume <thread id>` for the fallback, which therefore no longer runs
+  ephemerally so the session can be resumed. A running Claude Code agent cannot be
+  nudged in this release, so its `maxTurns` remains its only hard stop. Core implements
+  the two stages for both families by resuming the session with the nudge before
+  killing the process.
+- **Options considered:** Killing at the limit; no time limit.
+- **Reason:** A model that has read everything and is composing its answer should be
+  allowed to finish briefly instead of losing the work; the owner asked for exactly this
+  behavior.
+- **Consequences:** The Codex and review references, the method, and the Phase 2 plan
+  say so. The one-minute grace for the MCP nudge is guided in Skills 0.1 because the
+  host applies one timeout to every MCP call.
+
 ## Conclusion
 
 These entries settle the layout, formats, names, conventions, review mechanics, effort,
-and turn limits that Phase 1 builds on. Later stages add entries for their own required decisions.
+turn and time limits, deadlines, and Codex access that Phase 1 builds on. Later stages add entries for their own required decisions.
 
 ## Additional Resources
 

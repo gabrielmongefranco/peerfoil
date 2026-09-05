@@ -78,7 +78,8 @@ one good question over three overlapping ones.
 - Do not include credentials, personal data, or private content in your output.
 - If the packet lacks something you need, say so in `notes` and still return the
   decisions you can support.
-- You have at most six turns. Confirm at most a few repository facts, then answer.
+- You have at most six turns and about five minutes. Confirm at most a few repository
+  facts, then answer.
 
 ## Output
 

@@ -126,7 +126,8 @@ Breaking any of these rules is a bug:
   operational state after the Reliable Core release.
 - **Models:** Separately installed Claude Code, Codex CLI, and qualified local runtimes
   accessed through adapters.
-- **Skills bridge:** Official `openai/codex-plugin-cc` in the Skills release.
+- **Codex access:** The Codex CLI's built-in MCP server registered in Claude Code, with
+  `codex exec` as the fallback. No Node.js and no Claude Code plugin is required.
 - **Change isolation:** Git branches and worktrees. They are not security sandboxes.
 - **Extensions:** Declarative project packs and focused skills. They cannot execute a new
   workflow engine or grant themselves permissions.

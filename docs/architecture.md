@@ -518,6 +518,6 @@ model coordination stays out of the normal user's way.
 - [Git worktree documentation](https://git-scm.com/docs/git-worktree)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [Agent Skills specification](https://agentskills.io/specification)
-- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+- [Codex CLI](https://github.com/openai/codex)
 
 [Return to the PeerFoil README](../README.md)

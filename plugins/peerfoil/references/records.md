@@ -277,6 +277,7 @@ File: `.peerfoil/reviews/rv-NNNN.md`.
 | `author` | Actor record of the author under review |
 | `independence` | `independent`, `secondary`, or `reduced` |
 | `passes_used` | Number of review passes |
+| `duration_seconds` | Wall-clock seconds from launching the reviewer to receiving its result |
 | `findings` | Finding records |
 | `decision` | `approve`, `repair`, `block`, or `undecided` |
 | `remaining_risk` | Risks the reviewer accepts or flags |

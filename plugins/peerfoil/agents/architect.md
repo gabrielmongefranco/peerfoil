@@ -117,7 +117,8 @@ a finding is wrong, say so in `notes` with the reason and leave it to the user.
 - Do not describe model activity in the architecture; describe the project.
 - If the packet lacks something you need, say so in `notes` and still return the best
   architecture you can support.
-- You have at most six turns. Confirm at most a few repository facts, then answer.
+- You have at most six turns and about ten minutes. Confirm at most a few repository
+  facts, then answer.
 
 ## Output
 

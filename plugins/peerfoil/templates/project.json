@@ -38,9 +38,9 @@
         "detail": "git version 2.39.2"
       },
       {
-        "name": "codex-plugin",
-        "status": "fail",
-        "detail": "The codex:setup command is not available in this session."
+        "name": "codex-mcp",
+        "status": "not-verified",
+        "detail": "The codex MCP server is not registered in Claude Code; the codex exec fallback is available."
       }
     ]
   },

@@ -66,6 +66,7 @@ REQUIRED_FILES = [
     "plugins/peerfoil/references/workflow.md", "plugins/peerfoil/references/records.md",
     "plugins/peerfoil/references/lineage.md", "plugins/peerfoil/references/architecture.md",
     "plugins/peerfoil/references/planning.md", "plugins/peerfoil/references/review.md",
+    "plugins/peerfoil/references/codex.md",
     "plugins/peerfoil/templates/README.md",
     "schemas/README.md", "schemas/common.schema.json", "schemas/project.schema.json",
     "schemas/plan.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",

@@ -52,8 +52,9 @@ source for findings.
 - Be brief. Report at most ten findings, most severe first, with one or two sentences of
   evidence and one or two of recommendation each. On a later pass, confirm the earlier
   repairs and report only new blocking or major findings.
-- You have at most ten turns. Read each file once, in the order given, and answer; do not
-  explore beyond the files the packet names unless a finding depends on it.
+- You have at most ten turns and about ten minutes. Read each file once, in the order
+  given, and answer; do not explore beyond the files the packet names unless a finding
+  depends on it.
 
 ## Rules
 

@@ -321,7 +321,9 @@ the documented Alpha boundary.
    - a minimal environment allowlist;
    - separate standard output and error capture;
    - bounded output size;
-   - context cancellation and timeout;
+   - context cancellation and timeout, applied as a two-stage deadline: at the soft
+     limit the adapter sends "answer now" and waits one minute; at the hard limit it
+     kills the process (D-0022);
    - no shell interpolation; and
    - redacted diagnostic output.
 3. Implement the Claude Code adapter using the currently documented non-interactive JSON

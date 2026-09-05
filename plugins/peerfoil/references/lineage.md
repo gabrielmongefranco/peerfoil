@@ -26,7 +26,7 @@ lineage root. A different endpoint name does not make a model independent.
 | `lineage_root` | Use for |
 |---|---|
 | `anthropic-claude` | Any Claude model reached through Claude Code or another Claude tool |
-| `openai-gpt` | Any GPT or Codex model reached through Codex CLI or the Codex plugin |
+| `openai-gpt` | Any GPT or Codex model reached through the Codex CLI, its MCP server, or `codex exec` |
 | `human` | A person, including the user |
 | `unknown` | A model whose base family cannot be established |
 
@@ -41,7 +41,7 @@ The `tool` field records the application that ran the model:
 | `tool` | Meaning |
 |---|---|
 | `claude-code` | Claude Code, including this plugin's own session |
-| `codex-cli` | Codex CLI, including sessions started by the official Codex plugin |
+| `codex-cli` | Codex CLI, including sessions started through its MCP server or `codex exec` |
 | `human` | A person acting directly |
 | `other` | Any other application; describe it in the record's notes |
 

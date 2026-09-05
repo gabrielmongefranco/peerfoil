@@ -22,8 +22,9 @@ Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 [Return to the PeerFoil README](../../README.md)
 
 Phase 1 delivers a useful PeerFoil workflow as a Claude Code plugin made mostly from
-Markdown skills, role instructions, project packs, and templates. It uses the official
-Codex plugin for Claude Code rather than building another Claude-to-Codex bridge. A user
+Markdown skills, role instructions, project packs, and templates. It reaches Codex
+through the Codex CLI's built-in MCP server rather than building another Claude-to-Codex
+bridge. A user
 can complete the full workflow, but the interface clearly labels it **Guided** because no
 PeerFoil application enforces the transitions yet.
 
@@ -58,7 +59,7 @@ A user with Git, Claude Code, Codex, and the required project tools can:
 - A small Documentation Pack that proves the workflow is not tied to code.
 - Readable templates for every accepted `.peerfoil/` project artifact.
 - Guided authorship, model-family, evidence, review, repair, and plan-revision records.
-- Setup for the separately installed official Codex plugin.
+- Setup that finds the Codex CLI and registers its MCP server in Claude Code.
 - Static validation and fresh-session checks on Windows, macOS, and Linux.
 - Two small software examples and one small documentation example.
 
@@ -85,7 +86,7 @@ decision log.
 | Skill format | Agent Skills-compatible `SKILL.md` directories | Portable, inspectable, and supported by Claude Code |
 | User command names | `start`, `change`, `status`, `resume`, `review-phase`, `remember`, `settings`, and `setup` | Covers the complete guided journey without a large command surface |
 | Accepted project files | Markdown for people; JSON only where validation needs it | Keeps project truth easy to inspect and diff |
-| Plugin dependency behavior | Detect and guide installation of the Codex plugin | Avoids assuming cross-marketplace dependency behavior |
+| Codex access | Detect the Codex CLI and register its MCP server; fall back to `codex exec` | Native on every platform; no Node.js or plugin dependency |
 | Default project profile | Ask `personal` or `work`; inherit repository `AGENTS.md` | Prevents one profile from silently weakening another |
 | Assurance label | Always show `Guided` in Skills 0.1 status and phase results | Makes the release boundary honest |
 
@@ -199,8 +200,9 @@ the session **Guided**.
 4. Add a `setup` skill that checks:
    - repository access and Git availability;
    - whether `AGENTS.md` exists and was read;
-   - Claude Code and Node.js compatibility;
-   - the official Codex plugin installation and `/codex:setup` result;
+   - Claude Code and Codex CLI versions, found on the `PATH` or in IDE extension
+     folders;
+   - the Codex login and the Codex MCP server registration in Claude Code;
    - the user's personal or work profile; and
    - project tools declared by the selected pack.
 5. Create the shared contracts and human-readable templates listed above.
@@ -221,7 +223,7 @@ the session **Guided**.
 - Run Claude Code's strict plugin validator.
 - Load the plugin from its local directory in a fresh Claude Code session.
 - Confirm each skill appears under the expected namespace.
-- Run `setup` with the Codex plugin present and absent.
+- Run `setup` with Codex present and absent.
 - Confirm an absent dependency produces one clear next step and no false success.
 - Start a synthetic personal project and work project; confirm neither profile overwrites
   the repository's `AGENTS.md`.
@@ -294,7 +296,8 @@ production.
 7. Complete the Software Pack with practical checks for correctness, reliability,
    security, privacy, accessibility, maintainability, documentation, licensing, and
    release readiness.
-8. Use the Codex plugin to review the architecture and plan in fresh read-only sessions.
+8. Use the Codex MCP server, or the `codex exec` fallback, to review the architecture and
+   plan in fresh read-only sessions.
 9. Require the user to accept the architecture and stage order after review.
 10. Block production while consequential decisions or blocking review findings remain.
 
@@ -355,6 +358,22 @@ review after its architecture checks had passed. The Codex transfer follows the 
 documented rescue path and must be exercised in Stage 5 with the plugin installed. Those
 checks belong to the Stage 5 platform matrix and to the reviewer of this stage.
 
+After those runs, D-0019 replaced the Codex plugin with the Codex CLI's own MCP server
+and a `codex exec` fallback, so no Node.js is needed, and D-0021 and D-0022 added time
+limits with an "answer now" nudge. Checks of that route on the same machine, with Codex
+CLI 0.153.0 from the VS Code extension and its MCP server registered in Claude Code:
+
+| Check | Result |
+|---|---|
+| A fresh nested session called `mcp__codex__codex` read-only and received a thread identifier | Pass |
+| `codex exec` fallback with the packet on standard input, `--json`, and `--output-last-message`, then the `exec resume` nudge on the same thread | Pass |
+| `setup` found Codex inside the VS Code extension and Claude Code in its desktop install, saw the MCP tool, and recorded versions only | Pass; three version probes were Not verified because the test's permission rules blocked path-invoked commands |
+| Seeded architecture inconsistency reviewed by Codex: pass 1 returned a blocking finding naming the offline decision, with `independence: independent` and a distinct thread identifier per pass | Pass |
+| Three architecture passes returned `repair`; the skill accepted at the pass limit with the open findings deferred; the plan was written; the plan's first Codex pass returned `repair`; the run then stopped when the Claude account's session limit was reached | Recorded. The fixture still carried `xhigh` reviewer seats, so its forty minutes for four Codex passes does not reflect the new defaults |
+
+Not run after D-0019: the "answer now" nudge inside a skill run, and a complete run at
+the medium-effort defaults with the time limits in force.
+
 ## 9. Stage 3 — Production, changes, status, and recovery
 
 ### Outcome
@@ -373,7 +392,8 @@ chat.
    - allowed paths;
    - required evidence; and
    - the expected structured handoff.
-3. Use the official Codex plugin's delegation commands. Do not copy or fork its bridge.
+3. Use the Codex MCP server's `codex` tool with a `workspace-write` sandbox, or the
+   `codex exec` fallback. Do not build another bridge.
 4. Require one task per Codex call and one writer at a time.
 5. Capture the base revision, changed paths, Codex session, model family, and patch before
    another agent edits the work.
@@ -564,7 +584,7 @@ Before Phase 2 begins, commit and review:
 - Software, Generic, and Documentation pack manifests;
 - the three fixture repositories and expected results;
 - the Phase 1 evidence summary;
-- tested Claude Code, Codex plugin, Codex CLI, Node.js, Git, and operating-system versions;
+- tested Claude Code, Codex CLI, Git, and operating-system versions;
 - known provider-output variations;
 - every deferred item and unresolved non-blocking finding; and
 - lessons that should affect Core Alpha.
@@ -606,7 +626,7 @@ Guided label keep the five-stage schedule realistic and honest.
 - [Claude Code marketplace guide](https://code.claude.com/docs/en/plugin-marketplaces)
 - [Claude Code plugin reference](https://code.claude.com/docs/en/plugins-reference)
 - [Agent Skills specification](https://agentskills.io/specification)
-- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+- [Codex CLI](https://github.com/openai/codex)
 
 [Return to the PeerFoil README](../../README.md)
 

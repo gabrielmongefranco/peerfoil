@@ -48,19 +48,19 @@ Production with Codex, change placement into the plan, phase review, repair, and
 are **Coming soon** in later stages. The commands for them exist so that they can explain
 the boundary honestly. Production never starts before the reviewed plan is approved.
 
-When the Codex plugin is not installed, PeerFoil does not review your architecture or
-plan with the same model family and call it independent. It pauses and lets you either
-install the plugin or accept **Reduced assurance** for that one draft, which a fresh
-Claude reviewer then checks with the reduced label recorded.
+When Codex is not available, PeerFoil does not review your architecture or plan with
+the same model family and call it independent. It pauses and lets you either
+set up Codex or accept **Reduced assurance** for that one draft, which a fresh Claude
+reviewer then checks with the reduced label recorded.
 
 ## Prerequisites
 
 - Git.
 - Claude Code. The tested version is 2.1.260.
-- Node.js 18.18 or later, Codex CLI, and the official
-  [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc). These are
-  needed for independent review and production; the decision interview works without
-  them.
+- The [Codex CLI](https://github.com/openai/codex), signed in, either installed on its
+  own or bundled inside the Codex IDE extension; setup finds it in either place and
+  registers its MCP server in Claude Code. It is needed for independent review and
+  production; the decision interview works without it. No Node.js is required.
 - Your project's own development tools.
 
 ## Load the plugin for testing
@@ -80,7 +80,7 @@ on Windows, macOS, and Linux.
 
 | Command | What it does |
 |---|---|
-| `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, Node.js, Codex CLI, the Codex plugin, your profile, and pack tools |
+| `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, the Codex CLI and its login, the Codex MCP server, your profile, and pack tools |
 | `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, runs the decision interview, and continues through the reviewed architecture and plan |
 | `/peerfoil:change <request>` | Adds a request to the decision interview; plan placement is Coming soon |
 | `/peerfoil:status` | Reports assurance, state, architecture and plan status, quality state, blocker, pending decisions, and next action |
@@ -117,7 +117,7 @@ plugins/peerfoil/
   agents/architect.md          fresh architect role
   agents/planner.md            fresh planner role
   agents/claude-reviewer.md    fresh Claude reviewer for the reduced-assurance case
-  references/                  workflow, records, lineage, architecture, planning, and review rules shared by skills
+  references/                  workflow, records, lineage, codex, architecture, planning, and review rules shared by skills
   packs/<pack>/pack.json       Software, Generic, and Documentation packs
   templates/                   starting points for the .peerfoil/ project files
   LICENSE                      GNU General Public License, version 3

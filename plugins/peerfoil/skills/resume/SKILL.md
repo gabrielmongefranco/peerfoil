@@ -61,7 +61,7 @@ Read `workflow.state` from `project.json`.
 - **`paused`.** Read `workflow.paused_for` and tell the user what is needed. The state to
   return to is the `from_state` of the last `history.jsonl` line whose `to_state` is
   `paused`. When the need is met in this chat, for example the user answers the open
-  decision or the Codex plugin is now available, set `workflow.state` back to that
+  decision or Codex is now available, set `workflow.state` back to that
   state, record the transition, and continue as for that state. Otherwise stop.
 - **Any other state.** This build cannot continue that step. Say which state the project
   is in, what the completed workflow would do next, and that the capability is not yet

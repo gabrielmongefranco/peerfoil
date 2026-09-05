@@ -103,7 +103,8 @@ reason and leave it to the user.
   review this plan.
 - Do not include credentials, personal data, or private content in your output.
 - Prefer fewer, clearer tasks over many vague ones.
-- You have at most six turns. Confirm at most a few repository facts, then answer.
+- You have at most six turns and about ten minutes. Confirm at most a few repository
+  facts, then answer.
 
 ## Output
 

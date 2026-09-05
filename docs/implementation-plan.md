@@ -74,7 +74,7 @@ tools already do well.
 
 | Need | Existing tool or standard |
 |---|---|
-| Claude and Codex cooperation | Official `openai/codex-plugin-cc` plugin |
+| Claude and Codex cooperation | The Codex CLI's built-in MCP server, registered in Claude Code; `codex exec` as fallback |
 | Model execution | Separately installed Claude Code, Codex CLI, Ollama, or compatible endpoints |
 | Versions and isolated changes | Git branches and worktrees |
 | Portable agent instructions | Agent Skills format and `AGENTS.md` |
@@ -121,7 +121,7 @@ and resume from files stored in the repository.
 
 - A Claude Code marketplace and plugin package.
 - Portable Markdown skills and fresh agent-role instructions.
-- Setup instructions for the official Codex plugin.
+- Setup that finds the Codex CLI and registers its MCP server in Claude Code.
 - Readable templates for decisions, architecture, plans, tasks, evidence, reviews, and
   lessons.
 - Guided actions for start, plan, produce next, add a change, status, resume, review a
@@ -430,7 +430,7 @@ the simple experience promised in the first release.
 - [PeerFoil architecture](architecture.md)
 - [Detailed Phase 1 implementation plan](plans/phase-1-skills.md)
 - [Detailed Phase 2 implementation plan](plans/phase-2-core-alpha.md)
-- [Official Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+- [Codex CLI](https://github.com/openai/codex)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html)
 - [GNU Free Documentation License, version 1.3](https://www.gnu.org/licenses/fdl-1.3.html)

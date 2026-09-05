@@ -123,10 +123,15 @@ small, reversible, low risk, and easy to check. High and extra-high effort are a
 for any seat under Advanced settings when a project needs them; they make a step
 noticeably slower.
 
-Every model call is also bounded. A reviewer run uses at most ten turns and returns at
-most ten findings; an evaluator, architect, planner, or change-steward run uses at most
-six turns. A run that reaches its limit without a result is retried once, then PeerFoil
-asks the user.
+Every model call is also bounded, in turns and in time. A reviewer run uses at most ten
+turns and returns at most ten findings; an evaluator, architect, planner, or
+change-steward run uses at most six turns. A review, an architecture or plan draft, or a
+production task may take at most ten minutes; the evaluator, setup probes, and status
+may take at most five. When the time is up, PeerFoil asks the model once to stop and
+answer with what it has and gives it one more minute; only then does the run count as
+no result. A run with no result is retried once, then PeerFoil asks the user. Every
+review records how long it took. The Skills release can nudge Codex but not a running
+Claude agent; Core nudges both.
 
 Security, personal data, migrations, permissions, uploads, public interfaces, new
 dependencies, concurrency, architecture, published claims, important financial
@@ -356,18 +361,19 @@ The default setup requires:
 
 - Git;
 - Claude Code;
-- Node.js 18.18 or later;
-- Codex CLI or a supported ChatGPT account/API key; and
+- the Codex CLI, signed in with a ChatGPT account or API key; and
 - the project's own development tools.
 
-The official Codex plugin is installed in Claude Code with:
+The Codex CLI is a native program. It is available on its own or bundled inside the
+Codex IDE extension, and PeerFoil finds it in either place. Its built-in MCP server is
+registered in Claude Code once:
 
 ```text
-/plugin marketplace add openai/codex-plugin-cc
-/plugin install codex@openai-codex
-/reload-plugins
-/codex:setup
+claude mcp add --scope user codex -- codex mcp-server
 ```
+
+When the server is not registered, PeerFoil falls back to running `codex exec`. No
+Node.js and no Claude Code plugin is required.
 
 PeerFoil's installation commands will be published with the release. The planned command
 set is:
@@ -586,7 +592,7 @@ knowledge, and non-coding project packs without changing the basic experience.
 - [PeerFoil implementation plan](implementation-plan.md)
 - [PeerFoil phase prompt template](phase-prompt-template.md)
 - [PeerFoil repository](https://github.com/gabrielmongefranco/peerfoil)
-- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
+- [Codex CLI](https://github.com/openai/codex)
 - [Claude Code documentation](https://code.claude.com/docs)
 - [Codex documentation](https://learn.chatgpt.com/docs/codex)
 - [Agent Skills specification](https://agentskills.io/specification)

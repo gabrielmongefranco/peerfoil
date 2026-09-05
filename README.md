@@ -84,9 +84,10 @@ does not guarantee correctness or replace your judgment.
 
 **Coming soon.** PeerFoil has not been released yet.
 
-The first version will be a set of skills for Claude Code. It will use the official
-[Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc) to send coding and
-review tasks to Codex. A small local command-line application written in Go will follow.
+The first version will be a set of skills for Claude Code. It will send coding and
+review tasks to Codex through the [Codex CLI](https://github.com/openai/codex) and its
+built-in MCP server, with no extra runtime to install. A small local command-line
+application written in Go will follow.
 
 The normal workflow will be simple:
 
@@ -143,7 +144,7 @@ meet its quality checks.
 ### Can I use Claude Code and Codex together?
 
 That is the planned first-release setup. Claude Code will guide the workflow and use the
-official Codex plugin for coding and review tasks. See the [Quick Start Guide](#quick-start-guide)
+Codex CLI's MCP server for coding and review tasks. See the [Quick Start Guide](#quick-start-guide)
 and [current plugin documentation](plugins/peerfoil/README.md) for readiness and setup details.
 
 ### Can PeerFoil review existing code?
@@ -185,10 +186,9 @@ release.
 
 #### This work is based in part on the following projects and libraries:
 
-- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc) — connects
-  Claude Code and Codex without requiring PeerFoil to build another bridge.
 - [Codex CLI](https://github.com/openai/codex) — handles coding and review tasks in the
-  default setup.
+  default setup and provides the MCP server that connects it to Claude Code, so PeerFoil
+  builds no bridge of its own.
 - [Git](https://git-scm.com/) — stores project history and keeps work separated.
 - [Agent Skills](https://agentskills.io/specification) — provides the portable format for
   PeerFoil's instructions.
