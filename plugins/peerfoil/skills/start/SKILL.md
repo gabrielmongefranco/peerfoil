@@ -4,16 +4,16 @@ description: This skill should be used when the user runs /peerfoil:start or ask
 argument-hint: "[what you want to build or change]"
 license: GPL-3.0-or-later
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(git rev-parse *), Bash(git status *), Bash(git log *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *), PowerShell(Get-Date *)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git ls-files *), Bash(git ls-tree *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(git log *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *), PowerShell(Get-Date *)
 ---
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/skills/start/SKILL.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Guides project start: goal, pack, profile, project records, the decision interview, and the architecture and plan steps.
-Notes: Assurance is Guided. Production arrives in a later build; see references/workflow.md section 7.
+Notes: Assurance is Guided. Production stops at the phase-review boundary.
 
 Copyright © 2026 Gabriel Mongefranco
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -25,7 +25,8 @@ Request from the user: $ARGUMENTS
 
 Turn the request into a recorded project with a plain-language goal, a project pack, a
 profile, and a list of important decisions, then into a reviewed architecture and plan
-the user accepts. Create only the documented project files, inside the repository, and
+the user accepts, then produce and validate bounded tasks. Create documented project
+records and task-authorized deliverables inside the repository, and
 label everything **Guided**.
 
 ## Read first, in this order
@@ -186,8 +187,16 @@ Show the user, in plain language:
 - the files written; and
 - `Assurance: Guided`.
 
-Then state the boundary honestly. When the plan is approved, say that production, the
-next step, is not yet available in this build of PeerFoil Skills, as listed in the
-workflow reference, section 7. When decisions remain open or a step stopped, say that
+Then state the current task, evidence, blocker, and next action. Phase review, guided
+repair, and lessons remain Coming soon. When decisions remain open or a step stopped, say that
 `/peerfoil:resume` continues from the files. In every case say that a fresh chat can
 resume from the files under `.peerfoil/` without this conversation.
+
+## Host permissions
+
+The tool list pre-allows record edits and narrow read-only probes. Production also
+needs the Codex tool or CLI, temporary-index Git operations, snapshot hashing, and the
+project's declared check commands. Use the host permissions already authorized for this
+task; the skill does not grant blanket shell or MCP access. If a needed tool is denied,
+record the exact operation as blocked and give one recovery action. A non-interactive
+host must supply task-scoped permissions before production can continue.

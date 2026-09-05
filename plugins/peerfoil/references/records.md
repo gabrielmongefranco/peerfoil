@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/references/records.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Defines the shared PeerFoil records, their fields, identifiers, revisions, and file locations.
@@ -189,7 +189,25 @@ Files: `.peerfoil/plan.json` (validated by `schemas/plan.schema.json`) and
 | `stages[]` | Stage records with `id`, `title`, `outcome`, `order`, `status`, `depends_on`, and `tasks[]` |
 | `tasks[]` | Task records, defined below |
 | `requirements[]` | Optional `{ "id", "text", "source", "tasks" }` links from requirements to tasks |
-| `backlog[]` | Change requests placed in the backlog |
+| `backlog[]` | Unscheduled backlog or declined requests; retains the original small request shape |
+| `changes[]` | Optional revision traceability entries for every placement and discovered-work disposition; absent means an older record with no recorded intake yet |
+
+New plans use `schema_version: 2`. Version 1 plans remain readable with the retained
+`plan-v1.schema.json`; upgrade on the next candidate revision, preserving the accepted
+version 1 snapshot. Project, transition, and pack records remain version 1.
+
+Each `changes[]` entry contains `id`, `summary`, `placement`, `recorded_at`,
+`prior_revision`, `reason`, `affected_tasks`, `retained_tasks`, `evidence`, `reviews`, and
+`acceptance`. Placement is `current-stage`, `later-stage`, `later-phase`, `backlog`, or
+`declined`. Acceptance is `pending`, `reviewed`, `carried-forward`, or `user-reorder`.
+Task/evidence/review arrays hold existing stable identifiers; the affected and retained
+sets must be disjoint. `reason` records the impact comparison and accepting decision.
+See [changes.md](changes.md) for semantic validation and review continuity.
+
+Before replacing an accepted plan, retain it unchanged at `.peerfoil/plans/plan-N.json`
+using the same schema. Initial plans start with `changes: []`. Existing version 1 plans
+remain readable; initialize the array and set schema version 2 on first intake. Old
+consumers must be updated before reading version 2.
 
 Phase and stage status values: `planned`, `active`, `review`, `approved`, `deferred`,
 `removed`.
@@ -207,7 +225,7 @@ Inside `plan.json`.
 | `inputs` | Records or files the producer needs |
 | `output` | The expected artifact or change |
 | `required_evidence` | List of `{ "name", "kind", "level" }` matching the Quality Contract |
-| `depends_on` | Task identifiers that must be accepted first |
+| `depends_on` | Predecessors validated with current evidence within the active phase, or independently accepted in an earlier phase |
 | `acceptance` | Completion criteria in plain language |
 | `author_role` | Normally `producer` |
 | `status` | `planned`, `ready`, `in_progress`, `produced`, `validated`, `accepted`, `stale`, `blocked`, `deferred`, or `removed` |
@@ -227,7 +245,18 @@ File: `.peerfoil/evidence/cs-NNNN.md`.
 | `author` | Actor record for the producer, including its session |
 | `patch` | Location or hash of the captured patch |
 | `summary` | What changed, in plain language |
-| `captured_at` | Timestamp taken before any other agent edited the work |
+| `captured_at` | Timestamp taken before any other agent edited the work; null while pending |
+| `capture_status` | `pending`, `captured`, or `blocked` |
+| `started_at`, `attempt` | UTC launch time and bounded attempt number, retained before the call |
+| `plan_revision`, `architecture_revision`, `quality_revision` | Revisions sent to the producer |
+| `patch_sha256` | SHA-256 of retained patch bytes, or null before capture |
+| `input_snapshot` | Snapshot digest, or null before capture; see [evidence.md](evidence.md) |
+| `input_files` | Snapshot rows with path, file kind, and raw-byte SHA-256 or absent |
+| `baseline` | Launch inventory and previous snapshot reference when the baseline is uncommitted |
+
+Pending records reserve the identifier before invoking a writer. Do not treat a pending
+or blocked capture as produced work. Missing fields in older Markdown records mean Not
+verified until the host captures the missing facts; do not invent historical provenance.
 
 ### Evidence
 
@@ -241,7 +270,8 @@ File: `.peerfoil/evidence/ev-NNNN.md`.
 | `procedure` | Command as an argument list with its working directory, or the inspection or human steps |
 | `result` | `pass`, `fail`, `blocked`, or `not-run` |
 | `exit_code`, `duration_seconds`, `tool_version` | For executable evidence |
-| `source_revision`, `plan_revision` | The exact revision checked |
+| `source_revision`, `plan_revision` | The commit (null if uncommitted) and plan revision checked |
+| `input_snapshot` | Exact captured file-input digest verified before and after the check |
 | `recorded_at`, `recorded_by` | Timestamp and actor |
 | `retained_output` | Path to redacted output or a short redacted excerpt |
 
@@ -318,7 +348,7 @@ File: `.peerfoil/history.jsonl`, one JSON object per line. Validated by
 | `transition_id` | Transition identifier |
 | `project_id` | Project identifier |
 | `at` | Timestamp |
-| `from_state`, `to_state` | Workflow states; `from_state` is `null` at project start. An accepted record that does not change the state, such as plan approval in a build without production, is recorded with the same state on both sides |
+| `from_state`, `to_state` | Workflow states; `from_state` is `null` at project start. An accepted record that does not change the state, such as a bookkeeping plan revision, is recorded with the same state on both sides |
 | `actor` | Actor record for the coordinator that recorded the move |
 | `plan_revision` | Plan revision in effect |
 | `source_revision` | Git commit hash or `null` |

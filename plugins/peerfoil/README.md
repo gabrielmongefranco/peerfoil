@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/README.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Describes the PeerFoil plugin for Claude Code, what this build can do, and how to load it for testing.
@@ -29,7 +29,7 @@ written instructions, and nothing here enforces a step mechanically.
 
 ## What this build can do
 
-This build covers the first two of five Phase 1 stages. Today it can:
+This build covers the first three of five Phase 1 stages. Today it can:
 
 - check your prerequisites with `/peerfoil:setup`;
 - start a project, choose a pack and profile, and create the project records with
@@ -40,12 +40,16 @@ This build covers the first two of five Phase 1 stages. Today it can:
   accept them;
 - write an ordered plan of phases, stages, and small tasks with a fresh planner role,
   have Codex review it, and ask you to approve the stage order;
-- show the project's state with `/peerfoil:status`;
+- delegate one bounded task to Codex and retain its authorship before another edit;
+- run declared project checks through the host and retain exact input hashes and results;
+- place changes and discovered work with `/peerfoil:change`, revising the plan while
+  preserving unrelated completed work;
+- show the project's state, current evidence, and blockers with `/peerfoil:status`;
 - continue any of those steps in a fresh chat with `/peerfoil:resume`; and
 - view and change Advanced settings with `/peerfoil:settings`.
 
-Production with Codex, change placement into the plan, phase review, repair, and lessons
-are **Coming soon** in later stages. The commands for them exist so that they can explain
+Phase review, guided repair, and lessons are **Coming soon** in later stages. Their
+commands exist so that they can explain
 the boundary honestly. Production never starts before the reviewed plan is approved.
 
 When Codex is not available, PeerFoil does not review your architecture or plan with
@@ -81,8 +85,8 @@ on Windows, macOS, and Linux.
 | Command | What it does |
 |---|---|
 | `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, the Codex CLI and its login, the Codex MCP server, your profile, and pack tools |
-| `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, runs the decision interview, and continues through the reviewed architecture and plan |
-| `/peerfoil:change <request>` | Adds a request to the decision interview; plan placement is Coming soon |
+| `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, runs the decision interview, and continues through reviewed planning and bounded production |
+| `/peerfoil:change <request>` | Places a request or discovered work and records a plan revision with affected tasks and evidence |
 | `/peerfoil:status` | Reports assurance, state, architecture and plan status, quality state, blocker, pending decisions, and next action |
 | `/peerfoil:resume` | Continues the project from repository files in a fresh chat |
 | `/peerfoil:review-phase` | Coming soon: independent Claude and Codex review of a completed phase |
@@ -91,9 +95,11 @@ on Windows, macOS, and Linux.
 
 ## Files the plugin creates
 
-The plugin writes only inside your repository, under `.peerfoil/`. This build creates
+The coordinator writes project records under `.peerfoil/`. Codex writes only task-approved
+deliverables inside your repository. This build creates
 `project.json`, `decisions.md`, `history.jsonl`, `architecture.md`, `quality.md`,
-`plan.json`, `plan.md`, and review records under `reviews/`. These files belong to you.
+`plan.json`, `plan.md`, prior plans under `plans/`, captures, patches, and check results
+under `evidence/`, and review records under `reviews/`. These files belong to you.
 They hold decisions, the architecture, the evidence contract, the plan, small redacted
 transition records, and review findings with the author and reviewer of each. They never
 hold provider tokens, raw prompts, or full conversations.
@@ -105,7 +111,28 @@ architect receive the goal, pack, profile, a summary of your repository rules an
 observable repository facts, and the recorded decisions. The planner receives the
 accepted architecture and Quality Contract. A reviewer receives only the names of the
 frozen files to read and the questions to answer. Setup records tool versions only,
-never paths or user names.
+never paths or user names. The producer receives relevant rules, accepted excerpts,
+one task with allowed paths, and its evidence procedures. The CLI fallback retains its
+packet in provider-native local session storage; PeerFoil never copies that transcript
+into Git. Captures and logs are inspected for private content before retention.
+
+## Production and recovery limits
+
+A task reaches `validated` when the host retains passing required checks for its exact
+inputs. It is still awaiting independent review. This build stops at phase review and
+never calls a phase approved. Missing required evidence stays blocking.
+
+Use `/peerfoil:resume` in a fresh chat to continue from project files. Uncommitted
+captures include file hashes so the host can detect changed inputs. A pending capture,
+unknown writer termination, or inconsistent multi-file update needs reconciliation;
+Skills 0.1 does not guarantee crash recovery. Keep project files and safe captured
+patches in Git when you want the handoff to survive a fresh clone. Commits require your
+explicit instruction.
+
+A clean deliverable baseline is required before a new task. Retained, validated earlier
+tasks may form an uncommitted baseline after their hashes are verified. Unexplained
+edits are preserved and block a new writer. Unknown producer lineage is shown as
+Reduced assurance; it never becomes independent approval.
 
 ## Layout
 
@@ -132,10 +159,9 @@ repository [NOTICE](../../NOTICE) for the complete notices.
 
 ## Conclusion
 
-This build proves the front half of the workflow: prerequisites, a recorded goal, a
-decision interview, and an architecture and plan that another model family reviews
-before you accept them. Later stages add production, phase review, repair, and lessons
-on the same records.
+This build guides decisions, reviewed planning, bounded production, project checks,
+change intake, and fresh-chat continuation. Later stages add phase review, repair, and
+lessons on the same records. The complete release still needs its three-platform checks.
 
 ## Additional Resources
 

@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 docs/plans/phase-1-skills.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Provides the executable implementation plan for Phase 1, PeerFoil Skills 0.1, and records stage status.
@@ -456,6 +456,88 @@ chat.
 - a mid-stage change updates the plan without losing unrelated completed work;
 - status tells the user what is happening and what needs them; and
 - a fresh chat resumes the correct task without the old chat history.
+
+### Stage 3 implementation and verification status
+
+Implemented on 2026-09-05 on `phase-1-stage-3`. The implementation received independent repair verification; stage acceptance remains
+pending the live checks listed below. Phase 1 is not complete. Stage 4 has
+not begun. D-0025 in the [decision log](../decision-log.md) records the production and
+revision choices.
+
+The implementation adds shared production, evidence, and change references; connects
+`start`, `resume`, `change`, and `status`; extends capture and evidence templates; and
+retains prior accepted plans under `.peerfoil/plans/`. Plan schema version 2 adds change
+traceability, with the original version 1 schema retained and read dispatch based on
+version. This is a data-format upgrade, not a controller. A narrow ignore exception
+also includes the Codex reference in Git: the local `CODEX.md` ignore pattern had hidden
+that required file on Windows.
+
+Authorship: OpenAI Codex (`openai-gpt`) authored the Stage 3 patch, including changes to
+existing headers and templates. Existing notices remain intact; generated templates
+retain their directory-level license convention. This is provenance, not self-approval.
+The synthetic greeting source was separately authored by Codex CLI 0.153.0, model
+`gpt-6-astra`, at high effort and captured before any other source edit.
+
+| Check | Result |
+|---|---|
+| `python tests/static_checks.py` | Pass; JSON/schema dispatch, notices, relative links, frontmatter, packs, and required files |
+| `python tests/stage3_checks.py` | Pass; six tests covering both schema versions, five placements, malformed fields, overlapping task sets, duplicate changes, and invalid revision chains |
+| `bash .github/scripts/conformance.sh` using Git for Windows Bash | Pass; includes both Python checks; Bash is repository tooling, not a product prerequisite |
+| `claude plugin validate --strict .` and `claude plugin validate --strict plugins/peerfoil` | Pass with Claude Code 2.1.260 |
+| Clean Git-tree export `b758a3074516f8b63ea670a7136bd60ce3d9a563` | Both Python checks, conformance, and both strict validators pass; the formerly ignored Codex reference is present. Final changes after this export only append verification results to this status section |
+| Fresh `claude -p --plugin-dir <plugin> --model claude-fable-5 --effort high` invoking `/peerfoil:resume` in a synthetic path containing spaces, Unicode, and an apostrophe | Producer access denied; host paused without source changes or false task success. The combined path's cause is unverified. The host incorrectly marked the empty capture `captured`; the reference now explicitly requires `blocked`. Not re-run on that path |
+| `codex exec --sandbox workspace-write -c approval_policy="never" -c model_reasoning_effort="high" -m gpt-6-astra -C <synthetic repository> --json --output-last-message <temporary file> -` | Pass in a plain path, 32 seconds; one `hello.py` added, no other deliverable changed; structured handoff and actual thread ID retained outside Git |
+| Fresh `/peerfoil:resume` after a real Codex patch was captured by the host | Pass, 162 seconds; recomputed patch and six input hashes, ran `["python", "check.py"]` (exit 0), retained `ev-0001`, validated the task, and stopped at `review` without another producer or source edit |
+| Fresh `/peerfoil:status` with a task tied to plan 1 while plan 2 is active | Pass, 61 seconds; identified stale work, missing evidence, and broken review continuity; no files changed |
+| Fresh `/peerfoil:change` with an explicitly unscheduled JSON-output requirement | Pass, 187 seconds; created plan 2/schema 2, preserved plan 1/schema 1 and the original review, re-tied the unchanged validated task, retained capture/evidence, and changed no deliverables. Host schema/semantic checks pass for project, both plans, and every history line |
+
+The software fixture uses a single Python greeting command with a declared host check.
+Architecture/plan approvals are explicitly seeded synthetic preconditions; they do not
+count as live Stage 2 review evidence. Raw prompts, provider events, and test-session
+results remain outside Git. Only redacted summaries belong here. The first test wrapper
+failed to print its Unicode result under the Windows console encoding after saving the
+result successfully; subsequent summaries use ASCII-safe JSON.
+
+Independent Claude review pass 1 inspected the working patch in a fresh read-only
+session: `claude-fable-5`, lineage `anthropic-claude`, session
+`31c467e8-95f3-4d1d-b80e-fa53dcf89413`, 309 seconds. Decision: `repair`. Three major
+findings concerned missing stage evidence, tool permissions, and uncommitted baseline
+continuity. Six minor findings concerned bookkeeping review timestamps, declining user
+scope, schema versioning, authorship, hash permissions, and weak tests. The patch addresses
+these findings. The reviewer did not run
+commands because its read-only command allowlist denied its proposed check.
+
+Independent pass 2: `claude-fable-5`, lineage `anthropic-claude`, session
+`61e8dc52-dee7-48c4-94b5-191b4148d32b`, 171 seconds. Decision: `approve` for
+implementation repair verification, with all nine prior findings repaired and no
+remaining blocking finding. The reviewer ran both Python suites successfully. The
+reviewed file manifest digest was
+`7e473cb55aafcae7d2eb8bc732a01ce33cd4b0815d37f2387bf436ea92d39869`; every file still
+matched it before this verification summary was appended. This is not stage or phase
+acceptance. Raw review responses remain outside Git.
+
+Later-pass findings retained under D-0024: `p2-d1` (minor, deferred) notes that Write/Edit
+containment remains guided; consider narrower host permissions when supported in Core.
+`p2-d2` (normalized to note, deferred) notes that the semantic change checker relies on
+schema validation for malformed structures; no Stage 3 action is required. Neither
+finding changes the accepted production or evidence gates.
+
+A direct read-only Codex probe of the combined special-character path also failed
+(18 seconds): it could not find the fixture's instruction/README files and did not
+recognize the Git root. The host could read those files. This confirms an unresolved
+provider-path check, not its cause; no sandbox permission was broadened to bypass it.
+
+Remaining checks: live MCP production, writing timeout/cancellation and child cleanup,
+partial malformed handoff, a second uncommitted producer, live substantive plan review,
+combined special-character paths, macOS/Linux sessions, and human keyboard/screen-reader
+review. These remain visible verification gaps for the Stage 5 platform matrix; no
+three-platform release or completed Phase 1 is claimed. Plain-text status uses named
+states and descriptive actions without color dependence; automated links and structure
+checks pass, but they are not a WCAG certification.
+
+Durable lesson: a local reference can pass static existence checks yet be absent from a
+fresh clone because of case-insensitive ignore rules. Include clean-checkout validation
+when checking a distributable plugin.
 
 ## 10. Stage 4 — Review, repair, and lessons
 

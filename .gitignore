@@ -1,6 +1,6 @@
 # Project:  PeerFoil  |  File: .gitignore
-# Authors:  Gabriel Mongefranco (@gabrielmongefranco)
-# Created:  2026-09-04  |  Modified: 2026-09-04
+# Authors:  Gabriel Mongefranco (@gabrielmongefranco); OpenAI Codex
+# Created:  2026-09-04  |  Modified: 2026-09-05
 # Summary:  Excludes local tools, credentials, build output, and reconstructible PeerFoil state.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -26,6 +26,7 @@ CLAUDECODE.md
 GEMINI.md
 KIMI.md
 CODEX.md
+!plugins/peerfoil/references/codex.md
 CHATGPT.md
 
 # Secrets and local environment

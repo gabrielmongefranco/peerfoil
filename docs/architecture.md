@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 docs/architecture.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
 Last Modified: 2026-09-05
 Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
@@ -338,7 +338,8 @@ A project using PeerFoil keeps accepted state under `.peerfoil/`:
 | `plan.md` | Human-readable phases, stages, tasks, and changes |
 | `plan.json` | Validated task, dependency, and evidence data |
 | `history.jsonl` | Small, redacted records of accepted transitions |
-| `evidence/` | Evidence metadata and approved retained results |
+| `plans/` | Prior accepted plan revisions retained before change intake replaces them |
+| `evidence/` | Evidence metadata, captured producer patches, input snapshots, and approved retained results |
 | `reviews/` | Findings, decisions, repairs, and approvals |
 | `lessons/` | Candidate and accepted lessons |
 

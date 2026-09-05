@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 docs/PeerFoil-Method.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
 Last Modified: 2026-09-05
 Summary: Defines the PeerFoil workflow, its safeguards, and its planned releases.
@@ -290,7 +290,10 @@ evidence:
    can check well.
 
 Every task says which evidence is required, recommended, or not applicable. Missing
-required evidence blocks completion.
+required evidence blocks completion. Skills may validate an uncommitted task using a
+retained patch and file-input hashes, with the source commit left null. A validated task
+can supply inputs to the next task in the same phase; validation does not independently
+approve the task or close the phase.
 
 The architect creates a short **Quality Contract** for each project. It selects the checks
 that apply to the type of work and its risks. For software, this may include:

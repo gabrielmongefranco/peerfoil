@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/references/planning.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Defines the planning step: how a skill turns an accepted architecture into an ordered plan of phases, stages, and small tasks, obtains independent review, and records the user's approval of the stage order.
@@ -16,8 +16,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 This step runs while `workflow.state` is `plan` and the architecture is `accepted`. It
 produces `.peerfoil/plan.json` and `.peerfoil/plan.md`, has the plan reviewed by a
 different model family, and ends when the user approves the order of stages. In this
-build the project then waits in the `plan` state, because production arrives in a later
-build.
+build the project continues through bounded production and host-run validation.
 
 ## 1. Finding the current sub-step in a fresh chat
 
@@ -79,7 +78,7 @@ Do not include this chat's history, the architect's packet, or the evaluator's p
       record. Matching is case-insensitive so Windows and macOS cannot bypass a
       protected name. When a task is produced, every changed path is rejected if any
       component of it is a symbolic link or junction, and its resolved form must stay
-      inside the repository root; that check belongs to production in a later build.
+      inside the repository root; follow [production.md](production.md) for that check.
    8. **Evidence.** Every entry in `required_evidence` names an item in the Quality
       Contract with the same `kind`, and its `level` is `required` or `recommended`,
       never `not-applicable`.
@@ -104,7 +103,7 @@ Do not include this chat's history, the architect's packet, or the evaluator's p
    14. **Backlog.** The first plan's backlog is empty.
    Ask the planner once to fix a specific rule; if it still fails, stop and tell the user
    which rule failed.
-3. Write `.peerfoil/plan.json` with `record_type` `plan`, `schema_version` 1, the
+3. Write `.peerfoil/plan.json` with `record_type` `plan`, `schema_version` 2, the
    project identifier, `plan_revision` equal to `revisions.plan + 1`, the accepted
    `architecture_revision` and `quality_revision`, status `draft`, `revised_at` now,
    `revised_by` the planner actor, `revision_reason` "Initial plan written from
@@ -164,24 +163,17 @@ On approval:
    `workflow.task` `null`, keep `workflow.state` `plan`, and update `updated_at`.
 3. Append a transition with `from_state` `plan` and `to_state` `plan`, actor
    `coordinator`, `refs.reviews` listing the plan review identifiers, and the summary
-   "Plan revision N approved after independent review; production waits for a later
-   build." When the review was a reduced-assurance review, say so in the summary. Use
+   "Plan revision N approved after independent review; ready for production checks." When the review was a reduced-assurance review, say so in the summary. Use
    only the `refs` keys the records reference lists; deferred findings are recorded in
    the review, not in `refs`.
 
-## 8. The production boundary
+## 8. Continue to production
 
-Production is not available in this build. After approval, tell the user:
-
-- the plan is approved and lives in `.peerfoil/plan.json` and `.peerfoil/plan.md`;
-- the completed workflow will delegate the first task to Codex, capture its authorship,
-  and run the declared evidence, as listed as "Not yet" in the workflow reference,
-  section 7; and
-- `/peerfoil:status` shows the approved plan, and `/peerfoil:change` will place new
-  requests into it in a later build.
-
-Never begin a production task, and never move `workflow.state` to `produce`. Production
-also stays blocked whenever a decision is `open` or a `blocking` finding remains `open`.
+After approval, follow [production.md](production.md) from section 1. Tell the user the
+next bounded task and its checks. Continue within the authorized phase until a decision,
+permission, failure, or the phase-review boundary requires a stop. Production stays
+blocked while a decision or blocking finding is open, records disagree, or inputs are
+stale. `/peerfoil:change` uses [changes.md](changes.md) for subsequent plan revisions.
 
 ## 9. Rules
 

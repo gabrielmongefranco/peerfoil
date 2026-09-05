@@ -2,12 +2,12 @@
 name: status
 description: This skill should be used when the user runs /peerfoil:status or asks where a PeerFoil project stands, what is blocking it, or what to do next. It reads the accepted files under .peerfoil and reports the assurance level, state, architecture and plan status, quality state, blocker, pending decisions, and next action in plain language without calling a model or changing any file.
 license: GPL-3.0-or-later
-allowed-tools: Read, Glob, Grep, Bash(git rev-parse *), Bash(git status *), Bash(git log *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *)
+allowed-tools: Read, Glob, Grep, Bash(git diff *), Bash(git ls-files *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(git log *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *)
 ---
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/skills/status/SKILL.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Guides the read-only PeerFoil status report.
@@ -27,14 +27,18 @@ state. Change nothing. Do not reconstruct state from this chat.
 1. `${CLAUDE_PLUGIN_ROOT}/references/workflow.md`, sections 1, 3, 4, and 7.
 2. The repository root from `git rev-parse --show-toplevel`. If it fails, say that the
    current folder is not inside a Git repository and suggest `/peerfoil:setup`. Stop.
-3. `.peerfoil/project.json`. If it is missing, say that this repository has no PeerFoil
+3. Read root and applicable nested `AGENTS.md` before other project content.
+   Then read `.peerfoil/project.json`. If it is missing, say that this repository has no PeerFoil
    project yet and that `/peerfoil:start <idea>` creates one. Stop.
 4. `.peerfoil/decisions.md` and the last line of `.peerfoil/history.jsonl`.
-5. The header lines of `.peerfoil/architecture.md`, `.peerfoil/quality.md`, and
-   `.peerfoil/plan.json`, and, under `.peerfoil/reviews/`, the latest review of kind
+5. `.peerfoil/architecture.md`, `.peerfoil/quality.md`, and the full
+   `.peerfoil/plan.json` (including task revisions and change entries), and, under `.peerfoil/reviews/`, the latest review of kind
    `architecture` and the latest of kind `plan`, including their findings'
    dispositions, when they exist.
-6. `git status --porcelain --branch` for the branch name and whether the tree is clean.
+6. Active change sets, plan snapshots, and linked evidence. Follow
+   `${CLAUDE_PLUGIN_ROOT}/references/evidence.md` to compare current input hashes using
+   read-only host commands. If hashing is unavailable, report evidence Not verified.
+7. `git status --porcelain --branch` for the branch name and whether the tree is clean.
 
 ## Check the project record
 
@@ -75,9 +79,17 @@ Rules:
 - In the `architect` and `plan` states, name the current sub-step from the draft's
   status and the latest review: writing the draft, awaiting review, revising after
   findings, awaiting the user's acceptance, or approved. `Next` is `/peerfoil:resume`
-  unless the plan is `accepted`; then say that the plan is approved and that production
-  is not yet available in this build, as listed in the workflow reference, section 7.
-- `Blocker` names an `open` decision, an open `blocking` finding, or the `paused_for`
+  when the plan is accepted and production gates pass. Otherwise name the unfinished
+  review, acceptance, or candidate-change step.
+- In production and validation, name the active task and report required evidence as
+  passed, failed, missing, stale, or Not verified. A producer claim is not a pass. Task
+  `validated` means checks passed, not independently approved. A stale task tied to an
+  old plan cannot be reported as current; retained work needs the change-entry chain
+  and unchanged input hashes. At the phase boundary, say phase review Coming soon.
+- A pending capture means the producer may still be running; next is safe reconciliation
+  through `/peerfoil:resume`, never another writer. Do not call any model for status.
+- `Blocker` names a revision/hash mismatch, missing capture or evidence, an `open`
+  decision, an open `blocking` finding, or the `paused_for`
   reason when one exists.
 - For any capability the workflow reference marks "Not yet", say so instead of inventing
   a next step.

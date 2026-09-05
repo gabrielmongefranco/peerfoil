@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 schemas/README.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Explains the JSON schemas that validate PeerFoil's machine-readable project records and pack manifests.
@@ -33,7 +33,8 @@ rules, and field meanings are in the
 |---|---|
 | `common.schema.json` | Shared definitions: identifiers, timestamps, actors, model seats, and evidence requirements |
 | `project.schema.json` | `.peerfoil/project.json` |
-| `plan.schema.json` | `.peerfoil/plan.json` |
+| `plan.schema.json` | Version 2 `.peerfoil/plan.json` and retained version 2 snapshots |
+| `plan-v1.schema.json` | Existing version 1 plans and their retained snapshots |
 | `transition.schema.json` | One line of `.peerfoil/history.jsonl` |
 | `pack.schema.json` | A project pack's `pack.json` manifest |
 
@@ -56,9 +57,19 @@ A change that needs another keyword must also extend the validator in
 
 ## Versioning
 
-Each record carries `schema_version`. The current version of every record is `1`. A
+Each record carries `schema_version`. Project, transition, and pack records use version `1`; new plans use version `2`. A
 change that breaks existing files increases the version, keeps the old schema readable,
 and documents an upgrade path.
+
+Plan version 2 adds `changes` entries for revision traceability. The unchanged version 1
+shape is retained in `plan-v1.schema.json`, and the repository validator dispatches by
+`schema_version`. To upgrade, preserve the accepted version 1 plan in `.peerfoil/plans/`,
+create the next candidate with `schema_version: 2` and `changes: []`, and follow normal
+change review. Never rewrite historical snapshots. Older consumers must be upgraded
+before reading version 2. A recovery can restore the prior accepted snapshot and report
+later work as pending; it must not silently accept later work under the older plan.
+Cross-record references, disjoint task sets, review eligibility, and file hashes are
+semantic host checks; schema validity alone does not establish acceptance.
 
 ## Conclusion
 
