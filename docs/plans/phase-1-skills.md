@@ -373,8 +373,14 @@ CLI 0.153.0 from the VS Code extension and its MCP server registered in Claude C
 
 Not run after D-0019: the "answer now" nudge inside a skill run, and a complete run at
 the medium-effort defaults with the time limits in force. A small run at those defaults
-did measure one step: a fresh session in the `architect` state reached its first
-independent Codex review of the architecture two minutes and five seconds after launch.
+measured the architecture step alone: a fresh session in the `architect` state reached
+its first independent Codex review two minutes and five seconds after launch and
+recorded the architecture's acceptance sixteen minutes after launch, after three Codex
+passes and two architect revisions, in nineteen coordinator turns. Two defects showed:
+the run accepted at the pass limit with a `blocking` finding deferred, because it had
+loaded the references before the Stage 2 review's fix to that rule was written, and it
+recorded review durations as `null` because it captured no start times, which the
+review reference now states explicitly.
 
 ### Stage 2 independent review
 

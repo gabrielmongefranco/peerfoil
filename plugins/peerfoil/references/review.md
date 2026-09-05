@@ -274,8 +274,9 @@ by reading each file once and writing each record once.
 
 Time limits: a review pass, an architecture or plan draft, and a production task may
 each take at most ten minutes of wall-clock time; the evaluator, setup probes, and
-status at most five. Note the start time before launching a reviewer or author and the
-end time when the result arrives, and write the difference as the review's `Duration`.
+status at most five. Run the UTC time command immediately before launching a reviewer
+or author and again immediately after its result arrives, and write the difference in
+seconds as the review's `Duration`; `null` is allowed only when a command failed.
 Limits are two-stage. When the time limit passes without a result, the reviewer is asked
 once to stop and answer now with what it has, and given one more minute; only then does
 the run count as no result, after which it is retried once and then the user is asked.
