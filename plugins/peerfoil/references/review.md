@@ -5,7 +5,7 @@ Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Defines how a PeerFoil skill obtains an independent review of an architecture or plan draft, records it, and handles the case where no different-family reviewer is available.
-Notes: This build covers architecture and plan reviews. Phase review, repair, and the six-pass limits arrive in Phase 1, Stage 4 and extend this file. Codex access is defined in codex.md.
+Notes: This file defines the transfer for every review kind. Phase review is coordinated by phase-review.md and repair verification by repair.md; both use the packet, launch, validation, and recording rules here. Codex access is defined in codex.md.
 
 Copyright © 2026 Gabriel Mongefranco
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,19 +18,22 @@ files and returning specific findings. The coordinating skill prepares the packe
 launches the reviewer, validates what comes back, and records the result. It never
 approves anything itself, and it never lets the author's session review its own draft.
 
-## 1. What is reviewed in this build
+## 1. What is reviewed
 
 | Kind | Frozen material | Author role | Written after approval |
 |---|---|---|---|
 | `architecture` | `.peerfoil/architecture.md` and `.peerfoil/quality.md` at their draft revision | `architect` | Both files move from `draft` to `reviewed` |
 | `plan` | `.peerfoil/plan.json` at its draft revision | `planner` | `plan.json` moves from `draft` to `reviewed` |
+| `phase` | The frozen bundle named in a phase review record | Item by item | The phase is approved or repaired as [phase-review.md](phase-review.md) describes |
+| `repair` | The repair change set, fresh evidence, and repaired deliverables | The repairer | The phase is approved or paused as [repair.md](repair.md) describes |
 
 ## 2. Choosing the reviewer
 
 1. Read the author's actor from the draft. Its `lineage_root` is the family that must
    not give primary approval.
 2. Read `settings.phase_reviewers` from `project.json`. The primary reviewer is the seat
-   whose `tool` differs from the author's tool. With the default settings the author is
+   whose configured model maps, under [`lineage.md`](lineage.md) section 1, to a
+   lineage root different from the author's. With the default settings the author is
    `claude-code` (`anthropic-claude`) and the primary reviewer is `codex-cli`
    (`openai-gpt`).
 3. The Codex reviewer is **available** when either is true, checked in this order as
@@ -225,6 +228,8 @@ Reject the review and use the retry rule in section 6, step 5, when any of these
 - `decision` is not `approve`, `repair`, or `block`.
 - A finding lacks a non-empty `title`, `location`, `requirement`, `severity`, `evidence`,
   or `recommendation`, or its `severity` is not `blocking`, `major`, `minor`, or `note`.
+- For kind `phase` or `repair`, any additional check in [phase-review.md](phase-review.md),
+  section 5, or [repair.md](repair.md), section 6, fails.
 
 Apply these corrections without asking the reviewer:
 
@@ -276,7 +281,9 @@ Apply these corrections without asking the reviewer:
   allow one more revise-and-review round, or stop. A draft with an open `blocking`
   finding is never accepted: only `major`, `minor`, and `note` findings can be deferred,
   and a `blocking` finding clears only when a later independent pass reports it
-  repaired. This build states the limit; it cannot enforce it mechanically.
+  repaired. A phase review uses the per-reviewer limits in
+  [phase-review.md](phase-review.md), section 12. This build states the limits; it
+  cannot enforce them mechanically.
 
 ## 11. Turn and time budgets
 

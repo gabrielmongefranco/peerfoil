@@ -6,7 +6,7 @@
 # Last Modified: 2026-09-05
 # Summary: Runs PeerFoil's static repository checks: required files, JSON and schema validity,
 #          skill and agent frontmatter, relative links, plugin path references, file notices,
-#          manifests, packs, and stale project names.
+#          manifests, packs, review settings, and stale project names.
 # Notes: Uses only the Python 3 standard library so it runs from a clean checkout on Windows,
 #        macOS, and Linux. Run it from any directory: python tests/static_checks.py
 # Copyright © 2026 Gabriel Mongefranco
@@ -69,6 +69,9 @@ REQUIRED_FILES = [
     "plugins/peerfoil/references/codex.md",
     "plugins/peerfoil/references/production.md", "plugins/peerfoil/references/evidence.md",
     "plugins/peerfoil/references/changes.md", "tests/stage3_checks.py",
+    "plugins/peerfoil/references/phase-review.md", "plugins/peerfoil/references/repair.md",
+    "plugins/peerfoil/references/lessons.md", "plugins/peerfoil/agents/repair-coordinator.md",
+    "tests/stage4_checks.py",
     "plugins/peerfoil/templates/README.md",
     "schemas/README.md", "schemas/common.schema.json", "schemas/project.schema.json",
     "schemas/plan.schema.json", "schemas/plan-v1.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",
@@ -79,7 +82,7 @@ REQUIRED_FILES = [
     f"plugins/peerfoil/templates/{name}" for name in (
         "project.json", "decisions.md", "architecture.md", "quality.md", "plan.md",
         "plan.json", "history.jsonl", "evidence.md", "change-set.md", "review.md",
-        "lesson.md",
+        "phase-review.md", "lesson.md",
     )
 ]
 
@@ -341,6 +344,9 @@ def check_schemas(problems: Problems) -> None:
         if schema_file == "plan.schema.json" and isinstance(instance, dict):
             for error in plan_change_errors(instance):
                 problems.add(path, error)
+        if schema_file == "project.schema.json" and isinstance(instance, dict):
+            for error in review_settings_errors(instance):
+                problems.add(path, error)
 
     validate_file(TEMPLATE_DIR / "project.json", "project.schema.json")
     validate_file(TEMPLATE_DIR / "plan.json", "plan.schema.json")
@@ -388,6 +394,33 @@ def plan_change_errors(plan: dict) -> list[str]:
         current = plan.get("plan_revision")
         if isinstance(prior, int) and isinstance(current, int) and prior >= current:
             errors.append(f"{identifier}: prior_revision must precede plan_revision")
+    return errors
+
+
+def review_settings_errors(project: dict) -> list[str]:
+    """Check the review limits and seats that the schema's ranges alone cannot express."""
+    errors = []
+    settings = project.get("settings")
+    if not isinstance(settings, dict):
+        return errors  # Schema validation reports the missing object.
+    review = settings.get("review", {})
+    if isinstance(review, dict):
+        default_passes = review.get("default_passes")
+        max_passes = review.get("max_passes")
+        if isinstance(default_passes, int) and isinstance(max_passes, int) and default_passes > max_passes:
+            errors.append("default_passes must not exceed max_passes")
+        selection = review.get("repair_selection_passes")
+        selection_max = review.get("repair_selection_max_passes")
+        if isinstance(selection, int) and isinstance(selection_max, int) and selection > selection_max:
+            errors.append("repair_selection_passes must not exceed repair_selection_max_passes")
+    seats = settings.get("phase_reviewers")
+    if isinstance(seats, list) and len(seats) == 2 and all(isinstance(seat, dict) for seat in seats):
+        if seats[0].get("tool") == seats[1].get("tool"):
+            errors.append("phase_reviewers must use two different tools")
+    roles = settings.get("roles", {})
+    repairer = roles.get("repair_producer") if isinstance(roles, dict) else None
+    if isinstance(repairer, dict) and repairer.get("effort") == "low":
+        errors.append("repair_producer effort must not be low")
     return errors
 
 

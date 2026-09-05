@@ -33,7 +33,10 @@ This is a written host procedure, not a controller or a crash-recovery guarantee
    `in_progress`, `produced`, or `validated` task using section 5 before choosing a new
    one. Never launch a second writer. Select the first `planned` or `ready` task in
    the user's authorized stage order whose dependencies are satisfied. A task or stage
-   in another phase needs phase approval and authorization to begin that phase.
+   in another phase begins only when the previous phase's review record is `approved`,
+   `workflow.state` is `approve`, and the user authorizes the next phase in this chat.
+   Then set that phase and its first stage `active`, move `workflow.state` to
+   `produce` with the `approve` to `produce` transition, and continue.
 4. `validated` predecessors may supply inputs within the active phase when their
    current evidence passes; this is readiness for dependent work, not independent
    acceptance. `accepted` predecessors must have eligible review records. Do not set
@@ -66,7 +69,8 @@ Build one compact transfer packet containing:
 - accepted decisions and architecture excerpts needed by this task;
 - project ID, active phase/stage/task, revisions, base commit, and change-set ID;
 - exact task scope, inputs, allowed paths, expected output, and acceptance criteria;
-- required evidence procedures from the accepted Quality Contract; and
+- required evidence procedures from the accepted Quality Contract;
+- active lesson hints from [lessons.md](lessons.md), section 4, when any; and
 - the handoff shape below and the producer restrictions in this section.
 
 Do not send old chats, review deliberations, credentials, or unrelated private context.
@@ -168,9 +172,10 @@ Never reset the retry allowance on resume.
 | Captured change and task `produced` | Verify snapshot and revisions, then run host evidence; do not call the producer again |
 | Task `validated` | Verify current evidence, then select the next dependency-ready task within the authorized phase |
 | Missing capture, changed hashes, stale task, or disagreeing records | Report the blocker; retain files and route changed work through change intake |
-| All active-phase tasks validated | Refresh earlier evidence affected by subsequent tasks against the final snapshot; only then set workflow `review`, phase/stages `review`, report phase review Coming soon, and stop |
+| All active-phase tasks validated | Refresh earlier evidence affected by subsequent tasks against the final snapshot; only then set workflow `review`, phase/stages `review`, append the `validate` to `review` transition, and tell the user to run `/peerfoil:review-phase`, or continue with [phase-review.md](phase-review.md) when the user asked for the review in this chat |
 
 Read accepted files, snapshots, and history, never an old conversation or provider
 session to reconstruct task state. A provider session may corroborate identity but is
 not the project handoff. An interrupted multi-file record update is a visible mismatch
-requiring reconciliation, not a successful transition. Do not start the next phase.
+requiring reconciliation, not a successful transition. Do not start the next phase
+without the approval and authorization in section 1, step 3.

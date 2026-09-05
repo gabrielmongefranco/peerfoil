@@ -12,6 +12,8 @@ Project: `{{project_id}}` · Assurance: Guided
 - **Conflicts:** {{existing rules or decisions it may contradict, or "None"}}
 - **Proposed destination:** {{decision | test | skill | agents-md-proposal | pack-rule | hint}}
 - **Expires at:** {{timestamp for a hint | null}}
+- **Verification:** {{none yet | review identifiers and the verdict}}
+- **Promoted to:** {{decision, change request, or destination name | null}}
 - **Recorded by:** {{role}} ({{tool}}, {{lineage_root}}, session {{session | null}})
 - **Recorded at:** {{timestamp}}
 

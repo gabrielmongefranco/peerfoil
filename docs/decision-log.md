@@ -54,6 +54,10 @@ that supersedes the old one, never by editing history.
 | D-0022 | Two-stage deadlines: an "answer now" nudge, then a kill one minute later | Accepted; Skills half narrowed by D-0023 | Phase 1, Stage 2 |
 | D-0023 | In Skills 0.1 the nudge exists only on the `codex exec` path; lineage comes from the model identifier | Accepted | Phase 1, Stage 2 |
 | D-0024 | Later review passes decide on blocking findings only, on changed material only | Accepted | Phase 1, Stage 2 |
+| D-0025 | Guided production snapshots and change continuity | Implemented | Phase 1, Stage 3 |
+| D-0026 | Phase review record with item-level primary reviewers and a merged finding list | Accepted | Phase 1, Stage 4 |
+| D-0027 | Repairer chosen by rule; reviewer agreement stands in for the repair task's plan review | Accepted | Phase 1, Stage 4 |
+| D-0028 | Lessons are verified at phase review and promoted only with the user; hints may stay unverified | Accepted | Phase 1, Stage 4 |
 
 ## D-0001 — Plugin location
 
@@ -459,10 +463,89 @@ that supersedes the old one, never by editing history.
   This entry records implementation provenance, not self-approval. The corresponding
   Claude review records its own session and inspected revision in the detailed plan.
 
+## D-0026 — Phase review record and item-level independence
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** Each phase review round is recorded in one `pr-NNNN` phase review
+  record under `.peerfoil/reviews/`. It holds the frozen bundle manifest with a SHA-256
+  per item and a bundle digest, the author and primary reviewer of every item, the
+  evidence currency the host recomputed, the open items, one `rv-` review per
+  reviewer per pass, the merged shared finding list, the repair, and the decision.
+  Each item's primary reviewer is the phase reviewer seat whose configured model
+  maps to a lineage root different from the item's author; the other seat is
+  secondary for that item. Both reviewers review the whole bundle independently in
+  pass 1, then compare through the shared list in pass 2. Duplicate findings are
+  merged by keeping both identifiers and both severities; a disputed `blocking`
+  finding goes to the user. Transition records may name the phase review through the
+  optional `refs.phase_reviews` key.
+- **Options considered:** Storing the merged list inside one reviewer's record; a
+  single combined review authored by the coordinator; a fixed order in which one
+  reviewer sees the other's findings first.
+- **Reason:** The method requires independent first passes, a shared list for
+  comparison, and item-level independence for a phase that mixes authors. A separate
+  record keeps the manifest, disagreement, and decision readable without PeerFoil
+  and gives Core the shape it will enforce.
+- **Consequences:** `common.schema.json` defines the `pr-` identifier, the transition
+  schema accepts `refs.phase_reviews`, the review template gains `Item` and `Lens`
+  lines, and `plugins/peerfoil/references/phase-review.md` holds the procedure. The
+  manifest is inspectable, not tamper-proof; Core binds it to a commit.
+
+## D-0027 — Repair selection and the repair task's review
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** In Skills 0.1 the repairer is chosen by rule, not by model passes: a
+  deliverable repair goes to the `repair_producer` seat, an architecture or Quality
+  Contract repair returns through the architect's revise flow, and a plan repair
+  through the planner's. The verifier is the phase reviewer seat whose lineage
+  differs from the repairer's, using the pass reserved for verification. A fresh
+  `repair-coordinator` agent proposes the bounded repair task from the agreed
+  findings; the coordinating skill validates it and records it through change intake
+  with `acceptance: reviewed` naming both pass-1 phase reviews, so no separate plan
+  review pass is spent. One repair cycle is allowed per round; a repair never runs at
+  low effort.
+- **Options considered:** Spending the configured repair-selection passes on model
+  votes about the repairer; running a full plan review for every repair task;
+  letting the coordinator write the repair task without an agent.
+- **Reason:** With two seats and the family rule, the eligible repairer and verifier
+  are determined, so model passes would add time without changing the answer. The
+  reviewers already agreed on the repair, which is the review the plan needs. The
+  scope and paths of a repair still need judgment, which a bounded fresh agent gives
+  without writing anything.
+- **Consequences:** `repair_selection_passes` and `repair_selection_max_passes` stay
+  in the settings for Core, which may use model help within them. The procedure is
+  `plugins/peerfoil/references/repair.md`; the agent is
+  `plugins/peerfoil/agents/repair-coordinator.md`. The static checks refuse a
+  `repair_producer` seat at `low` effort.
+
+## D-0028 — Lesson verification and promotion
+
+- **Status:** Accepted on 2026-09-05.
+- **Decision:** `/peerfoil:remember` records a lesson as a `candidate` with a rule,
+  trigger, scope, evidence, conflicts, and proposed destination, authored by the
+  user. A candidate is verified only by the fresh reviewers of the next phase review,
+  which carries every candidate in its bundle and records a verdict per lesson. Only
+  a `verified` lesson is promoted, and only with the user's approval, to a decision,
+  a change request for a test, or proposed text in the lesson file for a skill, pack
+  rule, or `AGENTS.md` change that a person applies. The exception is a `hint`,
+  which the user may promote unverified with an expiry, thirty days by default.
+  Active hints are listed in the producer packet and in status. PeerFoil never edits
+  `AGENTS.md`, a skill, or a pack.
+- **Options considered:** Letting the coordinator verify a lesson by reading the
+  cited record; a separate review kind for lessons; writing proposals directly into
+  `AGENTS.md` for the user to revert.
+- **Reason:** The session that rewrote the lesson cannot independently verify it,
+  a separate review kind would spend passes for a small check that the phase
+  reviewers can make while reading the bundle, and repository rules must change only
+  by a person's hand.
+- **Consequences:** The lesson template gains `Verification` and `Promoted to` lines;
+  `plugins/peerfoil/references/lessons.md` holds the procedure; the phase packet
+  asks for lesson verdicts. Core keeps the same states.
+
 ## Conclusion
 
 These entries settle the layout, formats, names, conventions, review mechanics, effort,
-turn and time limits, deadlines, and Codex access that Phase 1 builds on. Later stages add entries for their own required decisions.
+turn and time limits, deadlines, Codex access, phase review, repair, and lessons that
+Phase 1 builds on. Later stages add entries for their own required decisions.
 
 ## Additional Resources
 

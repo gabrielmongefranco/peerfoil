@@ -41,6 +41,7 @@
         "change_sets": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/change_set_id" } },
         "evidence": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/evidence_id" } },
         "reviews": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/review_id" } },
+        "phase_reviews": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/phase_review_id" } },
         "lessons": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/lesson_id" } }
       }
     },
