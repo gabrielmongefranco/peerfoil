@@ -366,6 +366,10 @@ def parse_frontmatter(path: Path, problems: Problems) -> tuple[dict[str, str], s
         key, value = match.group(1), match.group(2).strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
+        elif ": " in value or value.endswith(":") or value[:1] in "[{&*!|>%@`#":
+            # An unquoted plain scalar with these characters parses as a mapping or a
+            # YAML construct, and the Claude Code validator rejects it on CRLF checkouts.
+            problems.add(path, f"frontmatter field '{key}' must be quoted: it contains ': ' or starts with a YAML special character")
         if key in fields:
             problems.add(path, f"duplicate frontmatter field '{key}'")
         fields[key] = value

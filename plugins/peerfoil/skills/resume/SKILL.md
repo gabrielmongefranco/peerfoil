@@ -1,6 +1,6 @@
 ---
 name: resume
-description: This skill should be used when the user runs /peerfoil:resume or asks to continue a PeerFoil project in a new chat. It reads the accepted files under .peerfoil instead of any earlier conversation, works out the current state and sub-step, and continues the next allowed step: the decision interview, the architecture and its review, or the plan and its review.
+description: This skill should be used when the user runs /peerfoil:resume or asks to continue a PeerFoil project in a new chat. It reads the accepted files under .peerfoil instead of any earlier conversation, works out the current state and sub-step, and continues the next allowed step, which is the decision interview, the architecture and its review, or the plan and its review.
 license: GPL-3.0-or-later
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(git rev-parse *), Bash(git status *), Bash(git log *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(git log *), PowerShell(Get-Date *)
