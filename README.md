@@ -21,19 +21,21 @@ Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 
 # PeerFoil
 
-***Every great idea needs a foil.*** Your AI needs a second opinion. Get better results
-with independent AI agents that review your work and challenge each other.
+Your AI needs a second opinion. Get better results with independent AI agents that review your work and challenge each other.
+
 
 ## AI coding with independent peer review
-
-<p align="center">
-  <img src="assets/brand/peerfoil-peer-review.svg" alt="Independent AI reviewers inspect your work, then compare findings and check each other’s contributions." width="720">
-</p>
 
 PeerFoil™ is an open-source workflow for AI coding and independent AI code review. It is
 designed to help solo developers use different AI model families to plan, create, test,
 and review their projects together. Agents check your work and each other's contributions
 to catch mistakes a single model might miss.
+
+
+<p align="center">
+  <img src="assets/brand/peerfoil-peer-review.svg" alt="Independent AI reviewers inspect your work, then compare findings and check each other’s contributions." width="720">
+</p>
+
 
 Looking for the "best ai for coding"? PeerFoil aims to bring out the best in the coding
 agents you use by giving them clear plans, project tests, and independent reviewers.
