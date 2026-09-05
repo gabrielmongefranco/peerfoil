@@ -20,23 +20,44 @@ Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 ***Every great idea needs a foil.*** Your AI needs a second opinion. Get better results
 with independent AI agents that review your work and challenge each other.
 
-## Description
+## AI coding with independent peer review
 
-PeerFoil™ is an open-source workflow that lets two different AI coding tools work together.
-One helps you think through the application and create a plan. Another writes the code.
-They check each other's work so you are not relying on one model to find its own mistakes.
+PeerFoil™ is an open-source workflow for AI coding and independent AI code review. It is
+designed to help solo developers use different AI model families to plan, create, test,
+and review their projects together. Agents check your work and each other's contributions
+to catch mistakes a single model might miss.
 
-It is designed for people who build software mostly alone, whether they are professional
-developers or learning as they go. PeerFoil keeps the complicated coordination in the
-background. You approve the important decisions, and it handles the plans, coding tasks,
-tests, reviews, fixes, and lessons learned.
+Looking for the "best ai for coding"? PeerFoil aims to bring out the best in the coding
+agents you use by giving them clear plans, project tests, and independent reviewers.
+Whether you are an experienced developer or learning as you go, the goal is better code
+quality with less time spent managing handoffs between AI coding tools.
 
-Software development is the main use. The same approach can also help write documentation,
-business plans, and research reports. Each type of project gets its own instructions and
-checks, while using the same independent review process.
+The first release will connect Claude Code and Codex in a guided multi-agent workflow.
+You approve the important decisions while the agents handle planning, coding, testing,
+review, and accepted fixes. Software development comes first, with project packs planned
+to apply the same process to documentation, business plans, and research reports.
 
-PeerFoil will work on Windows, macOS, and Linux. It will not require a paid service other
-than the AI models you choose. Local models will also be supported.
+**In development.** PeerFoil has not been released yet. See [Status](#status) for what is
+built and what comes next.
+
+## How AI peer review works
+
+PeerFoil's review process gives each agent a specific job and keeps authorship separate
+from approval:
+
+- **Plan before producing.** Another model family reviews the architecture and plan.
+- **Review AI-generated code.** A fresh reviewer checks the work against your requirements
+  and the results of project tests.
+- **Check each other.** Reviewers first inspect the same work independently, then compare
+  findings. Accepted fixes receive another independent check.
+
+An agent never approves its own work. Normal independent approval requires a qualified
+reviewer from a different underlying model family, not another copy of the same model.
+If that reviewer is unavailable, the result is labeled **Reduced assurance**.
+
+The first Skills release will guide agents through these rules. Later Core releases will
+enforce the workflow in a local application. Peer review can improve the work, but it
+does not guarantee correctness or replace your judgment.
 
 ## Quick Start Guide
 
@@ -44,7 +65,7 @@ than the AI models you choose. Local models will also be supported.
 
 The first version will be a set of skills for Claude Code. It will use the official
 [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc) to send coding and
-review tasks to Codex. A small local command-line application will follow.
+review tasks to Codex. A small local command-line application written in Go will follow.
 
 The normal workflow will be simple:
 
@@ -61,8 +82,8 @@ controls will stay under Advanced settings.
 
 - **[PeerFoil Method](docs/PeerFoil-Method.md):** What PeerFoil does and how its workflow
   protects quality.
-- **[Architecture](docs/architecture.md):** How the planned application is organized and
-  how its parts work together.
+- **[Architecture](docs/architecture.md):** How the planned application handles agent
+  orchestration, coordinating models, project files, and checks.
 - **[Implementation Plan](docs/implementation-plan.md):** What will be built first, what
   will come later, and how each release will be checked.
 - **[Phase Prompt Template](docs/phase-prompt-template.md):** A prompt you can paste into
@@ -95,6 +116,32 @@ meet its quality checks.
 - a documentation project with technical and editorial review;
 - a business plan with checked facts, calculations, and assumptions; and
 - a research report with source tracking and citation checks.
+
+## Common questions
+
+### Can I use Claude Code and Codex together?
+
+That is the planned first-release setup. Claude Code will guide the workflow and use the
+official Codex plugin for coding and review tasks. See the [Quick Start Guide](#quick-start-guide)
+and [current plugin documentation](plugins/peerfoil/README.md) for readiness and setup details.
+
+### Can PeerFoil review existing code?
+
+The planned workflow covers changes to existing projects as well as new applications.
+Reviews will check the affected code, requirements, and test results. The complete review
+workflow is still in development.
+
+### Does PeerFoil work beyond coding?
+
+That is part of the design. Project packs will provide instructions and checks for
+documentation, business plans, research reports, and other work. Each uses the same
+independent peer-review process, with evidence suited to the project.
+
+### Will PeerFoil support my tools and computer?
+
+PeerFoil targets Windows, macOS, and Linux. Claude Code and Codex come first; qualified
+local models and broader model support are planned for later releases. It will not
+require a paid service other than the AI models you choose.
 
 ## About the Author
 
