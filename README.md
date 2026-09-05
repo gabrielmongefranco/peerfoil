@@ -15,12 +15,20 @@ Software Foundation; with no Invariant Sections, no Front-Cover Texts, and no Ba
 Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 -->
 
+<p align="center">
+  <img src="assets/brand/peerfoil-banner.svg" alt="PeerFoil™. Every great idea needs a foil." width="100%">
+</p>
+
 # PeerFoil
 
 ***Every great idea needs a foil.*** Your AI needs a second opinion. Get better results
 with independent AI agents that review your work and challenge each other.
 
 ## AI coding with independent peer review
+
+<p align="center">
+  <img src="assets/brand/peerfoil-peer-review.svg" alt="Independent AI reviewers inspect your work, then compare findings and check each other’s contributions." width="720">
+</p>
 
 PeerFoil™ is an open-source workflow for AI coding and independent AI code review. It is
 designed to help solo developers use different AI model families to plan, create, test,
@@ -41,6 +49,17 @@ to apply the same process to documentation, business plans, and research reports
 built and what comes next.
 
 ## How AI peer review works
+
+<p align="center">
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/brand/peerfoil-workflow-mobile.svg">
+    <img src="assets/brand/peerfoil-workflow.svg" alt="Plan with independent review, produce, validate, and review. Failed checks return to production; repairs receive validation and fresh independent review before approval." width="680">
+  </picture>
+</p>
+
+Start with reviewed architecture and a plan you approve. Produce and validate the work,
+then review it independently. Accepted repairs go through checks and fresh review again.
+PeerFoil pauses for your decision when blocked or when review limits are reached.
 
 PeerFoil's review process gives each agent a specific job and keeps authorship separate
 from approval:
@@ -92,15 +111,12 @@ controls will stay under Advanced settings.
   respect.
 - **[Plugin README](plugins/peerfoil/README.md):** What the current build of the Claude
   Code plugin can do and how to load it for testing.
-- **[Brand Set](docs/branding.md):** PeerFoil's artwork, colors, placement, and reuse
-  terms.
 
 ## Status
 
-**Phase 1 in progress.** Stages 1 and 2 of PeerFoil Skills 0.1 are built and awaiting
-their independent review. They provide the plugin skeleton, the project-file formats,
-setup checks, Advanced settings, the decision interview, and the reviewed architecture,
-Quality Contract, and plan. Nothing has been released yet.
+**Phase 1 in progress.** Stage 1 of PeerFoil Skills 0.1 is built and awaiting its
+independent review. It provides the plugin skeleton, the project-file formats, setup
+checks, Advanced settings, and the decision interview. Nothing has been released yet.
 
 | Release | Target | What you will be able to do |
 |---|---:|---|
