@@ -1,0 +1,31 @@
+{
+  "name": "peerfoil",
+  "displayName": "PeerFoil",
+  "version": "0.1.0-dev",
+  "description": "Guided PeerFoil workflow for Claude Code: resolve decisions, review architecture and plans across model families, delegate bounded tasks to Codex, keep evidence, and resume from repository files.",
+  "author": {
+    "name": "Gabriel Mongefranco",
+    "url": "https://gabriel.mongefranco.com"
+  },
+  "homepage": "https://github.com/gabrielmongefranco/peerfoil",
+  "repository": "https://github.com/gabrielmongefranco/peerfoil",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "workflow",
+    "peer-review",
+    "independent-review",
+    "codex",
+    "planning",
+    "evidence"
+  ],
+  "metadata": {
+    "project": "PeerFoil",
+    "file": "plugins/peerfoil/.claude-plugin/plugin.json",
+    "authors": "Gabriel Mongefranco (@gabrielmongefranco)",
+    "created": "2026-09-05",
+    "modified": "2026-09-05",
+    "summary": "Declares the PeerFoil plugin for Claude Code.",
+    "copyright": "Copyright © 2026 Gabriel Mongefranco",
+    "license": "SPDX-License-Identifier: GPL-3.0-or-later"
+  }
+}

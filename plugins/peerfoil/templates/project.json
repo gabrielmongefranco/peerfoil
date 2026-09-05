@@ -1,0 +1,68 @@
+{
+  "record_type": "project",
+  "schema_version": 1,
+  "project_id": "example-project",
+  "name": "Example Project",
+  "goal": "Describe in two to four sentences what the user wants to build or change, who it is for, and what a finished first phase looks like.",
+  "pack": {
+    "id": "software",
+    "version": "0.1.0"
+  },
+  "profile": "personal",
+  "rules_source": {
+    "mode": "inherit",
+    "path": "AGENTS.md"
+  },
+  "assurance": "guided",
+  "release": "peerfoil-skills/0.1.0-dev",
+  "created_at": "2026-09-05T00:00:00Z",
+  "updated_at": "2026-09-05T00:00:00Z",
+  "workflow": {
+    "state": "define",
+    "phase": null,
+    "stage": null,
+    "task": null,
+    "paused_for": null
+  },
+  "revisions": {
+    "architecture": 0,
+    "quality": 0,
+    "plan": 0
+  },
+  "environment": {
+    "checked_at": "2026-09-05T00:00:00Z",
+    "checks": [
+      {
+        "name": "git",
+        "status": "pass",
+        "detail": "git version 2.39.2"
+      },
+      {
+        "name": "codex-plugin",
+        "status": "fail",
+        "detail": "The codex:setup command is not available in this session."
+      }
+    ]
+  },
+  "settings": {
+    "roles": {
+      "evaluator": { "tool": "claude-code", "model": "default", "effort": "xhigh" },
+      "architect": { "tool": "claude-code", "model": "default", "effort": "xhigh" },
+      "planner": { "tool": "claude-code", "model": "default", "effort": "high" },
+      "change_steward": { "tool": "claude-code", "model": "default", "effort": "high" },
+      "producer": { "tool": "codex-cli", "model": "default", "effort": "high" },
+      "repair_producer": { "tool": "codex-cli", "model": "default", "effort": "high" }
+    },
+    "phase_reviewers": [
+      { "tool": "claude-code", "model": "default", "effort": "xhigh" },
+      { "tool": "codex-cli", "model": "default", "effort": "xhigh" }
+    ],
+    "review": {
+      "default_passes": 6,
+      "max_passes": 8,
+      "repair_selection_passes": 3,
+      "repair_selection_max_passes": 4,
+      "repair_cycles": 1
+    }
+  }
+}

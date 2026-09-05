@@ -1,0 +1,46 @@
+{
+  "_project": "PeerFoil",
+  "_file": "plugins/peerfoil/packs/generic/pack.json",
+  "_authors": "Gabriel Mongefranco (@gabrielmongefranco)",
+  "_created": "2026-09-05",
+  "_modified": "2026-09-05",
+  "_summary": "Declares the Generic project pack: a small starting point for custom work that defines its own artifacts and checks.",
+  "_copyright": "Copyright © 2026 Gabriel Mongefranco",
+  "_license": "SPDX-License-Identifier: GPL-3.0-or-later",
+  "record_type": "pack",
+  "schema_version": 1,
+  "id": "generic",
+  "name": "Generic",
+  "version": "0.1.0",
+  "status": "starter",
+  "summary": "A starting point for work that is not software or a document. The user names the deliverable, and the Quality Contract declares the commands, inspections, or human checks that count as evidence.",
+  "artifacts": [
+    { "id": "deliverable", "name": "Deliverable", "description": "The text or files the project produces, named by the user at start." }
+  ],
+  "typical_stages": [
+    "Define the deliverable and its checks",
+    "Produce the first complete draft",
+    "Check and revise",
+    "Finish and hand off"
+  ],
+  "evidence": [
+    { "name": "declared-command", "kind": "executable", "default_level": "recommended", "description": "A command the user declares in the Quality Contract exits successfully." },
+    { "name": "structured-inspection", "kind": "inspection", "default_level": "recommended", "description": "A reviewer checks the deliverable against a written checklist and retains the result." },
+    { "name": "human-check", "kind": "human", "default_level": "required", "description": "A person follows a written procedure, confirms the expected result, and records it." }
+  ],
+  "review_lenses": [
+    { "id": "correctness-reliability", "name": "Correctness and reliability", "focus": "The deliverable does what the accepted decisions say, and its claims hold up." },
+    { "id": "security-privacy", "name": "Security and privacy", "focus": "The deliverable exposes no credential, personal data, or private content it should not." },
+    { "id": "accessibility-ux", "name": "Accessibility and user experience", "focus": "The deliverable is readable and usable by its intended audience." },
+    { "id": "maintainability-docs-licensing-release", "name": "Maintainability, documentation, licensing, and release readiness", "focus": "The deliverable is organized, attributed, licensed correctly, and ready to hand off." }
+  ],
+  "completion": [
+    "Every required evidence item for the phase has a current record.",
+    "Both phase reviewers approved, or the user accepted a recorded reduced-assurance decision.",
+    "The plan revision reflects every accepted change and deferral."
+  ],
+  "tools": [
+    { "name": "git", "command": ["git", "--version"], "required": true, "purpose": "Version history for the deliverable and the PeerFoil records." }
+  ],
+  "project_tool_hints": []
+}

@@ -2,7 +2,7 @@
 # Project:  PeerFoil  |  File: .github/scripts/conformance.sh
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco)
 # Created:  2026-09-04  |  Modified: 2026-09-05
-# Summary:  Checks PeerFoil's required files, project identity, headers, and license notices.
+# Summary:  Checks PeerFoil's required files, project identity, headers, license notices, and static checks.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
@@ -54,7 +54,19 @@ for path in "${metadata_files[@]}"; do
   }
 done
 
-node -e 'JSON.parse(require("fs").readFileSync(".zenodo.json", "utf8"))'
+python_bin=""
+for candidate in python3 python; do
+  if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
+    python_bin="$candidate"
+    break
+  fi
+done
+if [[ -z "$python_bin" ]]; then
+  echo "conformance: Python 3.9 or later is required for the JSON and static checks" >&2
+  exit 1
+fi
+
+"$python_bin" -c 'import json; json.load(open(".zenodo.json", encoding="utf-8"))'
 
 for path in README.md AGENTS.md NOTICE .zenodo.json docs/*.md docs/plans/*.md .github/* .github/scripts/* .github/workflows/*; do
   [[ -d "$path" ]] && continue
@@ -65,5 +77,7 @@ for path in README.md AGENTS.md NOTICE .zenodo.json docs/*.md docs/plans/*.md .g
     exit 1
   fi
 done
+
+"$python_bin" tests/static_checks.py
 
 echo "conformance: PeerFoil repository checks pass"

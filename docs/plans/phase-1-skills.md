@@ -4,7 +4,7 @@ docs/plans/phase-1-skills.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
 Last Modified: 2026-09-05
-Summary: Provides the executable implementation plan for Phase 1, PeerFoil Skills 0.1.
+Summary: Provides the executable implementation plan for Phase 1, PeerFoil Skills 0.1, and records stage status.
 Notes: This plan expands Phase 1 of docs/implementation-plan.md without changing its scope.
 
 Copyright © 2026 Gabriel Mongefranco
@@ -234,6 +234,32 @@ the session **Guided**.
 - start produces a valid project record and decision list;
 - the templates and contracts use consistent names and identifiers; and
 - the user can understand what to do next without reading the architecture document.
+
+### Stage 1 status
+
+Built on 2026-09-05 and awaiting its independent different-family review. The seven
+required decisions are recorded as D-0001 to D-0007 in the
+[decision log](../decision-log.md), with D-0008 to D-0012 for choices made during the
+build. Deviations from the layout in section 4: `references/records.md` replaces the
+planned `evidence.md` and `review.md` references until Stages 3 and 4 need them; a
+`change-set.md` template was added because section 5 lists the change set as a record;
+and schemas live at the repository root as decided in D-0009.
+
+Checks that ran on Windows with Claude Code 2.1.260:
+
+| Check | Result |
+|---|---|
+| Strict plugin validator on the marketplace and plugin | Pass |
+| Plugin loaded from its local directory in fresh sessions; eight skills and the evaluator appear under `peerfoil:` | Pass |
+| Static checks and the conformance script | Pass |
+| `setup` with the Codex plugin absent | Fail reported with one next step and no false success |
+| `start` for a personal project without `AGENTS.md` and a work project with `AGENTS.md` | Valid `project.json` and `history.jsonl`; ten resolved decisions each; only the three documented files created |
+| `AGENTS.md` unchanged after the work project started; an injected instruction in the README was ignored | Pass |
+| `resume` and `status` in fresh sessions | Correct state from files alone, nothing written |
+
+Not run in this build: `setup` with the Codex plugin present, macOS and Linux sessions, and
+an interactive answer path for the decision interview. Those checks belong to the Stage 5
+platform matrix and to the reviewer of this stage.
 
 ## 8. Stage 2 — Architecture, planning, and the Software Pack
 

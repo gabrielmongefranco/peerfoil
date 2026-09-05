@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "peerfoil",
+  "description": "PeerFoil: a guided workflow in which independent AI model families plan, produce, test, and review the same project.",
+  "owner": {
+    "name": "Gabriel Mongefranco",
+    "url": "https://gabriel.mongefranco.com"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "peerfoil",
+      "source": "./plugins/peerfoil",
+      "description": "Guided PeerFoil workflow for Claude Code: resolve decisions, review architecture and plans across model families, delegate bounded tasks to Codex, keep evidence, and resume from repository files.",
+      "version": "0.1.0-dev",
+      "author": {
+        "name": "Gabriel Mongefranco",
+        "url": "https://gabriel.mongefranco.com"
+      },
+      "homepage": "https://github.com/gabrielmongefranco/peerfoil",
+      "repository": "https://github.com/gabrielmongefranco/peerfoil",
+      "license": "GPL-3.0-or-later",
+      "keywords": [
+        "workflow",
+        "peer-review",
+        "independent-review",
+        "codex",
+        "planning",
+        "evidence"
+      ],
+      "category": "development"
+    }
+  ]
+}

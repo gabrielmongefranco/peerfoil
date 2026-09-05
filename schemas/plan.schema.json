@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/plan.schema.json",
+  "$comment": "This file is part of PeerFoil. schemas/plan.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Validates the .peerfoil/plan.json record that holds phases, stages, tasks, dependencies, evidence requirements, requirement links, and the backlog. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "title": "PeerFoil plan record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type",
+    "schema_version",
+    "project_id",
+    "plan_revision",
+    "architecture_revision",
+    "quality_revision",
+    "status",
+    "revised_at",
+    "revised_by",
+    "revision_reason",
+    "phases",
+    "requirements",
+    "backlog"
+  ],
+  "properties": {
+    "record_type": { "const": "plan" },
+    "schema_version": { "const": 1 },
+    "project_id": { "$ref": "common.schema.json#/$defs/project_id" },
+    "plan_revision": { "type": "integer", "minimum": 1 },
+    "architecture_revision": { "type": "integer", "minimum": 1 },
+    "quality_revision": { "type": "integer", "minimum": 1 },
+    "status": { "type": "string", "enum": ["draft", "reviewed", "accepted", "superseded"] },
+    "revised_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "revised_by": { "$ref": "common.schema.json#/$defs/actor" },
+    "revision_reason": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/phase" }
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/requirement" }
+    },
+    "backlog": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/change_request" }
+    }
+  },
+  "$defs": {
+    "unit_status": {
+      "type": "string",
+      "enum": ["planned", "active", "review", "approved", "deferred", "removed"]
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "outcome", "order", "status", "stages"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/phase_id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "outcome": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "order": { "type": "integer", "minimum": 1 },
+        "status": { "$ref": "#/$defs/unit_status" },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stage" }
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "outcome", "order", "status", "depends_on", "tasks"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/stage_id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "outcome": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "order": { "type": "integer", "minimum": 1 },
+        "status": { "$ref": "#/$defs/unit_status" },
+        "depends_on": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/stage_id" }
+        },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/task" }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "scope",
+        "allowed_paths",
+        "inputs",
+        "output",
+        "required_evidence",
+        "depends_on",
+        "acceptance",
+        "author_role",
+        "status",
+        "plan_revision",
+        "architecture_revision"
+      ],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/task_id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "scope": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "allowed_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "output": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "required_evidence": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/evidence_requirement" }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/task_id" }
+        },
+        "acceptance": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "author_role": { "$ref": "common.schema.json#/$defs/role" },
+        "status": {
+          "type": "string",
+          "enum": ["planned", "ready", "in_progress", "produced", "validated", "accepted", "stale", "blocked", "deferred", "removed"]
+        },
+        "plan_revision": { "type": "integer", "minimum": 1 },
+        "architecture_revision": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "source", "tasks"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/requirement_id" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/task_id" }
+        }
+      }
+    },
+    "change_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "summary", "placement", "recorded_at"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/change_request_id" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "placement": {
+          "type": "string",
+          "enum": ["current-stage", "later-stage", "later-phase", "backlog", "declined"]
+        },
+        "recorded_at": { "$ref": "common.schema.json#/$defs/timestamp" }
+      }
+    }
+  }
+}

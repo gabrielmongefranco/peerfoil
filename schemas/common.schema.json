@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/common.schema.json",
+  "$comment": "This file is part of PeerFoil. schemas/common.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Shared definitions for identifiers, timestamps, actors, and model seats used by every PeerFoil record schema. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "title": "PeerFoil shared definitions",
+  "$defs": {
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "decision_id": { "type": "string", "pattern": "^d-[0-9]{4,}$" },
+    "requirement_id": { "type": "string", "pattern": "^r-[0-9]{4,}$" },
+    "phase_id": { "type": "string", "pattern": "^ph-[0-9]{2,}$" },
+    "stage_id": { "type": "string", "pattern": "^st-[0-9]{2,}$" },
+    "task_id": { "type": "string", "pattern": "^tk-[0-9]{3,}$" },
+    "change_request_id": { "type": "string", "pattern": "^cr-[0-9]{4,}$" },
+    "change_set_id": { "type": "string", "pattern": "^cs-[0-9]{4,}$" },
+    "evidence_id": { "type": "string", "pattern": "^ev-[0-9]{4,}$" },
+    "finding_id": { "type": "string", "pattern": "^fd-[0-9]{4,}$" },
+    "review_id": { "type": "string", "pattern": "^rv-[0-9]{4,}$" },
+    "lesson_id": { "type": "string", "pattern": "^ls-[0-9]{4,}$" },
+    "transition_id": { "type": "string", "pattern": "^tr-[0-9]{4,}$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "git_hash_or_null": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "revision": { "type": "integer", "minimum": 0 },
+    "workflow_state": {
+      "type": "string",
+      "enum": ["define", "architect", "plan", "produce", "validate", "review", "repair", "approve", "paused"]
+    },
+    "role": {
+      "type": "string",
+      "enum": ["evaluator", "architect", "planner", "change_steward", "producer", "reviewer", "repair_producer", "coordinator", "user"]
+    },
+    "tool": {
+      "type": "string",
+      "enum": ["claude-code", "codex-cli", "human", "other"]
+    },
+    "effort": {
+      "type": ["string", "null"],
+      "enum": ["medium", "high", "xhigh", null]
+    },
+    "lineage_root": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "tool", "model", "effort", "lineage_root", "session"],
+      "properties": {
+        "role": { "$ref": "#/$defs/role" },
+        "tool": { "$ref": "#/$defs/tool" },
+        "model": { "type": ["string", "null"], "minLength": 1 },
+        "effort": { "$ref": "#/$defs/effort" },
+        "lineage_root": { "$ref": "#/$defs/lineage_root" },
+        "session": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "seat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "model", "effort"],
+      "properties": {
+        "tool": { "type": "string", "enum": ["claude-code", "codex-cli"] },
+        "model": { "type": "string", "minLength": 1 },
+        "effort": { "type": "string", "enum": ["medium", "high", "xhigh"] }
+      }
+    },
+    "evidence_kind": {
+      "type": "string",
+      "enum": ["executable", "inspection", "human"]
+    },
+    "evidence_level": {
+      "type": "string",
+      "enum": ["required", "recommended", "not-applicable"]
+    },
+    "evidence_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "level"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$" },
+        "kind": { "$ref": "#/$defs/evidence_kind" },
+        "level": { "$ref": "#/$defs/evidence_level" }
+      }
+    },
+    "metadata_field": { "type": "string", "minLength": 1 }
+  }
+}

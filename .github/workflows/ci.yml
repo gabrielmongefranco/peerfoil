@@ -1,7 +1,7 @@
 # Project:  PeerFoil  |  File: .github/workflows/ci.yml
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco)
-# Created:  2026-09-04  |  Modified: 2026-09-04
-# Summary:  Checks PeerFoil's documentation and repository rules on Linux, macOS, and Windows.
+# Created:  2026-09-04  |  Modified: 2026-09-05
+# Summary:  Checks PeerFoil's documentation, repository rules, and plugin manifests on Linux, macOS, and Windows.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: CI
@@ -33,3 +33,26 @@ jobs:
       - name: Check repository files
         shell: bash
         run: bash .github/scripts/conformance.sh
+
+  plugin-validate:
+    name: plugin validate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install the tested Claude Code version
+        shell: bash
+        run: npm install -g @anthropic-ai/claude-code@2.1.260
+      - name: Validate the marketplace and plugin manifests strictly
+        shell: bash
+        run: |
+          claude plugin validate --strict .
+          claude plugin validate --strict plugins/peerfoil

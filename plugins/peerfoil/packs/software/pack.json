@@ -1,0 +1,66 @@
+{
+  "_project": "PeerFoil",
+  "_file": "plugins/peerfoil/packs/software/pack.json",
+  "_authors": "Gabriel Mongefranco (@gabrielmongefranco)",
+  "_created": "2026-09-05",
+  "_modified": "2026-09-05",
+  "_summary": "Declares the Software project pack: artifacts, evidence, review lenses, completion requirements, and tool probes for software projects.",
+  "_copyright": "Copyright © 2026 Gabriel Mongefranco",
+  "_license": "SPDX-License-Identifier: GPL-3.0-or-later",
+  "record_type": "pack",
+  "schema_version": 1,
+  "id": "software",
+  "name": "Software",
+  "version": "0.1.0",
+  "status": "default",
+  "summary": "The default pack for applications, services, libraries, and command-line tools. It expects a repository, builds, tests, and a first phase that installs, starts, and completes one real user action.",
+  "artifacts": [
+    { "id": "source", "name": "Source code", "description": "Application, library, or tool code in the repository." },
+    { "id": "tests", "name": "Tests", "description": "Automated tests and the commands that run them." },
+    { "id": "packaging", "name": "Packaging", "description": "Build, install, and release configuration." },
+    { "id": "documentation", "name": "Documentation", "description": "README, setup instructions, and user or developer documentation." }
+  ],
+  "typical_stages": [
+    "Architecture and Quality Contract",
+    "First working path: install, start, and complete one real user action",
+    "Working features",
+    "Tests and checks",
+    "Packaging and release"
+  ],
+  "evidence": [
+    { "name": "build", "kind": "executable", "default_level": "required", "description": "The project's build command exits successfully." },
+    { "name": "unit-tests", "kind": "executable", "default_level": "required", "description": "The project's automated test command exits successfully." },
+    { "name": "lint", "kind": "executable", "default_level": "recommended", "description": "The project's formatter or linter reports no errors." },
+    { "name": "dependency-audit", "kind": "executable", "default_level": "recommended", "description": "A dependency vulnerability and license check reports no unresolved problem." },
+    { "name": "security-scan", "kind": "executable", "default_level": "recommended", "description": "A security scanner already used by the project reports no unresolved high finding." },
+    { "name": "user-journey", "kind": "human", "default_level": "required", "description": "A person completes the phase's main user action and records the result." },
+    { "name": "accessibility-check", "kind": "inspection", "default_level": "recommended", "description": "User-facing screens and output are checked against WCAG 2.2 Level AA where applicable." },
+    { "name": "documentation-check", "kind": "inspection", "default_level": "recommended", "description": "Setup and usage documentation match the behavior shipped in the phase." },
+    { "name": "license-check", "kind": "inspection", "default_level": "required", "description": "New dependencies and copied material are compatible with the project's license and carry their notices." }
+  ],
+  "review_lenses": [
+    { "id": "correctness-reliability", "name": "Correctness and reliability", "focus": "Behavior matches the accepted decisions and plan; failure handling, recovery, and edge cases are covered by evidence." },
+    { "id": "security-privacy", "name": "Security and privacy", "focus": "Input validation, command and query construction, permissions, credentials, personal data, and dependency risks." },
+    { "id": "accessibility-ux", "name": "Accessibility and user experience", "focus": "Keyboard use, labels, contrast, error messages, and plain-language output for user-facing surfaces." },
+    { "id": "maintainability-docs-licensing-release", "name": "Maintainability, documentation, licensing, and release readiness", "focus": "Readable code, current documentation, headers and notices, license compatibility, and packaging." }
+  ],
+  "completion": [
+    "Every required evidence item for the phase has a current record tied to the exact revision reviewed.",
+    "Both phase reviewers approved, or the user accepted a recorded reduced-assurance decision.",
+    "The plan revision reflects every accepted change, TODO, deviation, skipped check, and deferral.",
+    "The first phase installs, starts, and completes one real user action."
+  ],
+  "tools": [
+    { "name": "git", "command": ["git", "--version"], "required": true, "purpose": "Version history and change isolation." }
+  ],
+  "project_tool_hints": [
+    { "marker": "go.mod", "command": ["go", "version"], "purpose": "Go toolchain for build and tests." },
+    { "marker": "package.json", "command": ["node", "--version"], "purpose": "Node.js runtime for build and tests." },
+    { "marker": "pyproject.toml", "command": ["python", "--version"], "purpose": "Python interpreter; python3 is the alternative command name." },
+    { "marker": "requirements.txt", "command": ["python", "--version"], "purpose": "Python interpreter; python3 is the alternative command name." },
+    { "marker": "Cargo.toml", "command": ["cargo", "--version"], "purpose": "Rust toolchain for build and tests." },
+    { "marker": "*.csproj", "command": ["dotnet", "--version"], "purpose": ".NET SDK for build and tests." },
+    { "marker": "pom.xml", "command": ["mvn", "--version"], "purpose": "Maven for build and tests." },
+    { "marker": "build.gradle", "command": ["gradle", "--version"], "purpose": "Gradle for build and tests." }
+  ]
+}

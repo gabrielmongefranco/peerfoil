@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 README.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-04
+Last Modified: 2026-09-05
 Summary: Provides an overview of PeerFoil and its planned releases.
 Notes: See the /docs directory for complete project documentation.
 
@@ -17,11 +17,12 @@ Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 
 # PeerFoil
 
-***Better vibe, higher-quality coding.***
+***Every great idea needs a foil.*** Your AI needs a second opinion. Get better results
+with independent AI agents that review your work and challenge each other.
 
 ## Description
 
-PeerFoil is an open-source workflow that lets two different AI coding tools work together.
+PeerFoil™ is an open-source workflow that lets two different AI coding tools work together.
 One helps you think through the application and create a plan. Another writes the code.
 They check each other's work so you are not relying on one model to find its own mistakes.
 
@@ -66,10 +67,16 @@ controls will stay under Advanced settings.
   will come later, and how each release will be checked.
 - **[Phase Prompt Template](docs/phase-prompt-template.md):** A prompt you can paste into
   a new chat before starting a phase or stage.
+- **[Decision Log](docs/decision-log.md):** The engineering choices that later work must
+  respect.
+- **[Plugin README](plugins/peerfoil/README.md):** What the current build of the Claude
+  Code plugin can do and how to load it for testing.
 
 ## Status
 
-**Design complete; implementation coming soon.**
+**Phase 1 in progress.** Stage 1 of PeerFoil Skills 0.1 is built and awaiting its
+independent review. It provides the plugin skeleton, the project-file formats, setup
+checks, Advanced settings, and the decision interview. Nothing has been released yet.
 
 | Release | Target | What you will be able to do |
 |---|---:|---|

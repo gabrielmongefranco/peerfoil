@@ -1,0 +1,70 @@
+{
+  "record_type": "plan",
+  "schema_version": 1,
+  "project_id": "example-project",
+  "plan_revision": 1,
+  "architecture_revision": 1,
+  "quality_revision": 1,
+  "status": "draft",
+  "revised_at": "2026-09-05T00:00:00Z",
+  "revised_by": {
+    "role": "planner",
+    "tool": "claude-code",
+    "model": "default",
+    "effort": "high",
+    "lineage_root": "anthropic-claude",
+    "session": null
+  },
+  "revision_reason": "Initial plan written from architecture revision 1.",
+  "phases": [
+    {
+      "id": "ph-01",
+      "title": "First working path",
+      "outcome": "The application installs, starts, and completes one real user action.",
+      "order": 1,
+      "status": "planned",
+      "stages": [
+        {
+          "id": "st-01",
+          "title": "Project skeleton",
+          "outcome": "The repository builds and runs an empty command.",
+          "order": 1,
+          "status": "planned",
+          "depends_on": [],
+          "tasks": [
+            {
+              "id": "tk-001",
+              "title": "Create the entry point",
+              "scope": "Add the program entry point and a build configuration. Do not add features or dependencies.",
+              "allowed_paths": ["cmd/**", "go.mod"],
+              "inputs": [".peerfoil/architecture.md", ".peerfoil/quality.md"],
+              "output": "A program that builds and prints its version.",
+              "required_evidence": [
+                { "name": "build", "kind": "executable", "level": "required" },
+                { "name": "unit-tests", "kind": "executable", "level": "required" }
+              ],
+              "depends_on": [],
+              "acceptance": [
+                "The build command exits with code 0.",
+                "Running the program prints the version and exits with code 0."
+              ],
+              "author_role": "producer",
+              "status": "planned",
+              "plan_revision": 1,
+              "architecture_revision": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "r-0001",
+      "text": "The program must run on Windows, macOS, and Linux without a container.",
+      "source": "d-0001",
+      "tasks": ["tk-001"]
+    }
+  ],
+  "backlog": []
+}

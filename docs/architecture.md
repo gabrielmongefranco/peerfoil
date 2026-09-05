@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/architecture.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-04
+Last Modified: 2026-09-05
 Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
 Notes: See README for an overview and full license information.
 
@@ -466,6 +466,12 @@ docs/                      project documentation
 
 Packages depend on small interfaces near the caller. Provider-specific code stays behind
 adapters. Project packs use data and templates, not compiled controller extensions.
+
+Before the controller exists, the PeerFoil Skills plugin ships its skills, agents, packs,
+and templates inside `plugins/peerfoil/`, so that installing the plugin from a marketplace
+delivers everything the skills need. Schemas live under `schemas/` from the start. Core
+reads the same pack, template, and schema formats. The
+[decision log](decision-log.md) records this choice.
 
 ## 13. Release boundaries
 

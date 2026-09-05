@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/transition.schema.json",
+  "$comment": "This file is part of PeerFoil. schemas/transition.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Validates one line of .peerfoil/history.jsonl, the small redacted record of an accepted workflow transition. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "title": "PeerFoil transition record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type",
+    "schema_version",
+    "transition_id",
+    "project_id",
+    "at",
+    "from_state",
+    "to_state",
+    "actor",
+    "plan_revision",
+    "source_revision",
+    "summary"
+  ],
+  "properties": {
+    "record_type": { "const": "transition" },
+    "schema_version": { "const": 1 },
+    "transition_id": { "$ref": "common.schema.json#/$defs/transition_id" },
+    "project_id": { "$ref": "common.schema.json#/$defs/project_id" },
+    "at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "from_state": {
+      "type": ["string", "null"],
+      "enum": ["define", "architect", "plan", "produce", "validate", "review", "repair", "approve", "paused", null]
+    },
+    "to_state": { "$ref": "common.schema.json#/$defs/workflow_state" },
+    "actor": { "$ref": "common.schema.json#/$defs/actor" },
+    "plan_revision": { "$ref": "common.schema.json#/$defs/revision" },
+    "source_revision": { "$ref": "common.schema.json#/$defs/git_hash_or_null" },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "decisions": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/decision_id" } },
+        "tasks": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/task_id" } },
+        "change_sets": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/change_set_id" } },
+        "evidence": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/evidence_id" } },
+        "reviews": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/review_id" } },
+        "lessons": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/lesson_id" } }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 300 }
+  }
+}

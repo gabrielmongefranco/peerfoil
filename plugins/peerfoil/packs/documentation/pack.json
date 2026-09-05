@@ -1,0 +1,53 @@
+{
+  "_project": "PeerFoil",
+  "_file": "plugins/peerfoil/packs/documentation/pack.json",
+  "_authors": "Gabriel Mongefranco (@gabrielmongefranco)",
+  "_created": "2026-09-05",
+  "_modified": "2026-09-05",
+  "_summary": "Declares the small Documentation project pack that proves the PeerFoil workflow is not tied to source code.",
+  "_copyright": "Copyright © 2026 Gabriel Mongefranco",
+  "_license": "SPDX-License-Identifier: GPL-3.0-or-later",
+  "record_type": "pack",
+  "schema_version": 1,
+  "id": "documentation",
+  "name": "Documentation",
+  "version": "0.1.0",
+  "status": "example",
+  "summary": "A small pack for Markdown documents such as guides, references, and articles. It uses link, source, readability, and editorial checks as evidence and keeps the same independent review path as software.",
+  "artifacts": [
+    { "id": "outline", "name": "Outline", "description": "The audience, purpose, and section plan for the document." },
+    { "id": "sections", "name": "Sections", "description": "The written Markdown sections." },
+    { "id": "examples", "name": "Examples", "description": "Worked examples, commands, or figures the document relies on." },
+    { "id": "diagrams", "name": "Diagrams", "description": "Diagrams with a nearby text explanation of the same relationship or sequence." }
+  ],
+  "typical_stages": [
+    "Audience and outline",
+    "Sections",
+    "Examples and diagrams",
+    "Editing",
+    "Publish"
+  ],
+  "evidence": [
+    { "name": "link-check", "kind": "inspection", "default_level": "recommended", "description": "Every relative link resolves and every external link is reachable or marked as unverified." },
+    { "name": "source-check", "kind": "inspection", "default_level": "required", "description": "Every factual claim, quotation, and figure has a source that says what the document says it says." },
+    { "name": "readability-review", "kind": "inspection", "default_level": "recommended", "description": "The text matches its intended reading level and defines terms where they first appear." },
+    { "name": "editorial-review", "kind": "human", "default_level": "required", "description": "A person reads the document for accuracy, clarity, and tone and records the result." },
+    { "name": "render-check", "kind": "inspection", "default_level": "recommended", "description": "The rendered output displays headings, tables, code, and diagrams correctly." }
+  ],
+  "review_lenses": [
+    { "id": "accuracy-sources", "name": "Accuracy and sources", "focus": "Claims are supported, current, and cited; examples work as written." },
+    { "id": "clarity-audience", "name": "Clarity and audience", "focus": "Structure, reading level, terminology, and examples fit the intended reader." },
+    { "id": "accessibility-structure", "name": "Accessibility and structure", "focus": "Meaningful headings, descriptive links, text alternatives for diagrams, and readable tables." },
+    { "id": "licensing-publishing", "name": "Licensing and publishing", "focus": "Attribution, license notices, quoted material, and readiness to publish." }
+  ],
+  "completion": [
+    "Every required evidence item for the phase has a current record.",
+    "Both phase reviewers approved, or the user accepted a recorded reduced-assurance decision.",
+    "The plan revision reflects every accepted change and deferral.",
+    "The document can be read from start to finish without an unresolved placeholder."
+  ],
+  "tools": [
+    { "name": "git", "command": ["git", "--version"], "required": true, "purpose": "Version history for the document and the PeerFoil records." }
+  ],
+  "project_tool_hints": []
+}
