@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 docs/decision-log.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
 Summary: Records the accepted engineering decisions that shape PeerFoil's implementation.
@@ -433,6 +433,31 @@ that supersedes the old one, never by editing history.
   behavior the pass and time limits cannot be met, and the reviews never converged.
 - **Consequences:** The review reference, the Claude reviewer, the planner packet, and
   the method say so. Phase review in Stage 4 applies the same rule per pass.
+
+## D-0025 — Guided production snapshots and change continuity
+
+- **Status:** Implemented on 2026-09-05; verification and independent-review status are
+  recorded in the detailed Stage 3 plan.
+- **Decision:** Preserve a pending launch record before calling a producer and retain its
+  patch, actor, session, launch baseline, and raw-byte input hashes before any later
+  writer. Leave the source revision null for uncommitted work. Validate dependency-ready
+  tasks within the current phase without calling them independently accepted. Capture
+  incremental patches relative to the launch tree when earlier tasks are uncommitted.
+- **Reason:** A commit hash alone cannot identify uncommitted work, and retrying an
+  ambiguous writing timeout can create simultaneous writers. MCP writing timeouts pause
+  until termination is confirmed; the read-only retry rule of D-0023 does not authorize
+  another producer.
+- **Consequences:** The production and evidence references define host checks, safe
+  capture, and task-boundary resume. Prior accepted plans are retained under
+  `.peerfoil/plans/`; a version 2 plan `changes` array records all five placements,
+  affected and retained tasks, evidence, and review continuity. Substantive changes need
+  fresh review; unchanged scheduled work may carry forward its recorded prior review.
+  The original version 1 schema remains available, and validation dispatches by version.
+  Old consumers need the updated schema to read version 2 plans; prior snapshots remain
+  unchanged for recovery. Phase approval and guided repair stay in Stage 4.
+- **Authorship:** OpenAI Codex (`openai-gpt`) authored the Stage 3 references and patches.
+  This entry records implementation provenance, not self-approval. The corresponding
+  Claude review records its own session and inspected revision in the detailed plan.
 
 ## Conclusion
 

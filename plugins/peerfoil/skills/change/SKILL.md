@@ -1,19 +1,19 @@
 ---
 name: change
-description: This skill should be used when the user runs /peerfoil:change or asks to add a request, requirement, or change to a PeerFoil project. In this build it can add the request to the decision interview while the project is still in the define state; placing a change into the current stage, a later stage, a later phase, or the backlog arrives in a later build.
+description: This skill should be used when the user runs /peerfoil:change or asks to add a request, requirement, or change to a PeerFoil project. It places requests and discovered work into the current stage, later stage, later phase, backlog, or declined, retaining plan revisions and affected evidence.
 argument-hint: "[the request or change]"
 license: GPL-3.0-or-later
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(git rev-parse *), Bash(git status *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(Get-Date *)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git ls-files *), Bash(git ls-tree *), Bash(sha256sum *), PowerShell(Get-FileHash *), Bash(git rev-parse *), Bash(git status *), Bash(date -u *), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(Get-Date *)
 ---
 <!--
 This file is part of PeerFoil.
 plugins/peerfoil/skills/change/SKILL.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
 Last Modified: 2026-09-05
-Summary: Guides change intake; in this build only the define-state path is available.
-Notes: Assurance is Guided. Change placement into the plan arrives in Phase 1, Stage 3.
+Summary: Guides decision intake and traceable plan revisions for changes and discovered work.
+Notes: Assurance is Guided. Changes never authorize a second writer or a later phase.
 
 Copyright © 2026 Gabriel Mongefranco
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -46,19 +46,22 @@ The request is new information for the decision interview.
 3. Report what was added or superseded and the counts of answered, assumed, and open
    decisions. End with `Assurance: Guided`.
 
-## In any other state
+## After decisions or planning
 
-This build cannot place a change into a plan yet. Tell the user honestly:
+If no plan exists yet, record the request as a new decision, superseding any affected
+answer. Return through the architecture review path in `/peerfoil:resume`; do not lose
+the request in chat. An open consequential decision keeps production blocked.
 
-- The completed workflow will decide whether the request belongs in the current stage, a
-  later stage of the current phase, a later phase, or the backlog, or should be declined,
-  and every placement creates a new plan revision.
-- That capability is listed as "Not yet" in the workflow reference, section 7.
-- While the project is in `architect` or `plan` and the draft is not yet accepted, the
-  request can be raised when `/peerfoil:resume` asks the user to accept the architecture
-  or approve the stage order: choose "Change something" and describe it. The author
-  revises the draft and it is reviewed again.
-- Until then, keep the request in your own notes or as a repository issue. Do not edit
-  `.peerfoil/` files by hand to record it.
+When a plan exists, read `${CLAUDE_PLUGIN_ROOT}/references/changes.md` in full and follow
+its compare, candidate, review, and acceptance steps. Keep one writer at a time. Report
+the placement and reason, new or pending plan revision, affected and retained tasks,
+current blocker, and next action. Every report says `Assurance: Guided`.
 
-Change nothing in that case.
+## Host permissions
+
+The tool list pre-allows record edits and narrow read-only probes. Production also
+needs the Codex tool or CLI, temporary-index Git operations, snapshot hashing, and the
+project's declared check commands. Use the host permissions already authorized for this
+task; the skill does not grant blanket shell or MCP access. If a needed tool is denied,
+record the exact operation as blocked and give one recovery action. A non-interactive
+host must supply task-scoped permissions before production can continue.

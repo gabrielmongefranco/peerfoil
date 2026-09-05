@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # This file is part of PeerFoil.
 # tests/static_checks.py
-# Author(s): Gabriel Mongefranco.
+# Author(s): Gabriel Mongefranco; OpenAI Codex.
 # Created: 2026-09-05
 # Last Modified: 2026-09-05
 # Summary: Runs PeerFoil's static repository checks: required files, JSON and schema validity,
@@ -67,9 +67,11 @@ REQUIRED_FILES = [
     "plugins/peerfoil/references/lineage.md", "plugins/peerfoil/references/architecture.md",
     "plugins/peerfoil/references/planning.md", "plugins/peerfoil/references/review.md",
     "plugins/peerfoil/references/codex.md",
+    "plugins/peerfoil/references/production.md", "plugins/peerfoil/references/evidence.md",
+    "plugins/peerfoil/references/changes.md", "tests/stage3_checks.py",
     "plugins/peerfoil/templates/README.md",
     "schemas/README.md", "schemas/common.schema.json", "schemas/project.schema.json",
-    "schemas/plan.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",
+    "schemas/plan.schema.json", "schemas/plan-v1.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",
 ] + [f"plugins/peerfoil/skills/{name}/SKILL.md" for name in EXPECTED_SKILLS] + [
     f"plugins/peerfoil/packs/{name}/{file}"
     for name in EXPECTED_PACKS for file in ("pack.json", "README.md")
@@ -221,6 +223,8 @@ class SchemaValidator:
         return node, file_name
 
     def validate(self, instance: object, schema_file: str) -> list[str]:
+        if schema_file == "plan.schema.json" and isinstance(instance, dict) and instance.get("schema_version") == 1:
+            schema_file = "plan-v1.schema.json"
         errors: list[str] = []
         self._validate(instance, self.schemas[schema_file], schema_file, "$", errors)
         return errors
@@ -334,6 +338,9 @@ def check_schemas(problems: Problems) -> None:
             return
         for error in validator.validate(instance, schema_file):
             problems.add(path, error)
+        if schema_file == "plan.schema.json" and isinstance(instance, dict):
+            for error in plan_change_errors(instance):
+                problems.add(path, error)
 
     validate_file(TEMPLATE_DIR / "project.json", "project.schema.json")
     validate_file(TEMPLATE_DIR / "plan.json", "plan.schema.json")
@@ -346,6 +353,42 @@ def check_schemas(problems: Problems) -> None:
             validate_file(project_json, "project.schema.json")
             validate_file(project_json.parent / "plan.json", "plan.schema.json")
             validate_file(project_json.parent / "history.jsonl", "transition.schema.json")
+            for snapshot in sorted((project_json.parent / "plans").glob("plan-*.json")):
+                validate_file(snapshot, "plan.schema.json")
+                saved = load_json(snapshot, problems)
+                if isinstance(saved, dict) and (
+                    snapshot.stem != f"plan-{saved.get('plan_revision')}"
+                    or saved.get("status") != "accepted"
+                ):
+                    problems.add(snapshot, "snapshot name/revision must match and status must be accepted")
+
+
+def plan_change_errors(plan: dict) -> list[str]:
+    """Check local change relationships; review eligibility and hashes need live host checks."""
+    errors = []
+    seen = set()
+    changes = plan.get("changes", [])
+    if not isinstance(changes, list):
+        return errors  # Schema validation reports malformed structures.
+    for change in changes:
+        if not isinstance(change, dict):
+            continue
+        identifier = change.get("id")
+        if not isinstance(identifier, str):
+            continue
+        if identifier in seen:
+            errors.append(f"duplicate change id {identifier}")
+        seen.add(identifier)
+        affected = change.get("affected_tasks", [])
+        retained = change.get("retained_tasks", [])
+        if isinstance(affected, list) and isinstance(retained, list):
+            if any(task in retained for task in affected):
+                errors.append(f"{identifier}: affected_tasks and retained_tasks must be disjoint")
+        prior = change.get("prior_revision")
+        current = plan.get("plan_revision")
+        if isinstance(prior, int) and isinstance(current, int) and prior >= current:
+            errors.append(f"{identifier}: prior_revision must precede plan_revision")
+    return errors
 
 
 def parse_frontmatter(path: Path, problems: Problems) -> tuple[dict[str, str], str] | None:

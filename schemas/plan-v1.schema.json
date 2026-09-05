@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/plan.schema.json",
-  "$comment": "This file is part of PeerFoil. schemas/plan.schema.json. Author(s): Gabriel Mongefranco; OpenAI Codex. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Validates the .peerfoil/plan.json record that holds phases, stages, tasks, dependencies, evidence requirements, requirement links, and the backlog. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/plan-v1.schema.json",
+  "$comment": "This file is part of PeerFoil. schemas/plan-v1.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Preserves the version 1 plan format and validates the .peerfoil/plan.json record that holds phases, stages, tasks, dependencies, evidence requirements, requirement links, and the backlog. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
   "title": "PeerFoil plan record",
   "type": "object",
   "additionalProperties": false,
@@ -22,7 +22,7 @@
   ],
   "properties": {
     "record_type": { "const": "plan" },
-    "schema_version": { "const": 2 },
+    "schema_version": { "const": 1 },
     "project_id": { "$ref": "common.schema.json#/$defs/project_id" },
     "plan_revision": { "type": "integer", "minimum": 1 },
     "architecture_revision": { "type": "integer", "minimum": 1 },
@@ -40,95 +40,12 @@
       "type": "array",
       "items": { "$ref": "#/$defs/requirement" }
     },
-    "changes": { "type": "array", "items": { "$ref": "#/$defs/plan_change" } },
     "backlog": {
       "type": "array",
       "items": { "$ref": "#/$defs/change_request" }
     }
   },
   "$defs": {
-    "plan_change": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "summary",
-        "placement",
-        "recorded_at",
-        "prior_revision",
-        "reason",
-        "affected_tasks",
-        "retained_tasks",
-        "evidence",
-        "reviews",
-        "acceptance"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "common.schema.json#/$defs/change_request_id"
-        },
-        "summary": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 1000
-        },
-        "placement": {
-          "type": "string",
-          "enum": [
-            "current-stage",
-            "later-stage",
-            "later-phase",
-            "backlog",
-            "declined"
-          ]
-        },
-        "recorded_at": {
-          "$ref": "common.schema.json#/$defs/timestamp"
-        },
-        "prior_revision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "reason": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2000
-        },
-        "affected_tasks": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/task_id"
-          }
-        },
-        "retained_tasks": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/task_id"
-          }
-        },
-        "evidence": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/evidence_id"
-          }
-        },
-        "reviews": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/review_id"
-          }
-        },
-        "acceptance": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "reviewed",
-            "carried-forward",
-            "user-reorder"
-          ]
-        }
-      }
-    },
     "unit_status": {
       "type": "string",
       "enum": ["planned", "active", "review", "approved", "deferred", "removed"]

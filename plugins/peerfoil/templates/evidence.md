@@ -16,6 +16,7 @@ Project: `{{project_id}}` · Assurance: Guided
 - **Tool version:** {{go version go1.25.0 | null}}
 - **Source revision:** {{full Git commit hash | null}}
 - **Plan revision:** {{plan_revision}}
+- **Input snapshot:** {{sha256 verified before and after the check}}
 - **Recorded at:** {{timestamp}}
 - **Recorded by:** {{role}} ({{tool}}, {{lineage_root}}, session {{session | null}})
 - **Retained output:** {{relative path to redacted output, or a short redacted excerpt}}

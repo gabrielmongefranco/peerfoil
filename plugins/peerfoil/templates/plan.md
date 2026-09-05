@@ -38,6 +38,6 @@ Project: `{{project_id}}` · Assurance: Guided · Plan revision: {{plan_revision
 
 ## Change history
 
-| Revision | When | Reason |
-|---:|---|---|
-| {{1}} | {{timestamp}} | {{Initial plan}} |
+| Change | Prior revision | Placement | Reason | Affected tasks | Retained tasks | Evidence / reviews | Acceptance |
+|---|---:|---|---|---|---|---|---|
+| {{cr-0001 or none}} | {{1}} | {{placement}} | {{reason}} | {{task ids}} | {{task ids}} | {{evidence and review ids}} | {{pending | reviewed | carried-forward | user-reorder}} |

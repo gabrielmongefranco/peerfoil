@@ -5,11 +5,18 @@
 Project: `{{project_id}}` · Assurance: Guided
 
 - **Task:** {{tk-001}}
+- **Capture status:** {{pending | captured | blocked}}
+- **Started at:** {{timestamp}}
+- **Attempt:** {{1 | 2}}
+- **Baseline:** {{launch inventory; previous change-set and snapshot when uncommitted}}
 - **Base revision:** {{full Git commit hash the producer started from}}
 - **Source revision:** {{full Git commit hash containing the change | null}}
 - **Author:** {{producer}} ({{tool}}, {{model}}, {{effort}}, {{lineage_root}}, session {{session | null}})
 - **Captured at:** {{timestamp, taken before any other agent edited the work}}
-- **Patch:** {{relative path to the captured patch, or its hash}}
+- **Patch:** {{relative path to the captured patch | null}}
+- **Patch SHA-256:** {{sha256 | null}}
+- **Input snapshot:** {{sha256 | null}}
+- **Quality revision:** {{quality_revision}}
 - **Plan revision:** {{plan_revision}} · **Architecture revision:** {{architecture_revision}}
 
 ## Changed paths
@@ -17,6 +24,12 @@ Project: `{{project_id}}` · Assurance: Guided
 | Change | Path |
 |---|---|
 | {{added | modified | deleted | renamed}} | {{path}} |
+
+## Input files
+
+| Path | Kind | SHA-256 or absent |
+|---|---|---|
+| {{repository-relative path}} | {{file | executable | absent}} | {{sha256 | absent}} |
 
 ## Summary
 

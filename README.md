@@ -1,7 +1,7 @@
 <!--
 This file is part of PeerFoil.
 README.md
-Author(s): Gabriel Mongefranco.
+Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
 Last Modified: 2026-09-05
 Summary: Provides an overview of PeerFoil and its planned releases.
@@ -117,10 +117,13 @@ controls will stay under Advanced settings.
 
 ## Status
 
-**Phase 1 in progress.** Stages 1 and 2 of PeerFoil Skills 0.1 are built, and Stage 2
+**Phase 1 in progress.** Stages 1–3 of PeerFoil Skills 0.1 are built, and Stage 2
 has received its independent Codex review. They provide the plugin skeleton, the
 project-file formats, setup checks, Advanced settings, the decision interview, and the
-reviewed architecture, Quality Contract, and plan. Nothing has been released yet.
+reviewed architecture, Quality Contract, and plan. Stage 3 adds bounded production,
+retained authorship and checks, plan changes, and file-based status and resume. See the
+[detailed plan](docs/plans/phase-1-skills.md) for verification limits. Nothing has been
+released yet.
 
 | Release | Target | What you will be able to do |
 |---|---:|---|
