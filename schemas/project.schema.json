@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gabrielmongefranco/peerfoil/schemas/project.schema.json",
+  "$comment": "This file is part of PeerFoil. schemas/project.schema.json. Author(s): Gabriel Mongefranco. Created: 2026-09-05. Last Modified: 2026-09-05. Summary: Validates the .peerfoil/project.json record that holds a project's pack, profile, assurance, workflow state, revisions, and accepted settings. Copyright © 2026 Gabriel Mongefranco. SPDX-License-Identifier: GPL-3.0-or-later.",
+  "title": "PeerFoil project record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type",
+    "schema_version",
+    "project_id",
+    "name",
+    "goal",
+    "pack",
+    "profile",
+    "rules_source",
+    "assurance",
+    "release",
+    "created_at",
+    "updated_at",
+    "workflow",
+    "revisions",
+    "settings"
+  ],
+  "properties": {
+    "record_type": { "const": "project" },
+    "schema_version": { "const": 1 },
+    "project_id": { "$ref": "common.schema.json#/$defs/project_id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "goal": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" }
+      }
+    },
+    "profile": { "type": "string", "enum": ["personal", "work"] },
+    "rules_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["inherit", "template", "reference", "none"] },
+        "path": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    },
+    "assurance": { "type": "string", "enum": ["guided", "enforced"] },
+    "release": { "type": "string", "pattern": "^peerfoil-(skills|core)/[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
+    "created_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "phase", "stage", "task", "paused_for"],
+      "properties": {
+        "state": { "$ref": "common.schema.json#/$defs/workflow_state" },
+        "phase": { "type": ["string", "null"], "pattern": "^ph-[0-9]{2,}$" },
+        "stage": { "type": ["string", "null"], "pattern": "^st-[0-9]{2,}$" },
+        "task": { "type": ["string", "null"], "pattern": "^tk-[0-9]{3,}$" },
+        "paused_for": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "revisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "quality", "plan"],
+      "properties": {
+        "architecture": { "$ref": "common.schema.json#/$defs/revision" },
+        "quality": { "$ref": "common.schema.json#/$defs/revision" },
+        "plan": { "$ref": "common.schema.json#/$defs/revision" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked_at", "checks"],
+      "properties": {
+        "checked_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status", "detail"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$" },
+              "status": { "type": "string", "enum": ["pass", "fail", "not-verified", "skipped"] },
+              "detail": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles", "phase_reviewers", "review"],
+      "properties": {
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evaluator", "architect", "planner", "change_steward", "producer", "repair_producer"],
+          "properties": {
+            "evaluator": { "$ref": "common.schema.json#/$defs/seat" },
+            "architect": { "$ref": "common.schema.json#/$defs/seat" },
+            "planner": { "$ref": "common.schema.json#/$defs/seat" },
+            "change_steward": { "$ref": "common.schema.json#/$defs/seat" },
+            "producer": { "$ref": "common.schema.json#/$defs/seat" },
+            "repair_producer": { "$ref": "common.schema.json#/$defs/seat" }
+          }
+        },
+        "phase_reviewers": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "common.schema.json#/$defs/seat" }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default_passes", "max_passes", "repair_selection_passes", "repair_selection_max_passes", "repair_cycles"],
+          "properties": {
+            "default_passes": { "type": "integer", "minimum": 1, "maximum": 8 },
+            "max_passes": { "type": "integer", "minimum": 1, "maximum": 8 },
+            "repair_selection_passes": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "repair_selection_max_passes": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "repair_cycles": { "type": "integer", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "record_type": "project",
+  "schema_version": 1,
+  "project_id": "example-project",
+  "name": "Example Project",
+  "goal": "Describe in two to four sentences what the user wants to build or change, who it is for, and what a finished first phase looks like.",
+  "pack": {
+    "id": "software",
+    "version": "0.1.0"
+  },
+  "profile": "personal",
+  "rules_source": {
+    "mode": "inherit",
+    "path": "AGENTS.md"
+  },
+  "assurance": "guided",
+  "release": "peerfoil-skills/0.1.0-dev",
+  "created_at": "2026-09-05T00:00:00Z",
+  "updated_at": "2026-09-05T00:00:00Z",
+  "workflow": {
+    "state": "define",
+    "phase": null,
+    "stage": null,
+    "task": null,
+    "paused_for": null
+  },
+  "revisions": {
+    "architecture": 0,
+    "quality": 0,
+    "plan": 0
+  },
+  "environment": {
+    "checked_at": "2026-09-05T00:00:00Z",
+    "checks": [
+      {
+        "name": "git",
+        "status": "pass",
+        "detail": "git version 2.39.2"
+      },
+      {
+        "name": "codex-mcp",
+        "status": "not-verified",
+        "detail": "The codex MCP server is not registered in Claude Code; the codex exec fallback is available."
+      }
+    ]
+  },
+  "settings": {
+    "roles": {
+      "evaluator": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "architect": { "tool": "claude-code", "model": "default", "effort": "high" },
+      "planner": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "change_steward": { "tool": "claude-code", "model": "default", "effort": "medium" },
+      "producer": { "tool": "codex-cli", "model": "default", "effort": "medium" },
+      "repair_producer": { "tool": "codex-cli", "model": "default", "effort": "medium" }
+    },
+    "phase_reviewers": [
+      { "tool": "claude-code", "model": "default", "effort": "medium" },
+      { "tool": "codex-cli", "model": "default", "effort": "medium" }
+    ],
+    "review": {
+      "default_passes": 6,
+      "max_passes": 8,
+      "repair_selection_passes": 3,
+      "repair_selection_max_passes": 4,
+      "repair_cycles": 1
+    }
+  }
+}

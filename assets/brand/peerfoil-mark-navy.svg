@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+<!--
+This file is part of PeerFoil.
+assets/brand/peerfoil-mark-navy.svg
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-05
+Last Modified: 2026-09-05
+Summary: PeerFoil brand artwork for documentation.
+Copyright © 2026 Gabriel Mongefranco
+SPDX-License-Identifier: GFDL-1.3-or-later
+No Invariant Sections, Front-Cover Texts, or Back-Cover Texts.
+PeerFoil™ is a trademark of Gabriel Mongefranco.
+-->
+<title id="title">PeerFoil™ mark</title><desc id="desc">Asymmetric P with a hooked reviewer annotation.</desc>
+<g transform="translate(22 34) scale(1)"><path fill="#0B203F" fill-rule="evenodd" d="M5 240 L16 74 Q18 12 79 10 L127 11 Q181 14 179 68 L176 112 Q174 159 123 162 L50 164 L45 240 Z M55 117 L116 114 Q136 113 136 91 L138 71 Q139 48 115 48 L83 49 Q58 50 57 73 Z"/><path d="M91 101 C117 104 107 31 147 31 H258" fill="none" stroke="#0B203F" stroke-width="23" stroke-linecap="round"/></g>
+</svg>

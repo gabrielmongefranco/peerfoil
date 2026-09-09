@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="280" viewBox="0 0 1100 280" role="img" aria-labelledby="title desc">
+<!--
+This file is part of PeerFoil.
+assets/brand/peerfoil-logo-dark.svg
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-05
+Last Modified: 2026-09-05
+Summary: PeerFoil brand artwork for documentation.
+Copyright © 2026 Gabriel Mongefranco
+SPDX-License-Identifier: GFDL-1.3-or-later
+No Invariant Sections, Front-Cover Texts, or Back-Cover Texts.
+PeerFoil™ is a trademark of Gabriel Mongefranco.
+-->
+<title id="title">PeerFoil™</title><desc id="desc">Mint and coral custom P beside the PeerFoil wordmark.</desc>
+<g transform="translate(18 20) scale(0.93)"><path fill="#62E5A4" fill-rule="evenodd" d="M5 240 L16 74 Q18 12 79 10 L127 11 Q181 14 179 68 L176 112 Q174 159 123 162 L50 164 L45 240 Z M55 117 L116 114 Q136 113 136 91 L138 71 Q139 48 115 48 L83 49 Q58 50 57 73 Z"/><path d="M91 101 C117 104 107 31 147 31 H258" fill="none" stroke="#FF7E6D" stroke-width="23" stroke-linecap="round"/></g><g transform="translate(302 92) scale(1.38)" fill="#0B203F"><path transform="translate(0 0)" d="M0 100 V0 H41 C76 0 78 60 42 61 H24 V100 Z M24 19 V41 H40 C54 41 54 19 40 19 Z" fill-rule="evenodd"/><path transform="translate(80 0)" d="M69 55 C69 32 56 23 36 23 C12 23 0 40 0 64 C0 88 14 102 37 102 C51 102 62 96 69 84 L52 74 C46 85 31 88 23 73 L69 55 Z M21 56 C22 40 40 34 49 46 Z" fill-rule="evenodd"/><path transform="translate(157 0)" d="M69 55 C69 32 56 23 36 23 C12 23 0 40 0 64 C0 88 14 102 37 102 C51 102 62 96 69 84 L52 74 C46 85 31 88 23 73 L69 55 Z M21 56 C22 40 40 34 49 46 Z" fill-rule="evenodd"/><path transform="translate(234 0)" d="M0 100 V25 H22 V35 C28 25 37 21 49 24 V47 C32 43 23 51 23 67 V100 Z" fill-rule="evenodd"/><path transform="translate(290 0)" d="M0 100 V0 H69 V21 H24 V42 H63 V63 H24 V100 Z" fill-rule="evenodd"/><path transform="translate(368 0)" d="M38 23 C12 23 0 39 0 63 C0 87 13 102 38 102 C63 102 76 87 76 63 C76 39 64 23 38 23 Z M38 44 C60 44 60 81 38 81 C16 81 16 44 38 44 Z" fill-rule="evenodd"/><path transform="translate(454 0)" d="M0 25 H23 V100 H0 Z M11.5 -3 A12 12 0 1 0 11.5 21 A12 12 0 1 0 11.5 -3 Z" fill-rule="evenodd"/><path transform="translate(489 0)" d="M0 0 H23 V100 H0 Z" fill-rule="evenodd"/><text x="522" y="13" font-family="Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="400" fill="#0B203F" text-anchor="start">™</text></g>
+</svg>
