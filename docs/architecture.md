@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/architecture.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-09-21
 Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
 Notes: See README for an overview and full license information.
 
@@ -422,8 +422,52 @@ PeerFoil assumes the workspace, its installed tools, and invoked model applicati
 trusted. Version 1.0 does not provide an operating-system sandbox. Users who open untrusted
 projects need an outside disposable environment.
 
+When Claude Code runs a guided phase, PeerFoil recommends checking its Bash sandbox in
+`/sandbox` before production. The sandbox applies to Claude Code shell commands and their
+child processes. It does not contain the Codex producer, editor tools, or other MCP tools.
+Each tool still needs its own access controls. PeerFoil only reports the sandbox status; it
+does not configure or enforce the host boundary.
+
+This project settings fragment is a starting point for Claude Code. Review the network
+domains against the tools your project needs, then confirm the resolved settings in
+`/sandbox`:
+
+```json
+{
+  "autoAllowBashIfSandboxed": true,
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "denyRead": ["~/.ssh", "~/.aws", "./.env", "./**/.env"]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "registry.npmjs.org",
+        "pypi.org"
+      ]
+    }
+  }
+}
+```
+
+The example does not make a project safe to open. A broad domain such as `github.com` can
+allow data to leave the sandbox, and the default proxy does not inspect encrypted traffic.
+Use only the domains your tools need. Native Windows is unsupported by this Claude Code
+feature; Windows users need WSL2. Claude's documentation lists other platform and dependency
+limits. The WSL2 network proxy has reported enforcement failures, so do not treat its domain
+allowlist as a security boundary. A sandbox warning is not a substitute for a disposable
+environment when a project is untrusted.
+
 Git worktrees and Dagger-style build environments may improve change isolation or
 reproducibility. They are not treated as hostile-code security boundaries.
+
+### Claude Code references
+
+- [Claude Code Bash sandbox setup and limitations](https://code.claude.com/docs/en/sandboxing)
+- [WSL2 network enforcement report](https://github.com/anthropics/claude-code/issues/79316)
+- [WSL2 Bash invocation report](https://github.com/anthropics/claude-code/issues/51126)
 
 ## 11. Cross-platform requirements
 

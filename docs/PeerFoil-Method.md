@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/PeerFoil-Method.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-09-21
 Summary: Defines the PeerFoil workflow, its safeguards, and its planned releases.
 Notes: See README for an overview and full license information.
 
@@ -549,6 +549,10 @@ PeerFoil 1.0 does not include:
 
 These limits keep the first product useful for solo developers instead of turning it into
 an enterprise platform.
+
+PeerFoil can recommend a host tool's sandbox and ask the user to check it before a guided
+phase. That check reports host status only. It does not provide a security boundary for
+Codex, editor tools, or other MCP tools.
 
 ## 20. Licensing
 

@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/implementation-plan.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-09-21
 Summary: Explains what PeerFoil will deliver, when it will arrive, and how each release will be checked.
 Notes: See README for an overview and full license information.
 
@@ -61,6 +61,11 @@ PeerFoil must:
 - revise the plan when requirements, TODOs, deferrals, or discovered work change;
 - treat `AGENTS.md` as the repository's highest local instruction source; and
 - clearly label safeguards that are guided rather than enforced.
+
+The Skills 0.1.x follow-up documents a recommended Claude Code Bash sandbox profile and
+adds an informational check before Claude Code-driven phases. Core may later record the
+same host-reported status. This feature does not implement a sandbox or extend its boundary
+to Codex, editor, or other MCP tools.
 
 PeerFoil 1.0 will not include operating-system sandboxing, multiple agents writing at the
 same time, team administration, a hosted dashboard, or automatic production deployment.
