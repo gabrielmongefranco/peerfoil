@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/references/production.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-09-21
 Summary: Guides one bounded production task, captures provenance, and resumes from retained files.
 Copyright © 2026 Gabriel Mongefranco
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -37,6 +37,14 @@ This is a written host procedure, not a controller or a crash-recovery guarantee
    `workflow.state` is `approve`, and the user authorizes the next phase in this chat.
    Then set that phase and its first stage `active`, move `workflow.state` to
    `produce` with the `approve` to `produce` transition, and continue.
+   At the start of each phase driven through Claude Code, inspect `/sandbox` and tell the
+   user whether the Bash sandbox is enabled and whether required dependencies are present.
+   If it is unavailable or off, explain that Claude Code shell commands will run without
+   that boundary and ask the user whether to continue. Record the user's choice in the
+   phase history. This check is informational: it does not inspect or constrain Codex,
+   editor, or other MCP tools. On native Windows, Claude Code does not support this
+   sandbox; WSL2 network filtering has reported enforcement failures. Refer to the
+   limitations in [architecture.md](../../../docs/architecture.md#10-trust-and-security-boundaries).
 4. `validated` predecessors may supply inputs within the active phase when their
    current evidence passes; this is readiness for dependent work, not independent
    acceptance. `accepted` predecessors must have eligible review records. Do not set

@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/plans/phase-1-skills.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-09-21
 Summary: Provides the executable implementation plan for Phase 1, PeerFoil Skills 0.1, and records stage status.
 Notes: This plan expands Phase 1 of docs/implementation-plan.md without changing its scope.
 
@@ -72,6 +72,8 @@ A user with Git, Claude Code, Codex, and the required project tools can:
 - Direct Claude Code or Codex process adapters.
 - Automatic MCP routing, local-model routing, or model qualification.
 - Operating-system sandboxing or simultaneous writers.
+- Detecting or enforcing sandbox status in Core. The Skills follow-up only documents the
+  Claude Code Bash sandbox and asks the user before proceeding when it is unavailable.
 
 The plugin must not imply that a guided safeguard is mechanically enforced.
 
