@@ -43,6 +43,30 @@ func TestLFSAttributesRejectedInBaseAndCapturedTrees(t *testing.T) {
 	}
 }
 
+func TestLFSPointersFromUntrackedAttributesAreRejected(t *testing.T) {
+	for _, config := range []string{"private", "global"} {
+		t.Run(config, func(t *testing.T) {
+			root := newTestRepo(t)
+			repo := New(root)
+			if config == "private" {
+				writeFile(t, root, ".git/info/attributes", "*.bin filter=lfs\n")
+			} else {
+				attributes := t.TempDir()
+				writeFile(t, attributes, "attributes", "*.bin filter=lfs\n")
+				runGit(t, root, "config", "core.attributesFile", attributes+"/attributes")
+			}
+			wt, err := repo.CreateTaskWorktree(context.Background(), runGit(t, root, "rev-parse", "HEAD"), "tk-001", 1, t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, wt.Path, "image.bin", "version https://git-lfs.github.com/spec/v1\noid sha256:"+strings.Repeat("0", 64)+"\nsize 12345\n")
+			if _, _, err := wt.Capture(context.Background()); err == nil || !strings.Contains(err.Error(), "LFS pointer") {
+				t.Fatalf("local attribute pointer accepted: %v", err)
+			}
+		})
+	}
+}
+
 func TestCommitUsesOnlyCapturedTree(t *testing.T) {
 	root := newTestRepo(t)
 	repo := New(root)

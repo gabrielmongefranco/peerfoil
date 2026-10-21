@@ -41,6 +41,14 @@ type repairVerification struct {
 	Author      project.Actor     `json:"author"`
 	Findings    []Finding         `json:"findings"`
 	Attempts    int               `json:"attempts"`
+	Approved    *repairApproval   `json:"approved,omitempty"`
+}
+
+type repairApproval struct {
+	Review   string        `json:"review"`
+	SHA256   string        `json:"sha256"`
+	Digest   string        `json:"tree_digest"`
+	Reviewer project.Actor `json:"reviewer"`
 }
 
 const repairVerificationHeading = "\n## Repair verification recovery\n\n"
@@ -50,6 +58,8 @@ var (
 	changeSetIDPattern   = regexp.MustCompile(`^cs-[0-9]{4,}$`)
 	repairTaskIDPattern  = regexp.MustCompile(`^tk-[0-9]{3,}$`)
 	commitIDPattern      = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
+	reviewIDPattern      = regexp.MustCompile(`^rv-[0-9]{4,}$`)
+	sha256Pattern        = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
 func (e *Engine) saveRepairVerification(checkpoint *repairVerification) error {
@@ -134,6 +144,12 @@ func (e *Engine) resumeRepairVerification(ctx context.Context, boundary *project
 		return err
 	}
 	refs := map[string][]string{"phase_reviews": {checkpoint.PhaseReview}, "change_sets": {checkpoint.ChangeSet}}
+	if err := e.checkReviewInputs(boundary); err != nil {
+		return err
+	}
+	if checkpoint.Approved != nil {
+		return e.integrateVerifiedRepair(ctx, boundary, checkpoint)
+	}
 	if checkpoint.Attempts >= 2 {
 		reason := "the repair verifier returned no usable result within two attempts"
 		if err := e.Pause(reason, refs); err != nil {
@@ -205,12 +221,71 @@ func (e *Engine) resumeRepairVerification(ctx context.Context, boundary *project
 		}
 		return errs.New(errs.Policy, reason, "read the repair review and continue with the PeerFoil skills")
 	}
-	worktree := &workspace.Worktree{Repo: e.Repo, Branch: branch}
-	integrationTip, err := e.Repo.Integrate(ctx, worktree, checkpoint.Source)
+	raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join("reviews", run.recordID+".md"), 1024*1024)
 	if err != nil {
 		return err
 	}
-	refs["reviews"] = []string{run.recordID}
+	approvalHash := sha256.Sum256([]byte(strings.ReplaceAll(string(raw), "\r\n", "\n")))
+	model, effort, session := run.seat.Model, run.seat.Effort, run.session
+	checkpoint.Approved = &repairApproval{Review: run.recordID, SHA256: hex.EncodeToString(approvalHash[:]), Digest: digest,
+		Reviewer: project.Actor{Role: "reviewer", Tool: run.seat.Tool, Model: &model, Effort: &effort, Session: &session, LineageRoot: run.lineage}}
+	if err := e.saveRepairVerification(checkpoint); err != nil {
+		return err
+	}
+	return e.integrateVerifiedRepair(ctx, boundary, checkpoint)
+}
+
+// integrateVerifiedRepair reuses an accepted verification after an integration
+// failure. It validates the retained result without consuming another reviewer call.
+func (e *Engine) integrateVerifiedRepair(ctx context.Context, boundary *project.Transition, checkpoint *repairVerification) error {
+	approval := checkpoint.Approved
+	invalid := errs.New(errs.Validation, "the retained repair approval is missing or no longer matches the repair", "restore the recorded approval before resuming integration")
+	if approval == nil || !reviewIDPattern.MatchString(approval.Review) || !sha256Pattern.MatchString(approval.SHA256) || !sha256Pattern.MatchString(approval.Digest) ||
+		approval.Reviewer.Role != "reviewer" || approval.Reviewer.LineageRoot == "" || approval.Reviewer.LineageRoot == provider.LineageUnknown || approval.Reviewer.LineageRoot == checkpoint.Author.LineageRoot ||
+		(checkpoint.Author.Session != nil && *checkpoint.Author.Session != "" && deref(approval.Reviewer.Session) == *checkpoint.Author.Session) {
+		return invalid
+	}
+	raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join("reviews", approval.Review+".md"), 1024*1024)
+	if err != nil {
+		return invalid
+	}
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	sum := sha256.Sum256([]byte(text))
+	if hex.EncodeToString(sum[:]) != approval.SHA256 {
+		return invalid
+	}
+	actor := approval.Reviewer
+	for _, line := range []string{
+		"- **Kind:** repair\n", "- **Decision:** approve\n",
+		"- **Independence:** independent — judged against each item's recorded author lineage\n",
+		fmt.Sprintf("- **Frozen material:** source revision %s, plan revision %d, architecture revision %d, quality revision %d, pass 1, digest %s, change set %s\n",
+			checkpoint.Source, checkpoint.Revisions.Plan, checkpoint.Revisions.Architecture, checkpoint.Revisions.Quality, approval.Digest, checkpoint.ChangeSet),
+		fmt.Sprintf("- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n", actor.Tool, deref(actor.Model), deref(actor.Effort), actor.LineageRoot, valueOrNull(deref(actor.Session))),
+	} {
+		if !strings.Contains(text, "\n"+line) {
+			return invalid
+		}
+	}
+	if err := e.checkReviewInputs(boundary); err != nil {
+		return err
+	}
+	branch := fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
+	branchTip, err := e.Repo.CommitOf(ctx, branch)
+	if err != nil {
+		return err
+	}
+	tip, err := e.Repo.CommitOf(ctx, e.Repo.IntegrationBranch(checkpoint.Revisions.Plan))
+	if err != nil {
+		return err
+	}
+	if branchTip != checkpoint.Source || (tip != checkpoint.Base && tip != checkpoint.Source) {
+		return errs.New(errs.Git, "a branch moved after the repair was verified", "restore the recorded repair and integration revisions, then run peerfoil resume")
+	}
+	integrationTip, err := e.Repo.Integrate(ctx, &workspace.Worktree{Repo: e.Repo, Branch: branch}, checkpoint.Source)
+	if err != nil {
+		return err
+	}
+	refs := map[string][]string{"phase_reviews": {checkpoint.PhaseReview}, "change_sets": {checkpoint.ChangeSet}, "reviews": {approval.Review}}
 	return e.approvePhase(integrationTip, refs,
-		"Phase approved after a verified repair; see "+checkpoint.PhaseReview+", "+run.recordID+", and "+checkpoint.ChangeSet+".")
+		"Phase approved after a verified repair; see "+checkpoint.PhaseReview+", "+approval.Review+", and "+checkpoint.ChangeSet+".")
 }

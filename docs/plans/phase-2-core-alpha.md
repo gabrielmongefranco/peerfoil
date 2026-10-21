@@ -769,6 +769,13 @@ The release boundary and deferred work remain as listed above.
 | Repairs omit major findings | Send the full agreed finding list to both repair producer and verifier | `TestRepairIncludesBlockingAndMajorFindings` |
 | Filenames inject records or reveal credentials | Reject controls, markup, and likely credentials without echoing the offending filename | `TestUnsafeFilenamesNeverReachReports` |
 | Captured trees introduce unsupported LFS | Inspect root and nested attribute blobs in the exact base and captured Git trees | `TestLFSAttributesRejectedInBaseAndCapturedTrees` |
+| Invalid repair inputs leave writer resources | Validate accepted inputs first; close intents and remove unused worktrees on other setup failures | `TestInvalidRepairInputsCreateNoWriterResources` |
+| Review copy follows local links | Use bounded regular-file reads with parent checks; cap copied bundles and reject likely credentials | `TestReviewCopyRejectsUnboundedAndLinkedRecords`, `TestReadRegularFileBoundsAndLinks` |
+| Frozen commit carries changed accepted requirements | Retain accepted input records and revisions per review transition; compare them before review and approval | `TestReviewRefusesChangedAcceptedInputs` |
+| Integration failure discards successful verification | Retain the review identity, reviewer, and normalized text hash; retry integration without another verification attempt | `TestVerifiedRepairResumesIntegrationWithoutAnotherReview` |
+| A body example can authorize a draft contract | Parse the canonical metadata paragraph directly after the title | `TestCanonicalHeaderCannotBeSuppliedByAnExample` |
+| Private or global attributes introduce LFS pointers | Batch-inspect small source blobs for current and legacy LFS pointer headers | `TestLFSPointersFromUntrackedAttributesAreRejected` |
+| Reviewer fields inject Markdown structure | Reject line breaks, controls, and structural markup before retaining findings or risk text | `TestReviewFieldsCannotForgeMarkdown` |
 
 The repair verification test also rejects a moved repair branch and pauses after two
 unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks
@@ -824,6 +831,29 @@ asserting the same recovery behavior. No production failure was hidden by changi
 Lesson: accepted requirements must reach both the writer and the check runner as the
 same current data. A toolchain marker or a committed copy is not proof that either
 matches the accepted contract.
+
+The subsequent review returned seven findings, also tracked above. Review boundary
+snapshots add `evidence/tr-NNNN.inputs.json` without changing transition schema fields.
+They contain the accepted records and revisions, exclude mutable workflow progress,
+and must exist before the history transition is written. Older Core review boundaries
+without this record fail closed and need fresh validation. A verified repair retains
+its review identifier and SHA-256 over the review text with LF line endings, so native
+Windows line conversion does not consume another verification attempt.
+
+The review copy now caps individual files at 1 MiB, each source directory at 1,024
+entries, and the complete copied bundle at 8 MiB. Symlink tests run where the host
+allows link creation; other platforms still run the regular-file and size-limit cases.
+The native Windows host could not create the two test links, so those cases were skipped;
+the Linux and macOS jobs require link creation to succeed. No system permission is changed
+to enable a test. The initial copy test needed its synthetic evidence directory created
+before seeding the oversized file; its rejection assertion remains unchanged.
+LFS pointer detection follows the
+[Git LFS specification](https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md),
+including its pointer-size bound and legacy version header.
+
+Lesson: recovery must preserve completed approvals separately from pending integration.
+Validation must also bind accepted requirements, and local record copying is a data
+disclosure boundary even when the produced Git tree contains no links.
 
 ## 16. Phase acceptance matrix
 

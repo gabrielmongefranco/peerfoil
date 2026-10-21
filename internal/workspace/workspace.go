@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
@@ -220,22 +221,38 @@ func (r *Repo) DetectUnsupported(ctx context.Context) error {
 // CheckTree rejects links, submodules, and LFS attributes in the exact Git tree
 // before checkout or integration, independently of the user's current working files.
 func (r *Repo) CheckTree(ctx context.Context, revision string) error {
-	entries, err := git(ctx, r.Root, "ls-tree", "-r", "-z", revision)
+	entries, err := git(ctx, r.Root, "ls-tree", "-r", "-l", "-z", revision)
 	if err != nil {
 		return errs.Wrap(errs.Git, "could not inspect the task's source tree", err)
 	}
+	var pointerCandidates []string
+	seen := map[string]bool{}
 	for _, entry := range bytes.Split(entries, []byte{0}) {
 		if bytes.HasPrefix(entry, []byte("120000 ")) || bytes.HasPrefix(entry, []byte("160000 ")) {
 			return errs.New(errs.Policy, "the source tree contains symbolic links or submodules, which this release does not support",
 				"replace links with regular files and use a repository without submodules before starting a task")
 		}
 		metadata, name, found := bytes.Cut(entry, []byte{'\t'})
-		if !found || path.Base(string(name)) != ".gitattributes" {
+		if !found {
 			continue
 		}
 		fields := strings.Fields(string(metadata))
-		if len(fields) != 3 || fields[1] != "blob" {
+		if len(fields) != 4 || fields[1] != "blob" {
 			return errs.New(errs.Git, "could not decode attributes in the source tree", "")
+		}
+		size, err := strconv.ParseInt(fields[3], 10, 64)
+		if err != nil || size < 0 {
+			return errs.New(errs.Git, "could not decode a source blob size", "")
+		}
+		if size < 1024 && !seen[fields[2]] {
+			pointerCandidates = append(pointerCandidates, fields[2])
+			seen[fields[2]] = true
+		}
+		if !strings.EqualFold(path.Base(string(name)), ".gitattributes") {
+			continue
+		}
+		if size > 1024*1024 {
+			return errs.New(errs.Policy, "source attributes exceed the 1 MiB inspection limit", "reduce the attributes file before continuing")
 		}
 		attributes, err := git(ctx, r.Root, "cat-file", "blob", fields[2])
 		if err != nil {
@@ -249,7 +266,7 @@ func (r *Repo) CheckTree(ctx context.Context, revision string) error {
 			}
 		}
 	}
-	return nil
+	return r.rejectLFSPointers(ctx, pointerCandidates)
 }
 
 // ### Status Decoding ###

@@ -16,12 +16,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
@@ -110,10 +112,6 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 		return errs.New(errs.Validation, "no phase is active, so there is nothing to review",
 			"a phase becomes active when its plan is accepted; continue with the PeerFoil skills")
 	}
-	if err := e.requireTwoFamilies(); err != nil {
-		return err
-	}
-
 	frozen, err := e.Repo.CommitOf(ctx, e.Repo.IntegrationBranch(e.State.Project.Revisions.Plan))
 	if err != nil {
 		return err
@@ -126,8 +124,14 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 		return errs.New(errs.Validation, "the phase review has no recorded source revision",
 			"restore the validated review boundary from history before running peerfoil resume")
 	}
+	if err := e.checkReviewInputs(e.reviewBoundary()); err != nil {
+		return err
+	}
 	if boundary := e.reviewBoundary(); boundary != nil && len(boundary.Refs["change_sets"]) > 0 {
 		return e.resumeRepairVerification(ctx, boundary)
+	}
+	if err := e.requireTwoFamilies(); err != nil {
+		return err
 	}
 	if recorded != frozen {
 		return errs.New(errs.Git,
@@ -165,6 +169,9 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 		runs = append(runs, *run)
 		fmt.Fprintf(e.Out, "Reviewer %s (%s): %s with %d finding(s).\n",
 			run.reviewerName, run.lineage, run.answer.Decision, len(run.answer.Findings))
+	}
+	if err := e.checkReviewInputs(e.reviewBoundary()); err != nil {
+		return err
 	}
 
 	merged := mergeFindings(runs)
@@ -334,6 +341,8 @@ check ran. Report at most ` + fmt.Sprint(maxFindings) + ` findings. "approve" me
 remains; "repair" means a bounded revision can resolve the findings; "block" means a
 decision or requirement must change first.
 
+Use plain, single-line text in every JSON string field. Do not put Markdown headings,
+links, table delimiters, backticks, HTML, or terminal controls inside those fields.
 End your answer with exactly one fenced JSON object:
 
 ` + "```json\n" + `{
@@ -353,14 +362,37 @@ End your answer with exactly one fenced JSON object:
 // Without this, reviewers and repair verifiers would see phase-start records and could
 // approve without reading the controller-run results for the revision under review.
 func (e *Engine) refreshRecordsInCheckout(checkout string) error {
+	const maxReviewRecordBytes = 1024 * 1024
+	const maxReviewBundleBytes = 8 * maxReviewRecordBytes
+	total := 0
+	for _, name := range []string{"architecture.md", "quality.md", "decisions.md", "plan.json"} {
+		raw, err := e.readAcceptedRecord(name, 0)
+		if err != nil {
+			return err
+		}
+		if err := fsx.WriteFileAtomic(filepath.Join(checkout, ".peerfoil", name), raw, 0o644); err != nil {
+			return err
+		}
+		total += len(raw)
+	}
 	for _, name := range []string{"evidence", "reviews"} {
 		source := filepath.Join(e.State.Dir, name)
+		info, err := os.Lstat(source)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return errs.New(errs.Validation, "review records must be held in regular directories", "remove links from the project records")
+		}
 		entries, err := os.ReadDir(source)
 		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
 			return errs.Wrap(errs.Configuration, "reading the "+name+" records", err)
+		}
+		if len(entries) > 1024 {
+			return errs.New(errs.Validation, "the review record directory exceeds 1,024 entries", "reduce the review bundle before retrying")
 		}
 		target := filepath.Join(checkout, ".peerfoil", name)
 		if err := os.MkdirAll(target, 0o755); err != nil {
@@ -370,9 +402,19 @@ func (e *Engine) refreshRecordsInCheckout(checkout string) error {
 			if entry.IsDir() {
 				continue
 			}
-			raw, err := os.ReadFile(filepath.Join(source, entry.Name()))
+			if err := workspace.CheckScope([]workspace.Change{{Path: entry.Name()}}, []string{"*"}); err != nil {
+				return err
+			}
+			raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join(name, entry.Name()), maxReviewRecordBytes)
 			if err != nil {
-				return errs.Wrap(errs.Configuration, "reading "+entry.Name(), err)
+				return errs.Wrap(errs.Validation, "review records must be bounded regular files without links", err)
+			}
+			total += len(raw)
+			if total > maxReviewBundleBytes {
+				return errs.New(errs.Validation, "the review record bundle exceeds 8 MiB", "reduce the review bundle before retrying")
+			}
+			if _, scrubbed := redact.Scrub(raw); scrubbed {
+				return errs.New(errs.Policy, "a review record may contain a credential", "remove credentials before exposing the record to a reviewer")
 			}
 			if err := fsx.WriteFileAtomic(filepath.Join(target, entry.Name()), raw, 0o644); err != nil {
 				return err
@@ -512,6 +554,10 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 		}
 		for _, value := range []string{finding.Title, finding.Location, finding.Requirement,
 			finding.Evidence, finding.Recommendation} {
+			if !plainReviewField(value) {
+				problems = append(problems, fmt.Sprintf("finding %d contains structural markup or control characters", index+1))
+				break
+			}
 			if len(value) > 2000 {
 				problems = append(problems, fmt.Sprintf("finding %d has a field longer than 2,000 characters", index+1))
 				break
@@ -520,6 +566,9 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 	}
 	if len(answer.RemainingRisk) > 4000 {
 		problems = append(problems, "remaining_risk is longer than 4,000 characters")
+	}
+	if !plainReviewField(answer.RemainingRisk) || !plainReviewField(answer.Model) {
+		problems = append(problems, "remaining risk or model contains structural markup or control characters")
 	}
 	if len(problems) > 0 {
 		return nil, errs.New(errs.Provider, "the review answer failed validation: "+strings.Join(problems, "; "), "")
@@ -543,6 +592,23 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 		}
 	}
 	return &answer, nil
+}
+
+func plainReviewField(value string) bool {
+	if strings.ContainsAny(value, "|`<>[]") || strings.HasPrefix(strings.TrimSpace(value), "#") {
+		return false
+	}
+	for _, prefix := range []string{"*", "- ", "+ ", "---", "==="} {
+		if strings.HasPrefix(strings.TrimSpace(value), prefix) {
+			return false
+		}
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			return false
+		}
+	}
+	return true
 }
 
 // combineDecisions applies the independence rules: approval needs both reviewers, and
@@ -762,20 +828,12 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 
 	// The repair works on a fresh worktree at the frozen revision.
 	lastTask := e.lastValidatedTaskID()
-	worktree, err := e.Repo.CreateTaskWorktree(ctx, frozen, lastTask, e.State.Project.Revisions.Plan+1, e.WorktreeParent)
-	if err != nil {
-		return err
-	}
 	changeSetID, err := e.nextEvidenceDirID("cs")
 	if err != nil {
 		return err
 	}
 	model := repairSeatSetting.Model
 	effort := repairSeatSetting.Effort
-	if _, err := e.Journal.Intent("repair-producer", changeSetID, map[string]string{
-		"worktree": worktree.Path, "branch": worktree.Branch}); err != nil {
-		return err
-	}
 	// The repair's authorship is persisted before the writer runs, exactly as a
 	// producer launch is: a crash mid-repair then still leaves a versioned record
 	// naming the authorized author, base revision, and pending capture.
@@ -797,6 +855,26 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
+	worktree, err := e.Repo.CreateTaskWorktree(ctx, frozen, lastTask, e.State.Project.Revisions.Plan+1, e.WorktreeParent)
+	if err != nil {
+		return err
+	}
+	launched, intended := false, false
+	defer func() {
+		if resultErr == nil || launched {
+			return
+		}
+		if intended {
+			_, closeErr := e.Journal.Result("repair-producer", changeSetID, "failed", nil)
+			resultErr = errors.Join(resultErr, closeErr)
+		}
+		resultErr = errors.Join(resultErr, e.Repo.CleanupWorktree(ctx, worktree))
+	}()
+	if _, err := e.Journal.Intent("repair-producer", changeSetID, map[string]string{
+		"worktree": worktree.Path, "branch": worktree.Branch}); err != nil {
+		return err
+	}
+	intended = true
 
 	var packet strings.Builder
 	packet.WriteString("You are the PeerFoil repair producer. The current directory is a dedicated worktree at the reviewed revision. Apply the smallest change that resolves the agreed findings below. Edit only what the findings require; never edit .peerfoil/, Git history, or AGENTS.md. Do not commit.\n\nAgreed findings:\n")
@@ -844,6 +922,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 	}()
 	fmt.Fprintf(e.Out, "Repairing with %s at %s.\n", e.RepairProducer.Name(), repairSeatSetting.Effort)
+	launched = true
 	outcome, invokeErr := e.RepairProducer.Invoke(ctx, provider.Invocation{
 		Role:    "repair_producer",
 		Packet:  packet.String(),

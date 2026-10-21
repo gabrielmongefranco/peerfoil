@@ -15,11 +15,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
@@ -28,37 +27,35 @@ import (
 
 const maxInputBytes = 256 * 1024
 
-var acceptedRecordHeader = regexp.MustCompile("(?m)^Project: `([^`]+)` · Assurance: [^\r\n]+ · Revision: ([0-9]+) · Status: accepted\\r?$")
+var acceptedRecordHeader = regexp.MustCompile("^Project: `([^`]+)` · Assurance: [^\r\n]+ · Revision: ([0-9]+) · Status: ([a-z-]+)$")
 
 // readAcceptedRecord bounds retained input and rejects links and secrets before
 // provider dispatch. Revisions in architecture and quality must match loaded state.
 func (e *Engine) readAcceptedRecord(name string, revision int) ([]byte, error) {
-	path := filepath.Join(e.State.Dir, name)
-	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() {
+	raw, err := fsx.ReadRegularFile(e.State.Dir, name, maxInputBytes)
+	if err != nil || !utf8.Valid(raw) {
 		return nil, errs.New(errs.Validation, "an accepted input record is missing or is not a regular file: "+name,
-			"restore the record through the PeerFoil skills before continuing")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, errs.Wrap(errs.Configuration, "could not open the accepted input record", err)
-	}
-	defer file.Close()
-	raw, err := io.ReadAll(io.LimitReader(file, maxInputBytes+1))
-	if err != nil {
-		return nil, errs.Wrap(errs.Configuration, "could not read the accepted input record", err)
-	}
-	if len(raw) > maxInputBytes {
-		return nil, errs.New(errs.Validation, "an accepted input record exceeds 256 KiB: "+name,
-			"reduce the record to the context needed for the task")
+			"restore a regular UTF-8 record no larger than 256 KiB through the PeerFoil skills")
 	}
 	if _, redacted := redact.Scrub(raw); redacted {
 		return nil, errs.New(errs.Policy, "an accepted input record may contain a credential: "+name,
 			"remove credentials before sending or retaining project inputs")
 	}
 	if revision > 0 {
-		matches := acceptedRecordHeader.FindAllStringSubmatch(string(raw), -1)
-		if len(matches) != 1 || matches[0][1] != e.State.Project.ProjectID || matches[0][2] != fmt.Sprint(revision) {
+		// The template's canonical metadata is the first paragraph after its title.
+		// Body examples and fenced text can never substitute for this header.
+		text := strings.TrimSpace(strings.ReplaceAll(string(raw), "\r\n", "\n"))
+		if strings.HasPrefix(text, "<!--") {
+			_, rest, found := strings.Cut(text, "-->")
+			if !found {
+				return nil, errs.New(errs.Validation, "the accepted input has an incomplete header", "restore its record template")
+			}
+			text = strings.TrimSpace(rest)
+		}
+		title, rest, _ := strings.Cut(text, "\n")
+		header, _, _ := strings.Cut(strings.TrimSpace(rest), "\n")
+		match := acceptedRecordHeader.FindStringSubmatch(header)
+		if !strings.HasPrefix(title, "# ") || match == nil || match[1] != e.State.Project.ProjectID || match[2] != fmt.Sprint(revision) || match[3] != "accepted" {
 			return nil, errs.New(errs.Validation, "the accepted input header does not match the current project revision: "+name,
 				"review and accept the current record through the PeerFoil skills")
 		}

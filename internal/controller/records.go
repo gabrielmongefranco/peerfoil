@@ -122,6 +122,11 @@ func (e *Engine) AppendTransition(to State, refs map[string][]string, summary st
 		Summary:       summary,
 	}
 	transition.SourceRevision = sourceRevision
+	if to == Review {
+		if err := e.saveReviewInputs(transition); err != nil {
+			return err
+		}
+	}
 
 	line, err := json.Marshal(transition)
 	if err != nil {

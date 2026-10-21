@@ -107,6 +107,8 @@ enter the accepted patch or supply its evidence.
 Core also rejects LFS attributes in that tree, including nested attribute files and
 attributes introduced by a producer. Unsafe filenames are withheld from reports and
 rejected before capture is retained. This includes controls, table markup, and likely credentials.
+It inspects small Git blobs for LFS pointers too. Pointers created through private or
+global Git attributes cannot bypass the tracked-attribute checks.
 
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh
@@ -125,6 +127,18 @@ The repair producer and verifier receive every agreed finding, including major f
 alongside blocking ones. Phase approval preserves deferred and removed stage statuses.
 Status directs blocked, stale, or unreachable tasks to change intake.
 
+Each review transition retains its accepted inputs in
+`.peerfoil/evidence/tr-NNNN.inputs.json`. Core compares the current plan, architecture,
+Quality Contract, decisions, and accepted revision numbers before review and approval.
+Changed inputs require change intake and fresh validation. Review checkouts receive
+current copies of these accepted records. Older review boundaries without this snapshot
+must return through validation before Core can approve them.
+
+Review records must be regular files without symbolic links, including in their parent
+directories. Each copied record is limited to 1 MiB. The copied bundle is limited to
+8 MiB and each record directory to 1,024 entries. Likely credentials stop the copy.
+Reviewer text must fit on one line and contain no structural Markdown or terminal controls.
+
 Review findings and remaining-risk text are scrubbed before being saved. Producer
 blocker text is limited to 2,000 bytes and scrubbed before entering errors or records.
 Redaction recognizes common credential formats; it cannot identify every sensitive value.
@@ -135,6 +149,8 @@ An integration failure pauses with the blocked task, captured change set, and ev
 linked for inspection. Resolve the branch problem through change intake before retrying.
 A repair worktree setup failure leaves the workflow at review. Later repair failures
 pause with the retained change set; they do not silently strand the repair state.
+Accepted repair inputs are checked before creating a writer worktree or journal intent.
+Other setup failures close the intent and remove the unused worktree.
 
 Before every operation that changes work, the producer and repair runs, `peerfoil`
 writes an intent to a local journal in your user cache directory, and a result
@@ -154,6 +170,12 @@ author, even when a different model family produced the original phase. It creat
 fresh read-only checkout and does not run another writer or ordinary phase review.
 Two failed or interrupted verification attempts pause for your decision. The original
 repair worktree remains available for inspection after a failed attempt.
+
+A successful independent repair approval is saved before integration. If integration
+then fails, restore the recorded branch positions and run `peerfoil resume`. Core
+validates the retained review's identity, normalized text hash, and accepted inputs,
+then retries integration without another writer or reviewer. This also works when the
+approval used the second verifier attempt. Changed approval text stops recovery.
 
 The recovery section retains the repair's findings, change set, author, base and source
 commits, accepted revisions, and attempt count. Core checks those against history and
