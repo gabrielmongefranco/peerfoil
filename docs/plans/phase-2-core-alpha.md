@@ -589,9 +589,17 @@ seat models, pack and project tools, the host sandbox (D-0029), and the local st
 directory. The fake-provider journeys cover the full Go fixture to the review boundary,
 an out-of-scope change blocking, a planted credential blocking, a required check
 failure returning the task to production without integration, and a malformed handoff
-that cannot succeed, with the user's HEAD asserted unchanged throughout. The
-real-provider smoke test and the macOS and Linux rows remain open checks recorded in
-Stage 8's status.
+that cannot succeed, with the user's HEAD asserted unchanged throughout.
+
+The real-provider smoke test ran on Windows on 2026-10-21 against a scratch copy of the
+Go fixture, with Codex CLI 0.162.0-alpha.17.2 signed in: `peerfoil start` sent tk-001
+to the real producer in a dedicated worktree, captured the patch and thread identifier,
+ran the real `go build`, `go test`, and `go vet` as controller-owned evidence, and
+integrated the validated change on `peerfoil/integration` while the user's branch
+stayed at the baseline. The first attempt failed honestly because the evidence
+environment allowlist lacked the Windows cache variables Go needs; that defect is fixed
+and the allowlist still excludes everything else. The macOS and Linux rows remain open
+checks recorded in Stage 8's status.
 
 ## 14. Stage 7 — Independent review and guided repair
 
@@ -721,11 +729,13 @@ through validation after a complete journey, the Documentation fixture processed
 through the same controller code with its required inspection and human evidence
 pausing honestly, and the [Core Alpha documentation page](../core-alpha.md) covering
 installation, commands, recovery, privacy, and limits. The three-OS matrix (builds,
-tests, fixtures) runs in CI and is pending its first run on this change. Not done,
-recorded as open checks for the user and later work: manual real-provider smoke tests
-on macOS and Linux, a real-provider end-to-end journey, checksummed shared binaries, a
-dependency vulnerability scan (the module has no third-party dependencies, so the scan
-is the toolchain's own), and the independent Claude and Codex review of the complete
+tests, fixtures) runs in CI and is pending its first run on this change. A
+real-provider smoke test of one produced task passed on Windows; Stage 6's status holds
+the details. Not done, recorded as open checks for the user and later work: manual
+real-provider smoke tests on macOS and Linux, a real-provider journey through the phase
+review and repair, checksummed shared binaries, a dependency vulnerability scan (the
+module has no third-party dependencies, so the scan is the toolchain's own), and the
+independent Claude and Codex review of the complete
 release candidate, which this change requests through the repository's pull-request
 review. P2-11 and the release rows of the acceptance matrix stay open until those runs
 exist.
