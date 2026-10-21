@@ -66,6 +66,7 @@ that supersedes the old one, never by editing history.
 | D-0034 | Local operational state lives in the user cache directory, keyed by project and repository | Accepted | Phase 2, Stage 1 |
 | D-0035 | Alpha cancellation kills the direct child process and reports the descendant limit | Accepted | Phase 2, Stage 1 |
 | D-0036 | The tested structured-output interfaces are Claude Code JSON output and codex exec JSON events | Accepted | Phase 2, Stage 1 |
+| D-0037 | Core Alpha writes a reduced phase-review record and the full template shape waits for Review Beta | Accepted | Phase 2, Stage 7 |
 
 ## D-0001 — Plugin location
 
@@ -610,7 +611,8 @@ that supersedes the old one, never by editing history.
   such. Everything inside a fixture except its README.md is synthetic user content, so
   it carries no PeerFoil header, like the plugin's templates, and it may hold seeded
   defects that the repository link check must not flag. Each seeded defect is
-  requirement `r-0002`, recorded but covered by no task.
+  requirement `r-0002`, recorded but covered by no task; the documentation fixture also
+  seeds a failing required link check through a broken relative link.
 - **Options considered:** Freezing fixtures after a captured production task, as the
   Stage 3 and 4 scratch fixtures did; source-only fixtures with no `.peerfoil` records.
 - **Reason:** A post-production freeze embeds patch and input hashes that must match the
@@ -703,6 +705,29 @@ that supersedes the old one, never by editing history.
   direct; MCP routing stays later-phase scope.
 - **Consequences:** Provider envelopes are parsed behind adapters, and a tool-version
   change shows up in diagnostics and evidence rather than silently changing behavior.
+
+## D-0037 — Core Alpha's reduced phase-review record
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The `pr-` record Core Alpha writes is a reduced shape: the frozen
+  revision, one whole-tree bundle digest, the plan and architecture revisions, the item
+  authorship table with each item's primary reviewer, one row per reviewer pass with
+  its recorded independence and decision, the merged finding list, and the decision.
+  The full Skills template shape, with a SHA-256 per bundle item, evidence currency,
+  open items, tool versions, and the repair section, arrives with Review Beta, which
+  owns multi-pass review. The individual `rv-` records Core writes keep the full review
+  template's field names, including the digest and, for a repair verification, the
+  change set it is bound to.
+- **Options considered:** Rendering the complete template from Alpha; keeping the
+  Skills shape and leaving Core's record undocumented.
+- **Reason:** Alpha runs exactly one fixed review round, so most of the template's
+  fields (passes per reviewer, round history, reconciliation) have no Alpha content,
+  and inventing placeholder values would make records lie. An undocumented divergence
+  would silently put two shapes under one identifier, which the Phase 2 start gate
+  forbids.
+- **Consequences:** Readers of `pr-` records check the generating release in the
+  record's first line. Review Beta replaces the reduced shape and this entry records
+  when and why the shapes differ.
 
 ## Conclusion
 

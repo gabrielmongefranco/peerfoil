@@ -57,9 +57,10 @@ outside service at all.
   Git. Records keep short redacted summaries and session identifiers only.
 - **Paths that name you.** A program path under your home directory names your user
   account, so records keep versions, never paths.
-- **Secrets in output.** Captured patches and retained command output are scanned
-  before saving. When something looks like a credential, PeerFoil blocks the capture
-  and asks you instead of storing it.
+- **Secrets in output.** A captured patch that looks like it contains a credential
+  blocks the capture, and PeerFoil asks you instead of storing it. Retained command
+  output is different: likely credential values in it are replaced with `[redacted]`
+  before the output is saved, and the record notes that redaction happened.
 
 ### What you control
 

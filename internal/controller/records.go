@@ -79,6 +79,22 @@ func (e *Engine) AppendTransition(to State, refs map[string][]string, summary st
 	}
 	var lastNumber int
 	fmt.Sscanf(strings.TrimPrefix(lastID, "tr-"), "%d", &lastNumber)
+	// An empty reference list marshals as null, which the transition schema rejects
+	// and would make the next load refuse the whole project, so empty lists are
+	// dropped rather than written.
+	for key, values := range refs {
+		if len(values) == 0 {
+			delete(refs, key)
+		}
+	}
+	if len(refs) == 0 {
+		refs = nil
+	}
+	// The schema caps a summary at 300 characters; the full detail lives in the
+	// referenced records, so a long reason is cut rather than invalidating history.
+	if runes := []rune(summary); len(runes) > 300 {
+		summary = string(runes[:297]) + "..."
+	}
 	fromName := string(from)
 	transition := project.Transition{
 		RecordType:    "transition",
@@ -301,6 +317,11 @@ func (e *Engine) WriteChangeSet(cs *ChangeSet) error {
 		kind, path, _ := strings.Cut(change, "\t")
 		fmt.Fprintf(&b, "| %s | %s |\n", kind, path)
 	}
+	b.WriteString("\n## Input files\n\n| Path | Kind | SHA-256 or absent |\n|---|---|---|\n")
+	// The controller launches producers from a committed base revision, so the base
+	// commit itself identifies every input; per-file snapshots are a guided-mode
+	// mechanism for uncommitted work (D-0025).
+	b.WriteString("| (all inputs are at the base revision) | file | absent |\n")
 	fmt.Fprintf(&b, "\n## Summary\n\n%s\n\n## Later edits by other agents\n\nNone.\n", cs.Summary)
 	return fsx.WriteFileAtomic(filepath.Join(dir, cs.ID+".md"), []byte(b.String()), 0o644)
 }
@@ -334,7 +355,13 @@ func (e *Engine) WriteEvidenceRecord(record evidence.Record, changeSetID, proced
 	fmt.Fprintf(&b, "- **Input snapshot:** %s\n", valueOrNull(record.RetainedSHA256))
 	fmt.Fprintf(&b, "- **Recorded at:** %s\n", record.At)
 	fmt.Fprintf(&b, "- **Recorded by:** coordinator (other, unknown, session null)\n")
-	fmt.Fprintf(&b, "- **Retained output:** %s\n\n## Notes\n\nNone.\n", valueOrNull(record.RetainedPath))
+	// The record is versioned and shareable, so the retained-output path is stored
+	// relative to .peerfoil; an absolute path under a home directory names the user.
+	retained := record.RetainedPath
+	if relative, err := filepath.Rel(e.State.Dir, retained); err == nil && !strings.HasPrefix(relative, "..") {
+		retained = filepath.ToSlash(relative)
+	}
+	fmt.Fprintf(&b, "- **Retained output:** %s\n\n## Notes\n\nNone.\n", valueOrNull(retained))
 	return fsx.WriteFileAtomic(filepath.Join(dir, record.ID+".md"), []byte(b.String()), 0o644)
 }
 

@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -192,6 +193,12 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// The captured work now has a commit, so the change set records it (D-0025
+	// allows a null source revision only for uncommitted work).
+	changeSet.SourceRev = taskCommit
+	if err := e.WriteChangeSet(changeSet); err != nil {
+		return err
+	}
 	evidenceIDs, failed, err := e.runTaskEvidence(ctx, worktree, task, changeSetID, taskCommit)
 	if err != nil {
 		return err
@@ -240,21 +247,43 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 			task.ID, e.Repo.IntegrationBranch(e.State.Project.Revisions.Plan), next.Task.ID)
 		return nil
 	}
+	// The review boundary is only reachable when no task in the phase carries a
+	// failed required check: a blocked task cannot be approved around.
+	if err := e.blockedTaskError(); err != nil {
+		return err
+	}
 	return e.enterReview(integrationTip, task.ID, evidenceIDs)
 }
 
-// finishPhaseProduction moves to review when the active phase has no eligible task
-// left and everything is validated.
-func (e *Engine) finishPhaseProduction(ctx context.Context) error {
+// blockedTaskError refuses to move toward review while any task is blocked or stale,
+// because a required failure is never voted away or skipped past.
+func (e *Engine) blockedTaskError() error {
 	for _, task := range e.State.Plan.Tasks() {
 		if task.Status == "blocked" || task.Status == "stale" {
 			return errs.New(errs.Policy,
 				fmt.Sprintf("task %s is %s and cannot be approved as it stands", task.ID, task.Status),
-				"run peerfoil resume, or route the change through the PeerFoil skills change intake")
+				"route the fix through the PeerFoil skills change intake, then run peerfoil start")
 		}
+	}
+	return nil
+}
+
+// finishPhaseProduction moves to review when the active phase has no eligible task
+// left and everything is validated. The lifecycle has no direct produce-to-review
+// edge, so the completeness re-check is recorded as its own validate step.
+func (e *Engine) finishPhaseProduction(ctx context.Context) error {
+	if err := e.blockedTaskError(); err != nil {
+		return err
 	}
 	head, err := e.Repo.HeadCommit(ctx)
 	if err != nil {
+		return err
+	}
+	if tip, err := e.Repo.CommitOf(ctx, e.Repo.IntegrationBranch(e.State.Project.Revisions.Plan)); err == nil {
+		head = tip
+	}
+	if err := e.AppendTransition(Validate, nil,
+		"No eligible task remains; the phase's evidence is re-checked before review.", &head); err != nil {
 		return err
 	}
 	return e.enterReview(head, "", nil)
@@ -304,6 +333,9 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 	if err := workspace.CheckScope(changes, task.AllowedPaths); err != nil {
 		return err
 	}
+	if err := rejectSymlinks(worktree.Path, changes); err != nil {
+		return err
+	}
 	// The actual diff decides what changed; the handoff's list is only cross-checked.
 	actual := map[string]bool{}
 	for _, change := range changes {
@@ -348,6 +380,31 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 		changeSet.Changed = append(changeSet.Changed, kind+"\t"+change.Path)
 	}
 	return e.WriteChangeSet(changeSet)
+}
+
+// rejectSymlinks refuses a change set that adds or modifies a symbolic link, because a
+// link pointing outside the repository would let any later checkout, build, or check
+// read or write beyond it; the default product path does not rely on symlinks at all.
+func rejectSymlinks(worktreePath string, changes []workspace.Change) error {
+	var links []string
+	for _, change := range changes {
+		if change.Status == "D" {
+			continue
+		}
+		info, err := os.Lstat(filepath.Join(worktreePath, filepath.FromSlash(change.Path)))
+		if err != nil {
+			continue
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			links = append(links, change.Path)
+		}
+	}
+	if len(links) > 0 {
+		return errs.New(errs.Policy,
+			"the produced change adds or edits symbolic links, which are not accepted: "+strings.Join(links, ", "),
+			"replace the links with regular files, or route the need through the PeerFoil skills")
+	}
+	return nil
 }
 
 // runTaskEvidence runs every executable evidence requirement the task declares, using

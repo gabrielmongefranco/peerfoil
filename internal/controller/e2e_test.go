@@ -80,6 +80,15 @@ func setupNamedFixtureRepo(t *testing.T, fixtureName string) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git is not installed")
 	}
+	// Isolate the journeys from the machine's own Git configuration (hooks,
+	// templates, line-ending conversion), the way the workspace tests do.
+	emptyConfig := filepath.Join(t.TempDir(), "empty-gitconfig")
+	if err := os.WriteFile(emptyConfig, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", emptyConfig)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_TERMINAL_PROMPT", "0")
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -359,6 +368,11 @@ func TestRequiredCheckFailureReturnsTaskToProduction(t *testing.T) {
 	if engine.State.Project.Workflow.State != "produce" {
 		t.Errorf("state %s, want produce (the task went back)", engine.State.Project.Workflow.State)
 	}
+	// The failure path must leave records a fresh session can still load.
+	schemas, _ := schema.LoadEmbedded()
+	if _, reloadErr := project.Load(root, schemas); reloadErr != nil {
+		t.Fatalf("records after the failure do not load: %v", reloadErr)
+	}
 	// The failing work must not be integrated.
 	cmd := exec.Command("git", "rev-parse", "--verify", "peerfoil/integration")
 	cmd.Dir = root
@@ -557,5 +571,10 @@ func TestDocumentationFixtureJourney(t *testing.T) {
 	cmd.Dir = root
 	if cmd.Run() == nil {
 		t.Error("work without required evidence reached the integration branch")
+	}
+	// The honest stop must leave records a fresh session can still load.
+	schemas, _ := schema.LoadEmbedded()
+	if _, reloadErr := project.Load(root, schemas); reloadErr != nil {
+		t.Fatalf("records after the documentation stop do not load: %v", reloadErr)
 	}
 }

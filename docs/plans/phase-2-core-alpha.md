@@ -658,7 +658,7 @@ families exist, runs one fresh Claude and one fresh Codex review of the same rea
 checkout with no producer transcript, validates and normalizes their findings (at most
 ten each; a blocking finding with an approve decision is corrected to repair), merges
 duplicates without erasing disagreement, and writes per-reviewer `rv-` records and one
-`pr-` phase review record. Approval requires every reviewer plus the different-family
+`pr-` phase review record in the reduced Alpha shape D-0037 defines. Approval requires every reviewer plus the different-family
 primary to approve; two same-family seats are refused outright, and one approve against
 one repair pauses for the user. The one repair cycle sends the agreed findings to the
 repair producer (never at low effort), captures the repair as its own change set,

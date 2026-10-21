@@ -30,13 +30,16 @@ EXPECTED = {
         "project_id": "peerfoil-fixture-go",
         "pack": "software",
         "sources": ["go.mod", "main.go", "main_test.go"],
-        "seeded_text": None,
+        # The discarded read error is the seeded defect; "fixing" it would destroy
+        # the journey the fixture exists to test.
+        "seeded_text": ("main.go", ["data, _ := os.ReadFile"]),
     },
     "software-node": {
         "project_id": "peerfoil-fixture-node",
         "pack": "software",
         "sources": ["package.json", "linecount.js", "linecount.test.js"],
-        "seeded_text": None,
+        # Dropping the final split element is the seeded defect.
+        "seeded_text": ("linecount.js", [".slice(0, -1)"]),
     },
     "documentation": {
         "project_id": "peerfoil-fixture-doc",
@@ -86,7 +89,12 @@ class FixtureLayout(unittest.TestCase):
             for path in root.rglob("*"):
                 if not path.is_file() or path.name == "README.md":
                     continue
-                text = path.read_text(encoding="utf-8")
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    # A local build can leave a binary such as linecount.exe in the
+                    # fixture; binaries carry no header and are gitignored.
+                    continue
                 with self.subTest(fixture=name, file=path.name):
                     self.assertNotIn("This file is part of PeerFoil", text)
                     self.assertNotIn("Copyright © 2026 Gabriel Mongefranco", text)

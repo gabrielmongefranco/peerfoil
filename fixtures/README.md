@@ -29,13 +29,16 @@ fixture starts at the first ready task.
 | [software-node](software-node/README.md) | Node.js | The same command in JavaScript |
 | [documentation](documentation/README.md) | Markdown | A short backup-and-restore guide |
 
-Each fixture seeds exactly two things, documented in its own README:
+Each fixture seeds at least two things, documented in its own README:
 
 1. **A requirement change** already placed through change intake: `cr-0001` raised the
    plan to revision 2 and added one task, with the revision 1 snapshot retained under
    `.peerfoil/plans/`.
 2. **A review defect** the phase review must find: one recorded requirement that no task
    covers and that the current content violates.
+
+The documentation fixture additionally seeds a failing required check: a broken relative
+link in the guide, which must block validation until it is repaired.
 
 ## Running a fixture journey
 

@@ -766,7 +766,7 @@ Checks that ran on Windows with Claude Code 2.1.260, Go 1.26.5, and Python 3.14:
 
 | Check | Result |
 |---|---|
-| `python tests/static_checks.py`, `stage3`, `stage4`, `stage5` | Pass; 202 files checked; 6, 18, and 7 tests |
+| `python tests/static_checks.py`, `stage3`, `stage4`, `stage5` | Pass at the branch head; 204 files checked; 6, 18, and 7 tests |
 | `bash .github/scripts/conformance.sh` | Pass |
 | `claude plugin validate --strict .` and `claude plugin validate --strict plugins/peerfoil` | Pass |
 | Go fixture: `go test ./...` and `go vet ./...` | Pass |

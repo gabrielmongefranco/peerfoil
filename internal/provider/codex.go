@@ -138,7 +138,7 @@ func (c *Codex) Invoke(ctx context.Context, inv Invocation) (Outcome, error) {
 			"check the sign-in with: codex login status, and that the selected model and effort exist")
 	}
 
-	text, readErr := os.ReadFile(answerPath)
+	text, readErr := readAnswerFile(answerPath)
 	if readErr != nil {
 		// The underlying error names a path in the user's temporary directory,
 		// which identifies the user, so it is summarized instead of attached.
@@ -181,7 +181,7 @@ func (c *Codex) nudge(ctx context.Context, inv Invocation, threadID string, elap
 	if runErr != nil || res.ExitCode != 0 {
 		return Outcome{}, timeoutErr
 	}
-	text, readErr := os.ReadFile(answerPath)
+	text, readErr := readAnswerFile(answerPath)
 	if readErr != nil {
 		return Outcome{}, timeoutErr
 	}
@@ -192,6 +192,19 @@ func (c *Codex) nudge(ctx context.Context, inv Invocation, threadID string, elap
 		Duration:  elapsed + res.Duration,
 		TimedOut:  true,
 	}, nil
+}
+
+// readAnswerFile reads a final-answer file with the same size bound the runner puts
+// on a stream, so a runaway answer cannot be loaded whole into memory.
+func readAnswerFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > DefaultMaxOutputBytes {
+		return nil, fmt.Errorf("the answer is larger than the %d-byte output bound", DefaultMaxOutputBytes)
+	}
+	return os.ReadFile(path)
 }
 
 // codexAnswerFile creates an empty, closed temporary file in the system

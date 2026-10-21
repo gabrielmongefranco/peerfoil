@@ -33,6 +33,23 @@ func (e *Engine) Resume(ctx context.Context, confirmStopped bool) error {
 
 	switch State(e.State.Project.Workflow.State) {
 	case Produce:
+		// An in-flight task with no open invocation means a crash landed between a
+		// plan write and its journal record. The work cannot be trusted as-is, so
+		// the task is blocked for inspection instead of looping on a refusal.
+		if open := e.State.InFlight(); len(open) > 0 {
+			for _, task := range open {
+				task.Status = "blocked"
+			}
+			if err := e.SavePlan(); err != nil {
+				return err
+			}
+			reason := fmt.Sprintf("task %s was interrupted before its result was recorded; inspect its change set and worktree", open[0].ID)
+			if err := e.Pause(reason, map[string][]string{"tasks": {open[0].ID}}); err != nil {
+				return err
+			}
+			return errs.New(errs.Policy, reason,
+				"review the records under .peerfoil/evidence, then route the task through the PeerFoil skills change intake")
+		}
 		return e.ProduceNext(ctx)
 	case Review:
 		return e.PhaseReview(ctx)

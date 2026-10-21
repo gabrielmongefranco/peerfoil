@@ -82,6 +82,11 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 			fmt.Sprintf("the phase review is not available in the %s state", e.State.Project.Workflow.State),
 			"run peerfoil status")
 	}
+	// A blocked or stale task means a required failure is outstanding; reviewers
+	// cannot approve around it, so the review does not start.
+	if err := e.blockedTaskError(); err != nil {
+		return err
+	}
 	if err := e.requireTwoFamilies(); err != nil {
 		return err
 	}
@@ -111,7 +116,7 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	packet := e.buildReviewPacket("phase", frozen, bundleDigest, nil)
 	var runs []reviewRun
 	for index, reviewer := range e.Reviewers {
-		run, err := e.runReviewer(ctx, reviewer, e.ReviewerSeats[index], "phase", packet, reviewPath, frozen, authors)
+		run, err := e.runReviewer(ctx, reviewer, e.ReviewerSeats[index], "phase", packet, reviewPath, frozen, authors, bundleDigest, "")
 		if err != nil {
 			return err
 		}
@@ -207,6 +212,7 @@ func (e *Engine) buildReviewPacket(kind, frozen, bundleDigest string, repairFind
 	fmt.Fprintf(&b, "Revisions: plan %d, architecture %d, quality %d\n\n",
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, e.State.Project.Revisions.Quality)
 	b.WriteString("Read the accepted records under .peerfoil/ (architecture.md, quality.md, plan.md, decisions.md, evidence/) and the deliverables they describe.\n")
+	b.WriteString("Note: the .peerfoil records in this checkout reflect the phase's start; the deliverable files are the reviewed revision, and this packet's revisions and requirement list are current.\n")
 
 	if e.State.Plan != nil {
 		b.WriteString("\nRequirements to check:\n")
@@ -247,9 +253,10 @@ End your answer with exactly one fenced JSON object:
 	return b.String()
 }
 
-// runReviewer invokes one fresh reviewer session, validates its answer, and records it.
+// runReviewer invokes one fresh reviewer session, validates its answer, and records it
+// with the digest and, for a repair verification, the change set it is bound to.
 func (e *Engine) runReviewer(ctx context.Context, reviewer provider.Adapter, seat provider.Seat,
-	kind, packet, dir, frozen string, authors map[string]string) (*reviewRun, error) {
+	kind, packet, dir, frozen string, authors map[string]string, digest, changeSetID string) (*reviewRun, error) {
 	outcome, err := reviewer.Invoke(ctx, provider.Invocation{
 		Role:    "reviewer",
 		Packet:  packet,
@@ -284,7 +291,7 @@ func (e *Engine) runReviewer(ctx context.Context, reviewer provider.Adapter, sea
 		return nil, err
 	}
 	run.recordID = recordID
-	if err := e.writeReviewRecord(run, kind, frozen, authors); err != nil {
+	if err := e.writeReviewRecord(run, kind, frozen, authors, digest, changeSetID); err != nil {
 		return nil, err
 	}
 	return run, nil
@@ -336,7 +343,13 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 	if len(matches) == 0 {
 		return nil, errs.New(errs.Provider, "the reviewer returned no fenced JSON answer", "")
 	}
-	decoder := json.NewDecoder(strings.NewReader(matches[len(matches)-1][1]))
+	raw := matches[len(matches)-1][1]
+	// The answer is untrusted model output headed for versioned records, so it gets
+	// the same kind of size bound as the producer handoff.
+	if len(raw) > 2*maxHandoffBytes {
+		return nil, errs.New(errs.Provider, "the reviewer answer is larger than 64 KiB", "")
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	var answer reviewAnswer
 	if err := decoder.Decode(&answer); err != nil {
@@ -368,6 +381,16 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 		if !validSeverities[finding.Severity] {
 			problems = append(problems, fmt.Sprintf("finding %d has severity %q", index+1, finding.Severity))
 		}
+		for _, value := range []string{finding.Title, finding.Location, finding.Requirement,
+			finding.Evidence, finding.Recommendation} {
+			if len(value) > 2000 {
+				problems = append(problems, fmt.Sprintf("finding %d has a field longer than 2,000 characters", index+1))
+				break
+			}
+		}
+	}
+	if len(answer.RemainingRisk) > 4000 {
+		problems = append(problems, "remaining_risk is longer than 4,000 characters")
 	}
 	if len(problems) > 0 {
 		return nil, errs.New(errs.Provider, "the review answer failed validation: "+strings.Join(problems, "; "), "")
@@ -460,7 +483,7 @@ func mergeFindings(runs []reviewRun) []Finding {
 }
 
 // writeReviewRecord renders one reviewer pass in the review template's field shape.
-func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string, authors map[string]string) error {
+func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string, authors map[string]string, digest, changeSetID string) error {
 	dir := filepath.Join(e.State.Dir, "reviews")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return errs.Wrap(errs.Configuration, "creating the reviews directory", err)
@@ -470,14 +493,15 @@ func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string, authors 
 	fmt.Fprintf(&b, "# Review %s — %s\n\n", run.recordID, kind)
 	fmt.Fprintf(&b, "Project: `%s` · Assurance: Guided\n\n", e.State.Project.ProjectID)
 	fmt.Fprintf(&b, "- **Kind:** %s\n", kind)
-	fmt.Fprintf(&b, "- **Frozen material:** source revision %s, plan revision %d, architecture revision %d, quality revision %d, pass 1, digest —, change set —\n",
-		frozen, e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, e.State.Project.Revisions.Quality)
+	fmt.Fprintf(&b, "- **Frozen material:** source revision %s, plan revision %d, architecture revision %d, quality revision %d, pass 1, digest %s, change set %s\n",
+		frozen, e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture,
+		e.State.Project.Revisions.Quality, orDash(digest), orDash(changeSetID))
 	fmt.Fprintf(&b, "- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n",
 		run.seat.Tool, run.seat.Model, run.seat.Effort, run.lineage, valueOrNull(run.session))
 	fmt.Fprintf(&b, "- **Author under review:** producer (%s, %s, session null)\n",
 		e.State.Project.Settings.Roles["producer"].Tool, distinctLineages(authors))
 	fmt.Fprintf(&b, "- **Independence:** %s — judged against each item's recorded author lineage\n", run.independence)
-	fmt.Fprintf(&b, "- **Passes used:** 1 of 1\n")
+	fmt.Fprintf(&b, "- **Passes used:** 1 of %d\n", e.State.Project.Settings.Review.DefaultPasses)
 	fmt.Fprintf(&b, "- **Reviewed at:** %s\n", Timestamp(e.Now()))
 	fmt.Fprintf(&b, "- **Duration (seconds):** %.0f\n", run.duration)
 	fmt.Fprintf(&b, "- **Decision:** %s\n\n## Findings\n\n", run.answer.Decision)
@@ -656,6 +680,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
 		return err
 	}
+	if err := rejectSymlinks(worktree.Path, changes); err != nil {
+		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
+		return err
+	}
 	patch, err := worktree.Patch(ctx)
 	if err != nil {
 		return err
@@ -697,6 +725,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 
 	repairCommit, err := worktree.Commit(ctx, "PeerFoil repair: agreed phase findings")
 	if err != nil {
+		return err
+	}
+	changeSet.SourceRev = repairCommit
+	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
 	if err := e.AppendTransition(Validate, map[string][]string{"change_sets": {changeSetID}},
@@ -744,8 +776,13 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return errs.New(errs.Configuration, "no reviewer from a different family than the repairer is available",
 			"install and sign in to the other model family, then run peerfoil resume")
 	}
-	verifyPacket := e.buildReviewPacket("repair", repairCommit, "", blocking)
-	verifyRun, err := e.runReviewer(ctx, verifier, verifierSeat, "repair", verifyPacket, worktree.Path, repairCommit, authors)
+	repairDigest := ""
+	if tree, err := e.Repo.TreeDigest(ctx, repairCommit); err == nil {
+		sum := sha256.Sum256(tree)
+		repairDigest = hex.EncodeToString(sum[:])
+	}
+	verifyPacket := e.buildReviewPacket("repair", repairCommit, repairDigest, blocking)
+	verifyRun, err := e.runReviewer(ctx, verifier, verifierSeat, "repair", verifyPacket, worktree.Path, repairCommit, authors, repairDigest, changeSetID)
 	if err != nil {
 		return err
 	}
@@ -807,6 +844,13 @@ func firstParagraph(text string) string {
 		return "Repair applied; see the captured patch."
 	}
 	return trimmed
+}
+
+func orDash(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "—"
+	}
+	return value
 }
 
 func orNone(value string) string {

@@ -59,9 +59,10 @@ overwrites an existing `.peerfoil/` directory. A project started with the PeerFo
 skills needs no `init`.
 
 `start` enforces the production gates before anything runs: the plan must be accepted
-at the current revision, the architecture and plan must have approved independent
-reviews on record, the working tree must be clean outside `.peerfoil/`, and no
-interrupted operation may be waiting. It then selects the next eligible task
+at the current revision, the architecture and plan must have approved reviews on
+record with their independence recorded (a user-accepted Reduced assurance review
+counts, exactly as D-0014 allows), the working tree must be clean outside
+`.peerfoil/`, and no interrupted operation may be waiting. It then selects the next eligible task
 deterministically, sends one bounded request to the producer in a fresh worktree,
 captures the patch and authorship before anything else touches the work, checks the
 changed paths against the task's allowed paths, scans the patch for credentials, runs
@@ -79,15 +80,21 @@ consensus.
 
 ### Recovery after an interruption
 
-Before every outside operation, `peerfoil` writes an intent to a local journal in your
-user cache directory, and a result afterward. After a crash, `resume` reads that
-journal. An operation with no recorded result is never rerun automatically: resume
+Before every operation that changes work, the producer and repair runs, `peerfoil`
+writes an intent to a local journal in your user cache directory, and a result
+afterward. Reviewer calls and check commands are not journaled in Alpha, because
+rerunning them is safe. After a crash, `resume` reads that journal. An operation with no recorded result is never rerun automatically: resume
 tells you what was interrupted and asks you to confirm the old process stopped, with
 `peerfoil resume --confirm-stopped`. It then closes the attempt as failed, keeps the
 retained worktree and captured records for inspection, and pauses. Accepted records are
 written atomically, so a crash leaves the old complete file or the new complete file,
 never a torn one. The journal is a cache: deleting it loses recovery convenience, never
 project truth, which stays in Git under `.peerfoil/`.
+
+One narrow window is a known Alpha limit: a crash exactly between the history append
+and the project write leaves `project.json` one transition behind `history.jsonl`.
+Every command then refuses with a message that names the exact one-line repair, instead
+of guessing which file is right.
 
 ### What Core Alpha does not do
 

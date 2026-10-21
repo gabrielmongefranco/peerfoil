@@ -31,6 +31,12 @@ import (
 // so evidence commands reuse the same bounded, shell-free execution as model calls.
 func evidenceRunner(ctx context.Context, argv []string, dir string, env []string,
 	timeout time.Duration) ([]byte, []byte, int, bool, error) {
+	// The evidence contract says a nil environment means an empty one; the process
+	// runner would substitute its base allowlist for nil, so the nil is made
+	// explicit here rather than silently widened.
+	if env == nil {
+		env = []string{}
+	}
 	result, err := provider.Run(ctx, provider.Request{
 		Argv: argv, Dir: dir, Env: env, Timeout: timeout,
 	})

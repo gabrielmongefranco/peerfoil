@@ -18,7 +18,7 @@ not apply. A model's statement that a check passed is a claim, not evidence.
 
 | Name | Kind | Procedure |
 |---|---|---|
-| link-check | inspection | From the project root, list every Markdown link in guide.md; confirm each relative target exists next to the guide and each external address answers or is marked unverified. Note: this check currently fails because guide.md links to checklist.md, which does not exist; that broken link is part of the fixture's seeded state and blocks validation until repaired. |
+| link-check | inspection | From the project root, list every Markdown link in guide.md; confirm each relative target exists next to the guide and each external address answers or is marked unverified. |
 | source-check | inspection | Read guide.md sentence by sentence; for every factual claim, quotation, and figure, confirm a named source that says what the guide says it says. |
 | editorial-review | human | A person reads guide.md start to finish for accuracy, clarity, and tone, and records the result with their name withheld from the record (role user). |
 

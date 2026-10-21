@@ -99,8 +99,15 @@ func unsafePathReason(p string) string {
 			// Only the controller writes project records; a producer change here
 			// could fabricate evidence or approvals, so no allowlist can grant it.
 			return "inside the .peerfoil project records"
-		case strings.EqualFold(comp, "AGENTS.md"):
+		case strings.EqualFold(comp, "AGENTS.md"), strings.EqualFold(comp, "CLAUDE.md"),
+			strings.EqualFold(comp, "CODEX.md"):
 			return "agent instruction file"
+		case strings.EqualFold(comp, ".claude"), strings.EqualFold(comp, ".mcp.json"),
+			strings.EqualFold(comp, ".codex"):
+			// These configure the model tools themselves (permissions, connected
+			// servers, instructions); produced changes to them could weaken the
+			// reviewers that later read this repository.
+			return "model-tool configuration"
 		case strings.Contains(comp, ":"):
 			// Covers drive letters ("c:") in the first component and NTFS
 			// alternate data streams ("file.txt:stream") anywhere.
@@ -165,7 +172,10 @@ var secretPatterns = []secretPattern{
 	{"GitHub token", regexp.MustCompile(`\bghp_[A-Za-z0-9]{36}\b`)},
 	{"GitHub fine-grained token", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`)},
 	{"Slack token", regexp.MustCompile(`\bxox[baprs]-`)},
-	{"credential assignment", regexp.MustCompile(`(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]{8,}`)},
+	{"Anthropic or OpenAI key", regexp.MustCompile(`\bsk-(ant-|proj-)?[A-Za-z0-9_-]{20,}\b`)},
+	// The value side accepts unquoted .env-style assignments but requires a long
+	// token-like run, so ordinary code such as token = parseToken(input) stays clean.
+	{"credential assignment", regexp.MustCompile(`(?i)\b[a-z0-9_]*(password|passwd|secret|token|api[_-]?key|access[_-]?key)[a-z0-9_]*\s*[:=]\s*['"]?[A-Za-z0-9+/_.=-]{12,}`)},
 	{"JSON Web Token", regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.`)},
 }
 

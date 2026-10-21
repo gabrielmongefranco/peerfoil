@@ -281,3 +281,50 @@ func TestRecordDirectoryIsAlwaysDenied(t *testing.T) {
 		t.Fatal("the .peerfoil denial must be case-insensitive")
 	}
 }
+
+// TestModelToolConfigurationIsAlwaysDenied pins the rule that produced changes can
+// never edit the files that configure the model tools reading this repository.
+func TestModelToolConfigurationIsAlwaysDenied(t *testing.T) {
+	for _, path := range []string{
+		"CLAUDE.md", "docs/CLAUDE.md", ".claude/settings.json", ".mcp.json",
+		".codex/config.toml", "CODEX.md", ".Claude/settings.json",
+	} {
+		changes := []Change{{Status: "M", Path: path}}
+		if err := CheckScope(changes, []string{"**"}); err == nil {
+			t.Errorf("a change to %s must be rejected even under a ** allowlist", path)
+		}
+	}
+}
+
+// TestScanSecretsEnvStyleAndProviderKeys covers the unquoted .env assignment form and
+// provider key prefixes, using clearly synthetic values.
+func TestScanSecretsEnvStyleAndProviderKeys(t *testing.T) {
+	for name, line := range map[string]string{
+		"env assignment":  "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY",
+		"provider key":    "key = sk-ant-api03-SyntheticExampleValue0000000000",
+		"quoted password": `password: "synthetic-example-value"`,
+	} {
+		hits := ScanSecrets([]byte("+" + line + "\n"))
+		if len(hits) == 0 {
+			t.Errorf("%s was not caught: %q", name, line)
+			continue
+		}
+		for _, hit := range hits {
+			if len(hit) > 0 && (contains(hit, "wJalr") || contains(hit, "sk-ant") || contains(hit, "synthetic-example")) {
+				t.Errorf("the report leaks the value: %q", hit)
+			}
+		}
+	}
+	clean := [][]byte{
+		[]byte("tokenizer := newTokenizer(input)\n"),
+		[]byte("// a passwordless login flow\n"),
+		[]byte("count := token.Count(items)\n"),
+	}
+	for _, patch := range clean {
+		if hits := ScanSecrets(patch); hits != nil {
+			t.Errorf("false positive on %q: %v", patch, hits)
+		}
+	}
+}
+
+func contains(s, sub string) bool { return strings.Contains(s, sub) }

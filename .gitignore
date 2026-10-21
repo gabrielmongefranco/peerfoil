@@ -56,6 +56,10 @@ temp/
 /coverage.out
 /vendor/
 
+# Fixture build output from running the fixtures' own checks locally
+fixtures/**/*.exe
+fixtures/software-go/linecount
+
 # Node-based plugin tooling
 node_modules/
 .npm/

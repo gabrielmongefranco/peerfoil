@@ -322,6 +322,12 @@ func (r *Repo) CreateTaskWorktree(ctx context.Context, baseCommit, taskID string
 		return nil, e
 	}
 
+	// Git registers a worktree by its real path, so a symlinked parent (such as
+	// /var on macOS, which links to /private/var) is resolved first; otherwise the
+	// recorded path never matches what git lists and cleanup refuses its own work.
+	if resolved, err := filepath.EvalSymlinks(parentDir); err == nil {
+		parentDir = resolved
+	}
 	wtPath := filepath.Join(parentDir, fmt.Sprintf("%s-r%d", taskID, planRevision))
 	if isWithin(r.Root, wtPath) {
 		return nil, errs.New(errs.Validation,

@@ -118,22 +118,22 @@ func nextAction(state *project.State) string {
 		return "finish the decisions, architecture, and plan with the PeerFoil skills, then run peerfoil start"
 	case "produce":
 		if open := state.InFlight(); len(open) > 0 {
-			return "run peerfoil resume to continue " + open[0].ID
+			return "run peerfoil resume so the interrupted task " + open[0].ID + " is inspected"
 		}
 		if selection, err := state.NextTask(); err == nil && selection != nil {
 			return "run peerfoil start to produce " + selection.Task.ID
 		}
-		return "every task in the active phase is done; run peerfoil resume to move to review"
+		return "every eligible task is done; run peerfoil start to move the phase to review"
 	case "validate":
-		return "run peerfoil resume to run the required checks"
+		return "the workflow stopped inside a task; inspect the latest change set and continue with the PeerFoil skills"
 	case "review":
-		return "run the phase review with the PeerFoil skills; Core Alpha records its result"
+		return "run peerfoil resume to start the two-family phase review"
 	case "repair":
-		return "run peerfoil resume to continue the repair"
+		return "the workflow stopped inside the repair; inspect the latest records and continue with the PeerFoil skills"
 	case "approve":
 		return "the phase is approved; the next phase starts when you ask for it"
 	case "paused":
-		return "resolve the blocker above, then run peerfoil resume"
+		return "resolve the blocker above, then continue with the PeerFoil skills; peerfoil start retries production once the records leave the paused state"
 	}
 	return "run peerfoil doctor"
 }

@@ -29,6 +29,11 @@ func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir
 		return "", errs.New(errs.Validation,
 			fmt.Sprintf("%q is not a valid review worktree name", name), "")
 	}
+	// Resolve a symlinked parent so the recorded path matches what git lists,
+	// exactly as CreateTaskWorktree does.
+	if resolved, err := filepath.EvalSymlinks(parentDir); err == nil {
+		parentDir = resolved
+	}
 	path := filepath.Join(parentDir, "review-"+name)
 	if _, err := git(ctx, r.Root, "worktree", "add", "--detach", path, commit); err != nil {
 		return "", errs.Wrap(errs.Git, "creating the review worktree", err)

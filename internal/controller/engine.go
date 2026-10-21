@@ -149,9 +149,17 @@ func (e *Engine) productionGate() error {
 	if err != nil {
 		return err
 	}
+	// A usable review names its decision and its independence; a record without a
+	// recorded independence value cannot prove the review rule was followed. The
+	// non-independent values are still accepted here because D-0014 lets the user
+	// accept a reduced-assurance review, and that acceptance lives in the record.
+	validIndependence := map[string]bool{
+		"independent": true, "local-family": true, "secondary": true, "reduced": true,
+	}
 	approved := func(kind string, matches func(reviewRecord) bool) bool {
 		for _, review := range reviews {
-			if review.Kind == kind && review.Decision == "approve" && matches(review) {
+			if review.Kind == kind && review.Decision == "approve" &&
+				validIndependence[review.Independence] && matches(review) {
 				return true
 			}
 		}
@@ -172,7 +180,7 @@ func (e *Engine) productionGate() error {
 	}
 	if !architectureReviewed || !planReviewed {
 		return errs.New(errs.Policy,
-			"production needs an approved independent review of the current architecture and plan",
+			"production needs an approved review, with its independence recorded, of the current architecture and plan",
 			"run the reviews with the PeerFoil skills, or check .peerfoil/reviews for the missing record")
 	}
 	open, err := e.Journal.OpenInvocations()

@@ -178,8 +178,16 @@ func (s *State) semanticProblems() []string {
 	if len(s.History) > 0 {
 		last := s.History[len(s.History)-1]
 		if last.ToState != s.Project.Workflow.State {
-			add("project.json workflow state %q does not match the last recorded transition %q",
-				s.Project.Workflow.State, last.ToState)
+			// The one known benign cause is an interruption between the history
+			// append and the project write; name the exact repair so the project
+			// is recoverable without guessing.
+			if len(s.History) > 1 && s.History[len(s.History)-2].ToState == s.Project.Workflow.State {
+				add("project.json workflow state %q is one transition behind history.jsonl, whose last transition %s reached %q; an interrupted run stopped between the two writes. To repair, set workflow.state in project.json to %q",
+					s.Project.Workflow.State, last.TransitionID, last.ToState, last.ToState)
+			} else {
+				add("project.json workflow state %q does not match the last recorded transition %q",
+					s.Project.Workflow.State, last.ToState)
+			}
 		}
 	} else if s.Project.Workflow.State != "define" {
 		add("project.json workflow state %q has no supporting history", s.Project.Workflow.State)
