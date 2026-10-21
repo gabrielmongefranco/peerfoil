@@ -4,7 +4,7 @@ docs/README.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-10-21
 Last Modified: 2026-10-21
-Summary: Index of the PeerFoil documentation, one line per page.
+Summary: Index of the PeerFoil documentation, one linked line per page.
 
 Copyright © 2026 Gabriel Mongefranco
 
@@ -40,6 +40,7 @@ build. Each page says plainly what exists today and what is still planned.
 - [Privacy](privacy.md): what stays on your computer, what reaches a model provider, and
   what is never stored.
 - [Known limits](known-limits.md): what each release can and cannot enforce.
+- [Core Alpha](core-alpha.md): building and using the peerfoil command.
 - [Fixtures](../fixtures/README.md): the three reference projects used to test the
   workflow.
 - [Phase prompt template](phase-prompt-template.md): a prompt to paste into a new chat

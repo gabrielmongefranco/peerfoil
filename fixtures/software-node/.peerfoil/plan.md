@@ -4,7 +4,7 @@
 
 Project: `peerfoil-fixture-node` · Assurance: Guided · Plan revision: 2 · Status: accepted
 
-- **Revised at:** 2026-10-21T10:20:00Z by change_steward (claude-code, anthropic-claude)
+- **Revised at:** 2026-10-20T10:20:00Z by change_steward (claude-code, anthropic-claude)
 - **Reason:** Change cr-0001 placed standard-input support into the current stage as task tk-002 and added requirement r-0004.
 - **Architecture revision:** 1 · **Quality revision:** 1
 

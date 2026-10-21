@@ -6,7 +6,7 @@
   "architecture_revision": 1,
   "quality_revision": 1,
   "status": "accepted",
-  "revised_at": "2026-10-21T10:20:00Z",
+  "revised_at": "2026-10-20T10:20:00Z",
   "revised_by": {
     "role": "change_steward",
     "tool": "claude-code",
@@ -112,7 +112,7 @@
       "id": "cr-0001",
       "summary": "Read from standard input when no path is given.",
       "placement": "current-stage",
-      "recorded_at": "2026-10-21T10:10:00Z",
+      "recorded_at": "2026-10-20T10:10:00Z",
       "prior_revision": 1,
       "reason": "The user asked for pipeline use after accepting the plan.",
       "affected_tasks": ["tk-002"],

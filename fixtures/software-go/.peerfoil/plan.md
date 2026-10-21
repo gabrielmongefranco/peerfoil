@@ -4,7 +4,7 @@
 
 Project: `peerfoil-fixture-go` · Assurance: Guided · Plan revision: 2 · Status: accepted
 
-- **Revised at:** 2026-10-21T15:10:00Z by change_steward (claude-code, anthropic-claude)
+- **Revised at:** 2026-10-20T15:10:00Z by change_steward (claude-code, anthropic-claude)
 - **Reason:** Change cr-0001 added task tk-002 so the command reads standard input when no path is given.
 - **Architecture revision:** 1 · **Quality revision:** 1
 

@@ -5,7 +5,7 @@
 Project: `peerfoil-fixture-go` · Assurance: Guided · Revision: 1 · Status: accepted
 
 - **Author:** architect (claude-code, anthropic-claude, session null)
-- **Written at:** 2026-10-21T14:22:00Z
+- **Written at:** 2026-10-20T14:22:00Z
 - **Pack:** software 0.1.0
 - **Architecture revision:** 1
 

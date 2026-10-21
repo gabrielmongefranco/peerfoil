@@ -4,7 +4,7 @@
 
 Project: `peerfoil-fixture-doc` · Assurance: Guided · Plan revision: 2 · Status: accepted
 
-- **Revised at:** 2026-10-21T09:50:00Z by change_steward (claude-code, anthropic-claude)
+- **Revised at:** 2026-10-20T09:50:00Z by change_steward (claude-code, anthropic-claude)
 - **Reason:** Change cr-0001 added task tk-002 for a restore section after the user asked for restore steps.
 - **Architecture revision:** 1 · **Quality revision:** 1
 

@@ -6,7 +6,7 @@
   "architecture_revision": 1,
   "quality_revision": 1,
   "status": "accepted",
-  "revised_at": "2026-10-21T09:50:00Z",
+  "revised_at": "2026-10-20T09:50:00Z",
   "revised_by": {
     "role": "change_steward",
     "tool": "claude-code",
@@ -113,7 +113,7 @@
       "id": "cr-0001",
       "summary": "Add a restore section.",
       "placement": "current-stage",
-      "recorded_at": "2026-10-21T09:45:00Z",
+      "recorded_at": "2026-10-20T09:45:00Z",
       "prior_revision": 1,
       "reason": "The user asked for restore steps after accepting the plan.",
       "affected_tasks": ["tk-002"],

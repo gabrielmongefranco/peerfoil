@@ -2,7 +2,7 @@
 
 # Decisions for Line Counter (Go)
 
-Project: `peerfoil-fixture-go` · Assurance: Guided · Last updated: 2026-10-21T14:06:00Z
+Project: `peerfoil-fixture-go` · Assurance: Guided · Last updated: 2026-10-20T14:06:00Z
 
 This file records the important questions, the answers the user gave, and the reversible
 assumptions PeerFoil took. Architecture work starts only when no decision is `open`.
@@ -28,7 +28,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Count non-empty lines; a line counts when characters remain after trimming spaces and tabs.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T14:03:00Z
+- **Decided at:** 2026-10-20T14:03:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0002 — How should a missing or unreadable file be reported?
@@ -43,7 +43,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Print a readable error to standard error and exit with code 1.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T14:04:00Z
+- **Decided at:** 2026-10-20T14:04:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0003 — Should the command also count words?
@@ -58,7 +58,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Add a -w flag that also prints the word count.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T14:05:00Z
+- **Decided at:** 2026-10-20T14:05:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0004 — Which Go version and dependency policy apply?
@@ -73,5 +73,5 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Assumed Go 1.22 and the standard library only; reversible by editing go.mod.
 - **Status:** assumed
 - **Owner:** evaluator
-- **Decided at:** 2026-10-21T14:06:00Z
+- **Decided at:** 2026-10-20T14:06:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)

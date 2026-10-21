@@ -61,6 +61,11 @@ that supersedes the old one, never by editing history.
 | D-0029 | PeerFoil recommends and detects the host sandbox; it never provides or enforces one | Accepted | Phase 1, Stage 5 |
 | D-0030 | Local models participate as advisory Ollama calls with `local-family` assurance bookkeeping | Accepted | Phase 1, Stage 5 |
 | D-0031 | Fixtures freeze at the production boundary; fixture content carries no PeerFoil header | Accepted | Phase 1, Stage 5 |
+| D-0032 | Core validates records with its own validator for the documented schema subset | Accepted | Phase 2, Stage 1 |
+| D-0033 | Accepted files are replaced by writing a flushed temporary file and renaming it | Accepted | Phase 2, Stage 1 |
+| D-0034 | Local operational state lives in the user cache directory, keyed by project and repository | Accepted | Phase 2, Stage 1 |
+| D-0035 | Alpha cancellation kills the direct child process and reports the descendant limit | Accepted | Phase 2, Stage 1 |
+| D-0036 | The tested structured-output interfaces are Claude Code JSON output and codex exec JSON events | Accepted | Phase 2, Stage 1 |
 
 ## D-0001 — Plugin location
 
@@ -619,6 +624,85 @@ that supersedes the old one, never by editing history.
   the seeded defects. CI runs the Go and Node.js fixture tests on all three operating
   systems. The live journey results belong to the Stage 5 status table, not to these
   automated checks.
+
+## D-0032 — Core's JSON Schema validation
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Core validates records with `internal/schema`, its own validator for the
+  keyword subset documented in `schemas/README.md`, with the schemas embedded in the
+  binary. A keyword outside the subset fails loading, which keeps the subset honest.
+- **Options considered:** A third-party Go JSON Schema library; validating with typed
+  decoding alone.
+- **Reason:** The schemas already restrict themselves to the subset the Python checks
+  support (D-0012), so a full draft 2020-12 library adds a dependency to vet and ship
+  without adding coverage. Typed decoding alone cannot reject unknown fields or report
+  precise locations.
+- **Consequences:** The repository checks and Core accept and reject the same records.
+  Growing the subset means updating `schemas/README.md`, the Python validator, and
+  `internal/schema` together.
+
+## D-0033 — Atomic file replacement
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** `internal/fsx` replaces an accepted file by writing a temporary file in
+  the target's directory, flushing it to disk, and renaming it over the target. Go's
+  `os.Rename` replaces an existing file on Windows, macOS, and Linux. On Windows the
+  rename is retried briefly because an open reader can hold the target. The directory
+  entry is flushed where the platform allows it.
+- **Options considered:** Write-then-rename with a separate backup file; direct
+  truncating writes.
+- **Reason:** A failed write must leave the old complete file or the new complete file.
+  Rename within one directory is the portable way to get that without a second file to
+  reconcile on recovery.
+- **Consequences:** Every accepted `.peerfoil` write in Core goes through this helper;
+  interruption tests cover a crash before and after the rename.
+
+## D-0034 — Local state directory
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Reconstructible operational state lives outside Git in the operating
+  system's user cache directory, at `peerfoil/projects/<project id>-<hash>`, where the
+  hash is a short digest of the repository root path. `os.UserCacheDir` supplies the
+  platform-correct base on Windows, macOS, and Linux.
+- **Options considered:** A dot directory inside the repository; the user configuration
+  directory.
+- **Reason:** Operational state must never enter Git, and two clones of one project on
+  one machine must not share a journal. Cache semantics fit state that can be discarded
+  and rebuilt from Git and the accepted records.
+- **Consequences:** `peerfoil doctor` reports the directory and checks that it is
+  writable. Deleting it loses only recovery convenience, never project truth.
+
+## D-0035 — Cancellation boundaries in Alpha
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Cancelling a run (Ctrl+C or a timeout) kills the direct child process
+  through the process handle. Core Alpha does not claim to kill that child's own
+  descendants, and the limitation is stated in the runner's documentation and the Alpha
+  limits page rather than hidden.
+- **Options considered:** Process groups and job objects per platform; no timeout kills.
+- **Reason:** Platform-correct descendant cleanup needs job objects on Windows and
+  process groups elsewhere, which is Reliable Core scope. Claiming it without testing
+  it on all three platforms would be a false safety statement.
+- **Consequences:** A cancelled invocation is recorded as cancelled, an ambiguous one
+  as unknown, and an unknown mutating invocation is never rerun automatically.
+
+## D-0036 — Tested structured-output interfaces
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The Claude Code adapter uses non-interactive mode with
+  `--output-format json` and reads the result object's `result` text and `session_id`.
+  The Codex adapter uses `codex exec` with `--json` events and
+  `--output-last-message`, reading the thread identifier from the `thread.started`
+  event, with the D-0022 "answer now" nudge as `codex exec resume` on the same thread.
+  The versions these interfaces were tested with are recorded with the release
+  evidence; an unrecognized output shape is a provider error, never a guess.
+- **Options considered:** Parsing human-readable output; the Codex MCP server as Core's
+  first interface.
+- **Reason:** These are the documented non-interactive interfaces of both tools and the
+  ones already exercised during Phase 1. Core owns its processes, so the CLI paths are
+  direct; MCP routing stays later-phase scope.
+- **Consequences:** Provider envelopes are parsed behind adapters, and a tool-version
+  change shows up in diagnostics and evidence rather than silently changing behavior.
 
 ## Conclusion
 

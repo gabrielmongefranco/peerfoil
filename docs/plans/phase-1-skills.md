@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/plans/phase-1-skills.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Provides the executable implementation plan for Phase 1, PeerFoil Skills 0.1, and records stage status.
 Notes: This plan expands Phase 1 of docs/implementation-plan.md without changing its scope.
 
@@ -733,6 +733,56 @@ macOS, and Linux. Release notes clearly explain what Skills 0.1 can and cannot e
 - the final review has no unresolved blocking finding;
 - release limitations are prominent and accurate; and
 - the Phase 2 handoff contains every accepted contract and known issue.
+
+### Stage 5 implementation and verification status
+
+Built on 2026-10-21. Phase 1 is not complete; the live checks listed below remain open.
+D-0029 to D-0031 in the [decision log](../decision-log.md) record the host-sandbox
+recommendation, the advisory local-model path, and the fixture conventions this stage
+added alongside its planned work.
+
+What exists now:
+
+- The three fixtures under `fixtures/`: the Go and Node.js line counters and the
+  documentation guide, each frozen at the production boundary with an accepted
+  revision 2 plan, one recorded requirement change (`cr-0001` with the revision 1
+  snapshot retained), one seeded review defect (requirement `r-0002`, recorded,
+  violated, and covered by no task), and a README with the journey script and expected
+  results. Their architecture and plan reviews are seeded synthetic preconditions,
+  labeled as such (D-0031).
+- `tests/stage5_checks.py` asserts the frozen state, the seeded items, and the
+  no-header rule for fixture content; the static checks validate fixture records
+  against the schemas and now also check Go file headers. The conformance script runs
+  all four Python suites.
+- CI gains a three-platform `fixtures` job (Go vet and tests, Node.js tests) next to
+  the existing conformance and strict-validator jobs.
+- User documentation under `/docs`: an index, setup, troubleshooting, privacy, and
+  known-limits pages, written against the tested versions and linking only features
+  that exist.
+- Repository hygiene found while checking: the reusable skills and skills index were
+  missing header dates and linked two pages that did not exist; both are fixed.
+
+Checks that ran on Windows with Claude Code 2.1.260, Go 1.26.5, and Python 3.14:
+
+| Check | Result |
+|---|---|
+| `python tests/static_checks.py`, `stage3`, `stage4`, `stage5` | Pass; 202 files checked; 6, 18, and 7 tests |
+| `bash .github/scripts/conformance.sh` | Pass |
+| `claude plugin validate --strict .` and `claude plugin validate --strict plugins/peerfoil` | Pass |
+| Go fixture: `go test ./...` and `go vet ./...` | Pass |
+| Node.js fixture tests | Not run on this machine, which has no Node.js by design; the CI fixtures job runs them on all three platforms |
+| Fixture records loaded by the Core Alpha loader and driven through its fake-provider journeys | Pass; see the Phase 2 plan's stage statuses |
+
+Not run in this build, recorded as the remaining Stage 5 checks: the live guided
+journeys on the three fixtures with real model sessions (production, phase review,
+repair, and the seeded defect's blocking finding); manual fresh-session smoke tests on
+macOS and Linux; the marketplace-installation test that finalizes D-0008; repository
+paths combining spaces, Unicode, and apostrophes against live providers (the Stage 3
+provider-path gap stands); human keyboard and screen-reader review; and the independent
+Claude and Codex review of the complete release candidate, which this change requests
+through the repository's pull-request review. The release evidence summary is written
+when those runs exist. Until then, Skills 0.1 remains unreleased and every surface
+keeps the Guided label.
 
 ## 12. Phase acceptance matrix
 

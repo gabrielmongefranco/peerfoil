@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/plans/phase-2-core-alpha.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Provides the executable implementation plan for Phase 2, PeerFoil Core Alpha 0.2.
 Notes: This plan expands Phase 2 of docs/implementation-plan.md without changing its scope.
 
@@ -249,6 +249,19 @@ depends on them.
 - the architecture decisions above are accepted; and
 - the initial three-platform CI matrix passes.
 
+### Stage 1 status
+
+Implemented on 2026-10-21. The module `github.com/gabrielmongefranco/peerfoil` builds one
+binary from `cmd/peerfoil` with a `flag.FlagSet` dispatcher, the five commands, stable
+help text, the eleven error categories mapped to exit codes 2 through 12 in
+`internal/errs`, and network-free version metadata in `internal/version`. The required
+architecture decisions are D-0032 to D-0036 in the [decision log](../decision-log.md).
+CI gains a three-platform `core` job (formatting, vet, build, tests, with race detection
+on Linux and macOS). Checks run on Windows with Go 1.26.5: `gofmt -l` clean,
+`go vet ./...`, `go build ./...`, and `go test ./...` pass; `--version`, help, unknown
+commands, and unknown options return the documented codes under test. The macOS and
+Linux rows come from the CI matrix and are pending its first run on this change.
+
 ## 9. Stage 2 — Project validation, state transitions, and journal
 
 ### Outcome
@@ -297,6 +310,22 @@ identify the last safe task boundary.
 - invalid or stale state fails closed with one useful next action;
 - transition tests cover every allowed and forbidden edge; and
 - resume never repeats an unknown mutating operation automatically.
+
+### Stage 2 status
+
+Implemented on 2026-10-21. `internal/project` loads and validates `project.json`,
+`plan.json` (versions 1 and 2 by dispatch), and `history.jsonl` against the embedded
+schemas (`internal/schema`, D-0032) plus the semantic rules: identity and revision
+agreement, duplicate identifiers, missing dependencies, dependency cycles, tasks naming
+later revisions, a broken `from_state` chain, and a workflow state without supporting
+history. `internal/controller` holds the deterministic transition table;
+`internal/store` is the write-ahead journal outside Git (D-0034) with intent and result
+entries and open-invocation recovery; `internal/fsx` writes accepted files atomically
+(D-0033). `peerfoil init` previews before creating and never overwrites; `peerfoil
+status` reads files only. Tests cover all three fixtures loading, every listed rejection,
+transition edges including forbidden ones, journal reopen and a torn final line, and
+atomic replacement; all pass on Windows. Interrupting a prepared and started invocation
+is covered by the controller recovery test in Stage 6's suite.
 
 ## 10. Stage 3 — Claude Code and Codex adapters
 
@@ -359,6 +388,22 @@ the documented Alpha boundary.
 - cancellation stops the direct provider process and reports any child-process limitation
   honestly.
 
+### Stage 3 status
+
+Implemented on 2026-10-21. `internal/provider` holds the shared bounded runner (argument
+arrays, explicit working directory, minimal environment allowlist, separate capped
+output streams, context deadline that kills the direct child and reports the descendant
+limit per D-0035) and the Claude Code and Codex adapters behind one contract with fake
+injection. The Claude adapter uses non-interactive JSON output; the Codex adapter uses
+`codex exec --json` with `--output-last-message` and the D-0022 two-stage deadline,
+nudging the same thread once before giving up (D-0036). Lineage maps from the model
+identifier only. The deterministic suite covers success, nonzero exit, stdin, output
+truncation, timeout kill, cancellation, malformed and truncated envelopes, the
+timeout-then-nudge path, and the rule that error messages never carry packet text. A
+real read-only probe ran on Windows through `peerfoil doctor`, which found Claude Code
+2.1.260 and Codex CLI 0.162.0-alpha.17.2 signed in; the macOS and Linux probes remain
+for the platform matrix.
+
 ## 11. Stage 4 — Git worktrees, scope, and provenance
 
 ### Outcome
@@ -405,6 +450,21 @@ branch without modifying the user's current branch.
 - authorship survives integration and conflict handling;
 - scope and secret checks block seeded violations; and
 - the user's current branch remains unchanged.
+
+### Stage 4 status
+
+Implemented on 2026-10-21. `internal/workspace` requires a repository with a commit,
+rejects submodules and Git LFS, creates one `peerfoil/task/` worktree per task from a
+validated identifier, reads changes with NUL-delimited plumbing, captures a
+binary-capable patch through a temporary index that never touches the user's index,
+checks scope with deny-by-default patterns (`*` and `?` never cross a separator, `**`
+does, matching is case-insensitive; absolute, traversal, drive, UNC, alternate-stream,
+`.git`, and `AGENTS.md` paths are rejected), scans patches for credentials without
+echoing the match, integrates only by fast-forwarding the dedicated
+`peerfoil/integration` branch, and cleans up only resources it created. Tests run
+against real Git repositories in temporary directories, including spaces and Unicode in
+names, a diverged integration branch being refused, and proof that the user's branch,
+index, and tree stay untouched; all pass on Windows, with macOS and Linux pending CI.
 
 ## 12. Stage 5 — Controller-run evidence
 
@@ -455,6 +515,19 @@ review.
 - stale or mismatched evidence cannot be accepted; and
 - retained diagnostics are useful without exposing sensitive content.
 
+### Stage 5 status
+
+Implemented on 2026-10-21. `internal/evidence` validates every declared command before
+running it (argument-array only, shell metacharacters rejected, working directory
+contained, bounded timeout), reuses the Stage 3 runner through an injected contract,
+scrubs retained output with `internal/redact`, caps it with head and tail halves,
+stores its SHA-256, and ties every record to the exact produced commit and plan
+revision. `Fresh` and `RequiredSatisfied` reject stale, missing, failed, and
+wrong-revision evidence, accept recommended failures as visible results, and require an
+explicit human record for required human evidence. Tests cover pass, fail, timeout,
+runner errors, injection attempts, a planted token never reaching the retained file,
+truncation, and the freshness rules; all pass on Windows.
+
 ## 13. Stage 6 — Enforced vertical slice
 
 ### Outcome
@@ -501,6 +574,24 @@ accepted integration-branch change. This is the first end-to-end enforced PeerFo
 - every accepted transition has current evidence and provenance;
 - every seeded invalid transition stops safely; and
 - the integration result can be understood and reviewed after a fresh clone.
+
+### Stage 6 status
+
+Implemented on 2026-10-21. `peerfoil start` runs the enforced slice: the production
+gate (accepted and independently reviewed architecture and plan at the current
+revisions, clean tree outside `.peerfoil/`, no interrupted operation), deterministic
+task selection, the launch record persisted before the producer runs, one bounded
+producer call in a dedicated worktree, handoff validation, capture with scope and
+secret checks, controller-run required checks against the task commit, and integration
+only of passing work, with later tasks building on the integration tip. `peerfoil
+doctor` checks the operating system, Git, records, both model tools and their logins,
+seat models, pack and project tools, the host sandbox (D-0029), and the local state
+directory. The fake-provider journeys cover the full Go fixture to the review boundary,
+an out-of-scope change blocking, a planted credential blocking, a required check
+failure returning the task to production without integration, and a malformed handoff
+that cannot succeed, with the user's HEAD asserted unchanged throughout. The
+real-provider smoke test and the macOS and Linux rows remain open checks recorded in
+Stage 8's status.
 
 ## 14. Stage 7 — Independent review and guided repair
 
@@ -550,6 +641,22 @@ different-family verification.
 - self-approval is blocked per artifact and patch;
 - a seeded repair completes with fresh independent verification; and
 - unresolved review produces one clear user decision instead of another automatic loop.
+
+### Stage 7 status
+
+Implemented on 2026-10-21. `peerfoil resume` in the review state freezes the
+integration tip with a tree digest, checks that two reviewer seats from different known
+families exist, runs one fresh Claude and one fresh Codex review of the same read-only
+checkout with no producer transcript, validates and normalizes their findings (at most
+ten each; a blocking finding with an approve decision is corrected to repair), merges
+duplicates without erasing disagreement, and writes per-reviewer `rv-` records and one
+`pr-` phase review record. Approval requires every reviewer plus the different-family
+primary to approve; two same-family seats are refused outright, and one approve against
+one repair pauses for the user. The one repair cycle sends the agreed findings to the
+repair producer (never at low effort), captures the repair as its own change set,
+reruns the affected checks, and requires a fresh different-family verification before
+the phase closes. The fake-provider suite covers approval, disagreement, the
+same-family refusal, and the full repair-and-verify path; all pass on Windows.
 
 ## 15. Stage 8 — Recovery, portability, fixtures, and alpha release
 
@@ -603,6 +710,25 @@ feature remains clearly labeled.
 - the Documentation fixture proves the controller is not hard-coded to source files;
 - the final review has no unresolved blocking finding; and
 - the Reliable Core handoff identifies every known limit and next dependency.
+
+### Stage 8 status
+
+Partially complete on 2026-10-21; the alpha is not released. Done: interruption
+recovery at the journal level (an unconfirmed invocation blocks everything, and
+`--confirm-stopped` closes it, blocks the task, and pauses), a torn journal line and
+atomic-write interruption tests, reconstruction by reloading the full record set
+through validation after a complete journey, the Documentation fixture processed
+through the same controller code with its required inspection and human evidence
+pausing honestly, and the [Core Alpha documentation page](../core-alpha.md) covering
+installation, commands, recovery, privacy, and limits. The three-OS matrix (builds,
+tests, fixtures) runs in CI and is pending its first run on this change. Not done,
+recorded as open checks for the user and later work: manual real-provider smoke tests
+on macOS and Linux, a real-provider end-to-end journey, checksummed shared binaries, a
+dependency vulnerability scan (the module has no third-party dependencies, so the scan
+is the toolchain's own), and the independent Claude and Codex review of the complete
+release candidate, which this change requests through the repository's pull-request
+review. P2-11 and the release rows of the acceptance matrix stay open until those runs
+exist.
 
 ## 16. Phase acceptance matrix
 

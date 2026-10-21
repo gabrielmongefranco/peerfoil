@@ -6,7 +6,7 @@
   "architecture_revision": 1,
   "quality_revision": 1,
   "status": "accepted",
-  "revised_at": "2026-10-21T14:40:00Z",
+  "revised_at": "2026-10-20T14:40:00Z",
   "revised_by": {
     "role": "planner",
     "tool": "claude-code",

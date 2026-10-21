@@ -37,8 +37,8 @@ SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", ".claude", ".idea", ".vscode",
     "tmp", "temp", "dist", "bin", "coverage", "worktrees",
 }
-CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml", ".svg"}
-CHECKED_NAMES = {".gitignore", ".gitattributes", "NOTICE"}
+CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml", ".svg", ".go"}
+CHECKED_NAMES = {".gitignore", ".gitattributes", "NOTICE", "go.mod"}
 
 # Files that legitimately carry no PeerFoil header of their own.
 NOTICE_EXEMPT = {

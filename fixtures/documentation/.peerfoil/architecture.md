@@ -5,7 +5,7 @@
 Project: `peerfoil-fixture-doc` · Assurance: Guided · Revision: 1 · Status: accepted
 
 - **Author:** architect (claude-code, anthropic-claude, session null)
-- **Written at:** 2026-10-21T08:40:00Z
+- **Written at:** 2026-10-20T08:40:00Z
 - **Decisions applied:** d-0001, d-0002, d-0003, d-0004
 - **Quality Contract:** `.peerfoil/quality.md` revision 1
 - **Reviews:** rv-0001

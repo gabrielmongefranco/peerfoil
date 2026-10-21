@@ -2,7 +2,7 @@
 
 # Decisions for SQLite Backup Guide
 
-Project: `peerfoil-fixture-doc` · Assurance: Guided · Last updated: 2026-10-21T08:20:00Z
+Project: `peerfoil-fixture-doc` · Assurance: Guided · Last updated: 2026-10-20T08:20:00Z
 
 This file records the important questions, the answers the user gave, and the reversible
 assumptions PeerFoil took. Architecture work starts only when no decision is `open`.
@@ -28,7 +28,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** The sqlite3 .backup command
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:05:00Z
+- **Decided at:** 2026-10-20T08:05:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0002 — Must every factual claim name a source?
@@ -43,7 +43,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Yes, every claim names its source
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:10:00Z
+- **Decided at:** 2026-10-20T08:10:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0003 — Should the guide show how to verify a backup?
@@ -58,7 +58,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Yes, with a worked example
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:15:00Z
+- **Decided at:** 2026-10-20T08:15:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0004 — What reading level should the guide target?
@@ -73,5 +73,5 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Plain second-person prose for a solo developer (assumption)
 - **Status:** assumed
 - **Owner:** evaluator
-- **Decided at:** 2026-10-21T08:20:00Z
+- **Decided at:** 2026-10-20T08:20:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)

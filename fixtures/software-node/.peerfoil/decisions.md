@@ -2,7 +2,7 @@
 
 # Decisions for Line Counter (Node.js)
 
-Project: `peerfoil-fixture-node` · Assurance: Guided · Last updated: 2026-10-21T08:16:00Z
+Project: `peerfoil-fixture-node` · Assurance: Guided · Last updated: 2026-10-20T08:16:00Z
 
 This file records the important questions, the answers the user gave, and the reversible
 assumptions PeerFoil took. Architecture work starts only when no decision is `open`.
@@ -28,7 +28,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Non-empty lines after trimming.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:10:00Z
+- **Decided at:** 2026-10-20T08:10:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0002 — How is a final line without a trailing newline treated?
@@ -43,7 +43,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Count it.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:12:00Z
+- **Decided at:** 2026-10-20T08:12:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0003 — Should the command offer machine-readable output?
@@ -58,7 +58,7 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** Add a --json flag.
 - **Status:** answered
 - **Owner:** user
-- **Decided at:** 2026-10-21T08:14:00Z
+- **Decided at:** 2026-10-20T08:14:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
 
 ## d-0004 — Which Node.js module system should the tool use?
@@ -73,5 +73,5 @@ assumptions PeerFoil took. Architecture work starts only when no decision is `op
 - **Answer:** CommonJS, taken as a reversible assumption.
 - **Status:** assumed
 - **Owner:** evaluator
-- **Decided at:** 2026-10-21T08:16:00Z
+- **Decided at:** 2026-10-20T08:16:00Z
 - **Raised by:** evaluator (claude-code, anthropic-claude)
