@@ -1,0 +1,52 @@
+{
+  "record_type": "project",
+  "schema_version": 1,
+  "project_id": "peerfoil-fixture-doc",
+  "name": "SQLite Backup Guide",
+  "goal": "Write a short Markdown how-to guide that explains backing up a small SQLite database safely. The guide is for a solo developer who keeps one database file on their own computer. The first phase is finished when the guide covers making, verifying, and restoring a backup.",
+  "pack": {
+    "id": "documentation",
+    "version": "0.1.0"
+  },
+  "profile": "personal",
+  "rules_source": {
+    "mode": "none"
+  },
+  "assurance": "guided",
+  "release": "peerfoil-skills/0.1.0-dev",
+  "created_at": "2026-10-21T08:00:00Z",
+  "updated_at": "2026-10-21T10:00:00Z",
+  "workflow": {
+    "state": "produce",
+    "phase": "ph-01",
+    "stage": "st-01",
+    "task": null,
+    "paused_for": null
+  },
+  "revisions": {
+    "architecture": 1,
+    "quality": 1,
+    "plan": 2
+  },
+  "settings": {
+    "roles": {
+      "evaluator": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "architect": { "tool": "claude-code", "model": "claude-fable-5", "effort": "high" },
+      "planner": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "change_steward": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "producer": { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" },
+      "repair_producer": { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" }
+    },
+    "phase_reviewers": [
+      { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" }
+    ],
+    "review": {
+      "default_passes": 6,
+      "max_passes": 8,
+      "repair_selection_passes": 3,
+      "repair_selection_max_passes": 4,
+      "repair_cycles": 1
+    }
+  }
+}

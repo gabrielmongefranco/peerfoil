@@ -60,6 +60,7 @@ that supersedes the old one, never by editing history.
 | D-0028 | Lessons are verified at phase review and promoted only with the user; hints may stay unverified | Accepted | Phase 1, Stage 4 |
 | D-0029 | PeerFoil recommends and detects the host sandbox; it never provides or enforces one | Accepted | Phase 1, Stage 5 |
 | D-0030 | Local models participate as advisory Ollama calls with `local-family` assurance bookkeeping | Accepted | Phase 1, Stage 5 |
+| D-0031 | Fixtures freeze at the production boundary; fixture content carries no PeerFoil header | Accepted | Phase 1, Stage 5 |
 
 ## D-0001 — Plugin location
 
@@ -593,6 +594,31 @@ that supersedes the old one, never by editing history.
   optional `local-models` check, and `schemas/common.schema.json` accepts `ollama`
   actors. Nothing here survives as a second adapter mechanism once Phase 7's
   provider-neutral contract exists.
+
+## D-0031 — Fixture layout and conventions
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The three Stage 5 fixtures live under `fixtures/` and freeze each
+  project at the production boundary: decisions, architecture, Quality Contract, and an
+  accepted revision 2 plan with one recorded change, and no production or evidence yet.
+  Their architecture and plan reviews are seeded synthetic preconditions, labeled as
+  such. Everything inside a fixture except its README.md is synthetic user content, so
+  it carries no PeerFoil header, like the plugin's templates, and it may hold seeded
+  defects that the repository link check must not flag. Each seeded defect is
+  requirement `r-0002`, recorded but covered by no task.
+- **Options considered:** Freezing fixtures after a captured production task, as the
+  Stage 3 and 4 scratch fixtures did; source-only fixtures with no `.peerfoil` records.
+- **Reason:** A post-production freeze embeds patch and input hashes that must match the
+  committed bytes exactly, which breaks on any innocent edit and on CRLF conversion. The
+  production boundary keeps the records simple and deterministic while still letting a
+  fresh session resume straight into the live journey. Source-only fixtures would leave
+  the schemas and resume path untested.
+- **Consequences:** `tests/static_checks.py` validates fixture JSON against the schemas
+  and exempts fixture content from the header and link checks;
+  `tests/stage5_checks.py` asserts the frozen state, the seeded change `cr-0001`, and
+  the seeded defects. CI runs the Go and Node.js fixture tests on all three operating
+  systems. The live journey results belong to the Stage 5 status table, not to these
+  automated checks.
 
 ## Conclusion
 

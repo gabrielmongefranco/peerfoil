@@ -102,6 +102,8 @@ controls will stay under Advanced settings.
 
 ## Documentation
 
+- **[Documentation index](docs/README.md):** Every page, including setup,
+  troubleshooting, privacy, and known limits.
 - **[PeerFoil Method](docs/PeerFoil-Method.md):** What PeerFoil does and how its workflow
   protects quality.
 - **[Architecture](docs/architecture.md):** How the planned application handles agent

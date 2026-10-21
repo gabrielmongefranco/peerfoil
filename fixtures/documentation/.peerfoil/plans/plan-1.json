@@ -1,0 +1,85 @@
+{
+  "record_type": "plan",
+  "schema_version": 2,
+  "project_id": "peerfoil-fixture-doc",
+  "plan_revision": 1,
+  "architecture_revision": 1,
+  "quality_revision": 1,
+  "status": "accepted",
+  "revised_at": "2026-10-21T09:15:00Z",
+  "revised_by": {
+    "role": "planner",
+    "tool": "claude-code",
+    "model": "claude-fable-5",
+    "effort": "medium",
+    "lineage_root": "anthropic-claude",
+    "session": null
+  },
+  "revision_reason": "Initial plan written from architecture revision 1.",
+  "phases": [
+    {
+      "id": "ph-01",
+      "title": "Complete guide",
+      "outcome": "The guide covers making and verifying a backup of a small SQLite database, with working links and sourced claims.",
+      "order": 1,
+      "status": "active",
+      "stages": [
+        {
+          "id": "st-01",
+          "title": "Write the remaining sections",
+          "outcome": "guide.md gains a verification section, and its links and factual claims hold up.",
+          "order": 1,
+          "status": "active",
+          "depends_on": [],
+          "tasks": [
+            {
+              "id": "tk-001",
+              "title": "Add a verification section that shows how to confirm a backup opens",
+              "scope": "Add a section to guide.md that shows the reader how to confirm a backup file opens and contains the expected tables, using the sqlite3 command line only. Do not change the existing backup steps and do not touch any file other than guide.md.",
+              "allowed_paths": ["guide.md"],
+              "inputs": [".peerfoil/architecture.md", ".peerfoil/quality.md", "guide.md"],
+              "output": "A verification section in guide.md with a worked sqlite3 example.",
+              "required_evidence": [
+                { "name": "link-check", "kind": "inspection", "level": "required" },
+                { "name": "source-check", "kind": "inspection", "level": "required" },
+                { "name": "readability-review", "kind": "inspection", "level": "recommended" }
+              ],
+              "depends_on": [],
+              "acceptance": [
+                "The guide has a verification section with a worked sqlite3 example that opens a backup.",
+                "Every relative link in guide.md resolves.",
+                "Every factual claim in the new section names its source."
+              ],
+              "author_role": "producer",
+              "status": "ready",
+              "plan_revision": 1,
+              "architecture_revision": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "r-0001",
+      "text": "The guide explains the sqlite3 .backup command with a working example.",
+      "source": "d-0001",
+      "tasks": []
+    },
+    {
+      "id": "r-0002",
+      "text": "Every factual claim in the guide names its source.",
+      "source": "d-0002",
+      "tasks": []
+    },
+    {
+      "id": "r-0003",
+      "text": "The guide shows how to verify a backup.",
+      "source": "d-0003",
+      "tasks": ["tk-001"]
+    }
+  ],
+  "changes": [],
+  "backlog": []
+}
