@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/PeerFoil-Method.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Defines the PeerFoil workflow, its safeguards, and its planned releases.
 Notes: See README for an overview and full license information.
 
@@ -484,6 +484,13 @@ following, tool use, timeouts, context limits, and the work required by the sele
 A local model begins with read-only work. It earns architecture, production, repair, or
 review roles separately. Normal independent review still requires models from different
 underlying families.
+
+Before qualification exists, the Skills releases let an installed Ollama model help in an
+advisory way: reading and summarizing for the coordinator, and reviewing a draft when no
+hosted different-family reviewer is available and the user accepts Reduced assurance.
+That advisory review is recorded as `local-family` when the model's base family differs
+from the author's, so the history already distinguishes it, but the assurance label does
+not improve until the model qualifies.
 
 ## 16. Platforms, authentication, and cost
 

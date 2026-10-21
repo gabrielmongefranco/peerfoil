@@ -67,6 +67,7 @@ REQUIRED_FILES = [
     "plugins/peerfoil/references/lineage.md", "plugins/peerfoil/references/architecture.md",
     "plugins/peerfoil/references/planning.md", "plugins/peerfoil/references/review.md",
     "plugins/peerfoil/references/codex.md", "plugins/peerfoil/references/sandbox.md",
+    "plugins/peerfoil/references/local-models.md",
     "plugins/peerfoil/references/production.md", "plugins/peerfoil/references/evidence.md",
     "plugins/peerfoil/references/changes.md", "tests/stage3_checks.py",
     "plugins/peerfoil/references/phase-review.md", "plugins/peerfoil/references/repair.md",

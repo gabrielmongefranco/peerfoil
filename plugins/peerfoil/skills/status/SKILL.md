@@ -9,7 +9,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/skills/status/SKILL.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Guides the read-only PeerFoil status report.
 Notes: Assurance is Guided. Status never writes a file and never reports Enforced.
 
@@ -77,8 +77,8 @@ Repository: <branch>, <clean | N changed files>
 Rules:
 
 - Always print `Guided`. Never print `Enforced` for this release, even if a file says so.
-- When a review's independence is `secondary` or `reduced`, print "Reduced assurance"
-  next to that artifact.
+- When a review's independence is `local-family`, `secondary`, or `reduced`, print
+  "Reduced assurance" next to that artifact.
 - In the `define` state, `Next` is `/peerfoil:resume` whether decisions are open or the
   interview is complete; say which.
 - In the `architect` and `plan` states, name the current sub-step from the draft's

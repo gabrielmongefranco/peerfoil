@@ -59,6 +59,7 @@ that supersedes the old one, never by editing history.
 | D-0027 | Repairer chosen by rule; reviewer agreement stands in for the repair task's plan review | Accepted | Phase 1, Stage 4 |
 | D-0028 | Lessons are verified at phase review and promoted only with the user; hints may stay unverified | Accepted | Phase 1, Stage 4 |
 | D-0029 | PeerFoil recommends and detects the host sandbox; it never provides or enforces one | Accepted | Phase 1, Stage 5 |
+| D-0030 | Local models participate as advisory Ollama calls with `local-family` assurance bookkeeping | Accepted | Phase 1, Stage 5 |
 
 ## D-0001 — Plugin location
 
@@ -562,6 +563,36 @@ that supersedes the old one, never by editing history.
   check, and the honest limits: no native Windows support, a best-effort network
   allowlist on WSL2, and hostname-only filtering. The setup skill and production
   reference say so. Machine-level hardening stays outside PeerFoil.
+
+## D-0030 — Early local-model participation through Ollama
+
+- **Status:** Accepted on 2026-10-21. Resolves the proposal in repository issue 3,
+  taking its option (b) for assurance treatment.
+- **Decision:** During the Skills releases a local model installed in Ollama may help as
+  an explicit tool the coordinator calls, the same pattern D-0019 uses for Codex. It may
+  read, summarize, and triage without creating records, and it may give an advisory
+  review of a draft when no hosted different-family reviewer is available and the user
+  accepts. Such a review is recorded with the new `independence: local-family` value
+  when the local model's lineage root differs from the author's; the user-facing label
+  stays Reduced assurance. The lineage reference records Qwen, Llama, Phi, Mistral,
+  DeepSeek, and Gemma as distinct base families, with fine-tunes sharing their base's
+  root, so Skills-era history is already correct when Phase 7 formalizes qualification.
+  The `ollama` tool value is added to the shared schema. Local models never author,
+  repair, architect, plan, or satisfy normal approval in this release.
+- **Options considered:** Advisory-only participation with no new independence value,
+  the issue's option (a); pulling Phase 7 qualification forward, its option (c); a new
+  MCP server in front of Ollama.
+- **Reason:** Option (b) keeps D-0014's effect unchanged while making history
+  distinguishable: a different-family local review is better information than a second
+  Claude session, and recording it as plain `secondary` would hide that. Option (c) is
+  qualification work that belongs to Phase 7. Documented commands need no new bridge,
+  which rule 11 of `AGENTS.md` forbids building when an existing tool serves.
+- **Consequences:** `plugins/peerfoil/references/local-models.md` holds the detection,
+  invocation, family mapping, and role limits. The lineage, review, and records
+  references and the status skill name the `local-family` value, setup gains an
+  optional `local-models` check, and `schemas/common.schema.json` accepts `ollama`
+  actors. Nothing here survives as a second adapter mechanism once Phase 7's
+  provider-neutral contract exists.
 
 ## Conclusion
 
