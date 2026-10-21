@@ -210,7 +210,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 		}
 		return errs.New(errs.Evidence,
 			fmt.Sprintf("required checks failed for %s: %s", task.ID, strings.Join(failed, ", ")),
-			"fix the change in the retained worktree branch "+worktree.Branch+", or run peerfoil resume to retry the task")
+			"inspect the retained worktree branch "+worktree.Branch+" and the evidence records, then route the fix through the PeerFoil skills change intake")
 	}
 
 	integrationTip, err := e.Repo.Integrate(ctx, worktree, taskCommit)

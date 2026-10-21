@@ -268,3 +268,16 @@ func TestScanSecretsClean(t *testing.T) {
 		t.Errorf("ScanSecrets on a clean patch = %v, want nil", hits)
 	}
 }
+
+// TestRecordDirectoryIsAlwaysDenied pins the rule that no allowlist, however broad,
+// can grant a producer a write under the .peerfoil project records.
+func TestRecordDirectoryIsAlwaysDenied(t *testing.T) {
+	changes := []Change{{Status: "M", Path: ".peerfoil/evidence/ev-0001.md"}}
+	if err := CheckScope(changes, []string{"**"}); err == nil {
+		t.Fatal("a change inside .peerfoil must be rejected even under a ** allowlist")
+	}
+	mixedCase := []Change{{Status: "A", Path: ".PeerFoil/plan.json"}}
+	if err := CheckScope(mixedCase, []string{"**"}); err == nil {
+		t.Fatal("the .peerfoil denial must be case-insensitive")
+	}
+}

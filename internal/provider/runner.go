@@ -86,13 +86,15 @@ type Result struct {
 
 // BaseEnv builds the minimal child environment from the current process: PATH,
 // the home variable (HOME or USERPROFILE), the temporary-directory variables
-// (TEMP and TMP), SystemRoot and ComSpec on Windows, and LANG and LC_ALL when
+// (TEMP and TMP), the cache-location variables build tools need (XDG_CACHE_HOME,
+// and on Windows LOCALAPPDATA and APPDATA, which Go and Node.js use for their
+// caches), SystemRoot, ComSpec, and PATHEXT on Windows, and LANG and LC_ALL when
 // set. Everything else, including any credential or token variable, is excluded
 // so a child tool never sees secrets it was not explicitly given.
 func BaseEnv() []string {
-	names := []string{"PATH", "HOME", "USERPROFILE", "TEMP", "TMP", "LANG", "LC_ALL"}
+	names := []string{"PATH", "HOME", "USERPROFILE", "TEMP", "TMP", "XDG_CACHE_HOME", "LANG", "LC_ALL"}
 	if runtime.GOOS == "windows" {
-		names = append(names, "SystemRoot", "ComSpec")
+		names = append(names, "SystemRoot", "ComSpec", "PATHEXT", "LOCALAPPDATA", "APPDATA")
 	}
 	env := make([]string, 0, len(names))
 	for _, name := range names {

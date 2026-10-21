@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
@@ -124,7 +125,7 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	decision := combineDecisions(runs, authors)
+	decision := combineDecisions(runs)
 	if err := e.writePhaseReviewRecord(phaseReviewID, frozen, bundleDigest, authors, runs, merged, decision); err != nil {
 		return err
 	}
@@ -283,10 +284,31 @@ func (e *Engine) runReviewer(ctx context.Context, reviewer provider.Adapter, sea
 		return nil, err
 	}
 	run.recordID = recordID
-	if err := e.writeReviewRecord(run, kind, frozen); err != nil {
+	if err := e.writeReviewRecord(run, kind, frozen, authors); err != nil {
 		return nil, err
 	}
 	return run, nil
+}
+
+// distinctLineages lists the material authors' lineage roots, sorted and deduplicated,
+// so records show real provenance instead of an assumed constant.
+func distinctLineages(authors map[string]string) string {
+	seen := map[string]bool{}
+	var roots []string
+	for _, lineage := range authors {
+		if lineage == "" {
+			lineage = provider.LineageUnknown
+		}
+		if !seen[lineage] {
+			seen[lineage] = true
+			roots = append(roots, lineage)
+		}
+	}
+	sort.Strings(roots)
+	if len(roots) == 0 {
+		return provider.LineageUnknown
+	}
+	return strings.Join(roots, "+")
 }
 
 // independenceAgainst judges one reviewer against every material item's author.
@@ -364,7 +386,7 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 
 // combineDecisions applies the independence rules: approval needs both reviewers, and
 // in particular the primary (different-family) reviewer of every item, to approve.
-func combineDecisions(runs []reviewRun, authors map[string]string) string {
+func combineDecisions(runs []reviewRun) string {
 	for _, run := range runs {
 		if run.answer.Decision == "block" {
 			return "user-decision"
@@ -438,7 +460,7 @@ func mergeFindings(runs []reviewRun) []Finding {
 }
 
 // writeReviewRecord renders one reviewer pass in the review template's field shape.
-func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string) error {
+func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string, authors map[string]string) error {
 	dir := filepath.Join(e.State.Dir, "reviews")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return errs.Wrap(errs.Configuration, "creating the reviews directory", err)
@@ -452,7 +474,8 @@ func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string) error {
 		frozen, e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, e.State.Project.Revisions.Quality)
 	fmt.Fprintf(&b, "- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n",
 		run.seat.Tool, run.seat.Model, run.seat.Effort, run.lineage, valueOrNull(run.session))
-	fmt.Fprintf(&b, "- **Author under review:** producer (%s, %s, session null)\n", "codex-cli", "openai-gpt")
+	fmt.Fprintf(&b, "- **Author under review:** producer (%s, %s, session null)\n",
+		e.State.Project.Settings.Roles["producer"].Tool, distinctLineages(authors))
 	fmt.Fprintf(&b, "- **Independence:** %s — judged against each item's recorded author lineage\n", run.independence)
 	fmt.Fprintf(&b, "- **Passes used:** 1 of 1\n")
 	fmt.Fprintf(&b, "- **Reviewed at:** %s\n", Timestamp(e.Now()))
@@ -558,6 +581,13 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return errs.New(errs.Policy, "a repair never runs at low effort", "raise the repair_producer seat's effort")
 	}
 	repairerLineage := e.Producer.LineageRoot(repairSeatSetting.Model)
+	if repairerLineage == provider.LineageUnknown {
+		// Unknown lineage fails closed: different-family verification cannot be
+		// proven for a repairer whose family is not established.
+		return errs.New(errs.Configuration,
+			"the repair producer's model lineage is unknown, so different-family verification cannot be proven",
+			"record an explicit model for the repair_producer seat, then run peerfoil resume")
+	}
 
 	// The repair works on a fresh worktree at the frozen revision.
 	lastTask := e.lastValidatedTaskID()
@@ -618,6 +648,9 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 		return errs.New(errs.Provider, reason, "")
 	}
+	// The repair may touch any path the user already approved for this phase's
+	// tasks, and nothing else. This is the write grant the user accepted when they
+	// approved the plan; .peerfoil, .git, and AGENTS.md stay denied regardless.
 	allowed := e.unionAllowedPaths()
 	if err := workspace.CheckScope(changes, allowed); err != nil {
 		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
@@ -695,11 +728,13 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return err
 	}
 
-	// The verifier is the reviewer whose family differs from the repairer's.
+	// The verifier is a reviewer whose family is known and differs from the
+	// repairer's; an unknown lineage never counts as a different family.
 	var verifier provider.Adapter
 	var verifierSeat provider.Seat
 	for index, reviewer := range e.Reviewers {
-		if reviewer.LineageRoot(e.ReviewerSeats[index].Model) != repairerLineage {
+		lineage := reviewer.LineageRoot(e.ReviewerSeats[index].Model)
+		if lineage != provider.LineageUnknown && lineage != repairerLineage {
 			verifier = reviewer
 			verifierSeat = e.ReviewerSeats[index]
 			break
@@ -715,8 +750,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return err
 	}
 	fmt.Fprintf(e.Out, "Repair verification by %s: %s.\n", verifyRun.reviewerName, verifyRun.answer.Decision)
-	if verifyRun.answer.Decision != "approve" {
-		reason := "one repair cycle did not clear the blocking findings; you decide how to proceed"
+	// Approval needs an independent verification, not just an approve word: the
+	// verifier's recorded lineage must differ from every material author's.
+	if verifyRun.answer.Decision != "approve" || verifyRun.independence != "independent" {
+		reason := "the repair did not receive an independent approval; you decide how to proceed"
 		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); err != nil {
 			return err
 		}

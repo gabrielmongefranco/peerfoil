@@ -95,6 +95,10 @@ func unsafePathReason(p string) string {
 			return "path traversal component"
 		case strings.EqualFold(comp, ".git"):
 			return "inside the .git directory"
+		case strings.EqualFold(comp, ".peerfoil"):
+			// Only the controller writes project records; a producer change here
+			// could fabricate evidence or approvals, so no allowlist can grant it.
+			return "inside the .peerfoil project records"
 		case strings.EqualFold(comp, "AGENTS.md"):
 			return "agent instruction file"
 		case strings.Contains(comp, ":"):
