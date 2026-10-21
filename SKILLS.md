@@ -1,5 +1,10 @@
 <!--
-This file is part of PeerFoil
+This file is part of PeerFoil.
+SKILLS.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-09
+Last Modified: 2026-10-21
+Summary: Indexes the repository's skills and explains how agents use them.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
 See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license information.

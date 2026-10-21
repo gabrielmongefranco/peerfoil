@@ -4,7 +4,12 @@ description: Write prose in plain, natural English. Apply to every response, des
 ---
 
 <!--
-This file is part of PeerFoil
+This file is part of PeerFoil.
+skills/response-style/SKILL.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-09
+Last Modified: 2026-10-21
+Summary: Plain-English wording rules for every piece of prose this repository produces.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
 See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license information.
