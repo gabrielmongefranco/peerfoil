@@ -14,6 +14,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,12 +75,22 @@ func (e *Engine) AppendTransition(to State, refs map[string][]string, summary st
 	if err := Move(from, to); err != nil {
 		return err
 	}
+	if to == Review && (sourceRevision == nil || !commitIDPattern.MatchString(*sourceRevision)) {
+		return errs.New(errs.Validation, "a controller review boundary requires a full source revision",
+			"validate the exact commit before starting its review")
+	}
 	lastID := "tr-0000"
 	if len(state.History) > 0 {
 		lastID = state.History[len(state.History)-1].TransitionID
 	}
-	var lastNumber int
-	fmt.Sscanf(strings.TrimPrefix(lastID, "tr-"), "%d", &lastNumber)
+	lastNumber, ok := new(big.Int).SetString(strings.TrimPrefix(lastID, "tr-"), 10)
+	if !ok || lastNumber.Sign() < 0 {
+		return errs.New(errs.Validation, "the last transition identifier is invalid", "restore the recorded history before continuing")
+	}
+	nextNumber := lastNumber.Add(lastNumber, big.NewInt(1)).String()
+	if len(nextNumber) < 4 {
+		nextNumber = strings.Repeat("0", 4-len(nextNumber)) + nextNumber
+	}
 	// An empty reference list marshals as null, which the transition schema rejects
 	// and would make the next load refuse the whole project, so empty lists are
 	// dropped rather than written.
@@ -100,7 +111,7 @@ func (e *Engine) AppendTransition(to State, refs map[string][]string, summary st
 	transition := project.Transition{
 		RecordType:    "transition",
 		SchemaVersion: 1,
-		TransitionID:  fmt.Sprintf("tr-%04d", lastNumber+1),
+		TransitionID:  "tr-" + nextNumber,
 		ProjectID:     state.Project.ProjectID,
 		At:            Timestamp(e.Now()),
 		FromState:     &fromName,

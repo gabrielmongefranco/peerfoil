@@ -183,10 +183,17 @@ func (r *Repo) IsClean(ctx context.Context) (bool, []string, error) {
 	return len(dirty) == 0, dirty, nil
 }
 
-// DetectUnsupported rejects repository features Core Alpha does not handle: submodules
-// and Git LFS. Running against them would risk silent data loss during change capture,
+// DetectUnsupported rejects repository features Core Alpha does not handle: submodules,
+// symbolic links, and Git LFS. Running against them would risk unsafe change capture,
 // so the check fails closed before any task starts.
 func (r *Repo) DetectUnsupported(ctx context.Context) error {
+	head, err := r.HeadCommit(ctx)
+	if err != nil {
+		return err
+	}
+	if err := r.CheckTree(ctx, head); err != nil {
+		return err
+	}
 	if _, err := os.Stat(filepath.Join(r.Root, ".gitmodules")); err == nil {
 		return errs.New(errs.Validation,
 			"the repository uses Git submodules, which this release does not support",
@@ -204,6 +211,22 @@ func (r *Repo) DetectUnsupported(ctx context.Context) error {
 					"the repository uses Git LFS, which this release does not support",
 					"use a repository without Git LFS, or wait for a release that supports it")
 			}
+		}
+	}
+	return nil
+}
+
+// CheckTree rejects links and submodules in a Git tree before any writer or check
+// receives its checkout. Git modes work even when Windows checks links out as files.
+func (r *Repo) CheckTree(ctx context.Context, revision string) error {
+	entries, err := git(ctx, r.Root, "ls-tree", "-r", "-z", revision)
+	if err != nil {
+		return errs.Wrap(errs.Git, "could not inspect the task's source tree", err)
+	}
+	for _, entry := range bytes.Split(entries, []byte{0}) {
+		if bytes.HasPrefix(entry, []byte("120000 ")) || bytes.HasPrefix(entry, []byte("160000 ")) {
+			return errs.New(errs.Policy, "the source tree contains symbolic links or submodules, which this release does not support",
+				"replace links with regular files and use a repository without submodules before starting a task")
 		}
 	}
 	return nil
@@ -285,11 +308,12 @@ func changeStatus(xy string) string {
 // Worktree is a dedicated checkout PeerFoil created for one task. Base is the resolved
 // commit the task branched from, and Branch always lives under peerfoil/task/.
 type Worktree struct {
-	Repo   *Repo
-	Path   string
-	Branch string
-	Base   string
-	TaskID string
+	Repo         *Repo
+	Path         string
+	Branch       string
+	Base         string
+	TaskID       string
+	capturedTree string
 }
 
 // CreateTaskWorktree creates a new branch and worktree for one task, rooted at
@@ -313,6 +337,9 @@ func (r *Repo) CreateTaskWorktree(ctx context.Context, baseCommit, taskID string
 		return nil, errs.Wrap(errs.Git, "the base commit for the task could not be resolved", err)
 	}
 	base := strings.TrimSpace(string(out))
+	if err := r.CheckTree(ctx, base); err != nil {
+		return nil, err
+	}
 
 	branch := fmt.Sprintf("%s%s-r%d", taskBranchPrefix, taskID, planRevision)
 	if _, err := git(ctx, r.Root, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch); err == nil {
@@ -369,27 +396,65 @@ func (w *Worktree) Changes(ctx context.Context) ([]Change, error) {
 // that is deleted afterwards, so the worktree's real index, and with it anything the
 // producer staged, stays exactly as it was.
 func (w *Worktree) Patch(ctx context.Context) ([]byte, error) {
+	_, patch, err := w.Capture(ctx)
+	return patch, err
+}
+
+// Capture stages a snapshot in a private index and returns its changed paths and
+// patch against Base. Commit uses only this immutable tree; later edits cannot join it.
+// It rejects links, submodules, or a producer-created commit and preserves the real index.
+func (w *Worktree) Capture(ctx context.Context) ([]Change, []byte, error) {
+	w.capturedTree = ""
+	head, err := git(ctx, w.Path, "rev-parse", "HEAD")
+	if err != nil || strings.TrimSpace(string(head)) != w.Base {
+		return nil, nil, errs.New(errs.Policy, "the task's branch changed before capture",
+			"inspect the retained task worktree before starting another writer")
+	}
 	tmpDir, err := os.MkdirTemp("", "peerfoil-index-")
 	if err != nil {
-		return nil, errs.Wrap(errs.Internal, "could not create a temporary directory for change capture", err)
+		return nil, nil, errs.Wrap(errs.Internal, "could not create a temporary directory for change capture", err)
 	}
 	defer os.RemoveAll(tmpDir)
 	env := []string{"GIT_INDEX_FILE=" + filepath.Join(tmpDir, "index")}
+	if _, err := gitEnv(ctx, w.Path, env, "read-tree", w.Base); err != nil {
+		return nil, nil, errs.Wrap(errs.Git, "could not initialize the capture index", err)
+	}
 	if _, err := gitEnv(ctx, w.Path, env, "add", "-A"); err != nil {
-		return nil, errs.Wrap(errs.Git, "could not capture the task changes", err)
+		return nil, nil, errs.Wrap(errs.Git, "could not capture the task changes", err)
 	}
-	out, err := gitEnv(ctx, w.Path, env, "diff", "--binary", "--cached", w.Base)
+	treeBytes, err := gitEnv(ctx, w.Path, env, "write-tree")
 	if err != nil {
-		return nil, errs.Wrap(errs.Git, "could not produce the task patch", err)
+		return nil, nil, errs.Wrap(errs.Git, "could not freeze the captured tree", err)
 	}
-	return out, nil
+	tree := strings.TrimSpace(string(treeBytes))
+	if err := w.Repo.CheckTree(ctx, tree); err != nil {
+		return nil, nil, err
+	}
+	names, err := git(ctx, w.Path, "diff", "--name-status", "-z", "--no-renames", w.Base, tree, "--")
+	if err != nil {
+		return nil, nil, errs.Wrap(errs.Git, "could not list the captured changes", err)
+	}
+	var changes []Change
+	fields := strings.Split(strings.TrimSuffix(string(names), "\x00"), "\x00")
+	if len(names) > 0 {
+		if len(fields)%2 != 0 {
+			return nil, nil, errs.New(errs.Git, "the captured path list is incomplete", "inspect the task worktree")
+		}
+		for i := 0; i < len(fields); i += 2 {
+			changes = append(changes, Change{Status: fields[i], Path: fields[i+1]})
+		}
+	}
+	patch, err := git(ctx, w.Path, "diff", "--binary", "--no-ext-diff", "--no-textconv", w.Base, tree, "--")
+	if err != nil {
+		return nil, nil, errs.Wrap(errs.Git, "could not produce the task patch", err)
+	}
+	w.capturedTree = tree
+	return changes, patch, nil
 }
 
-// Commit stages everything in the task worktree and commits it with PeerFoil's own
-// author and committer identity, returning the commit hash. It refuses to run outside
-// a peerfoil/task/ branch so it can never commit to the user's checkout. Signing is
-// turned off for this one commit because a machine-made task commit must not depend on
-// the user's signing keys or block on a passphrase prompt.
+// Commit commits only the tree returned by the last successful Capture or Patch.
+// It uses PeerFoil's identity, requires the task branch to remain at Base, skips hooks
+// and signing, and returns the commit hash. It never stages or overwrites later edits.
 func (w *Worktree) Commit(ctx context.Context, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {
 		return "", errs.New(errs.Validation, "the commit message is empty", "pass a short description of the task's work")
@@ -399,24 +464,35 @@ func (w *Worktree) Commit(ctx context.Context, message string) (string, error) {
 			"refusing to commit outside a PeerFoil task worktree",
 			"commits run only on branches under "+taskBranchPrefix)
 	}
-	if _, err := git(ctx, w.Path, "add", "-A"); err != nil {
-		return "", errs.Wrap(errs.Git, "could not stage the task changes", err)
+	if w.capturedTree == "" {
+		return "", errs.New(errs.Git, "no captured tree is available to commit", "capture and validate the task changes first")
 	}
-	_, err := git(ctx, w.Path,
+	branch, err := git(ctx, w.Path, "symbolic-ref", "HEAD")
+	if err != nil || strings.TrimSpace(string(branch)) != "refs/heads/"+w.Branch {
+		return "", errs.New(errs.Policy, "the task worktree is on a different branch", "inspect the task worktree before continuing")
+	}
+	baseTree, err := git(ctx, w.Path, "rev-parse", w.Base+"^{tree}")
+	if err != nil {
+		return "", err
+	}
+	if w.capturedTree == strings.TrimSpace(string(baseTree)) {
+		return "", errs.New(errs.Git, "the captured tree has no changes", "produce a change before committing it")
+	}
+	out, err := git(ctx, w.Path,
 		"-c", "user.name=PeerFoil Producer",
 		"-c", "user.email=peerfoil@localhost",
 		"-c", "commit.gpgsign=false",
-		"commit",
-		"--author=PeerFoil Producer <peerfoil@localhost>",
-		"-m", message)
+		"commit-tree", w.capturedTree, "-p", w.Base, "-m", message)
 	if err != nil {
 		return "", errs.Wrap(errs.Git, "could not commit the task changes", err)
 	}
-	out, err := git(ctx, w.Path, "rev-parse", "--verify", "HEAD^{commit}")
-	if err != nil {
-		return "", errs.Wrap(errs.Git, "could not read the new task commit", err)
+	commit := strings.TrimSpace(string(out))
+	if _, err := git(ctx, w.Path, "update-ref", "refs/heads/"+w.Branch, commit, w.Base); err != nil {
+		return "", errs.Wrap(errs.Git, "the task branch moved before the captured commit could be recorded", err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	w.Base = commit
+	w.capturedTree = ""
+	return commit, nil
 }
 
 // ### Integration ###

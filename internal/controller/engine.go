@@ -74,6 +74,7 @@ type reviewRecord struct {
 	PlanRevision    int
 	ArchRevision    int
 	QualityRevision int
+	ReviewedAt      string
 }
 
 var (
@@ -83,6 +84,8 @@ var (
 	reviewPlanRevision     = regexp.MustCompile(`plan revision ([0-9]+)`)
 	reviewArchRevision     = regexp.MustCompile(`architecture revision ([0-9]+)`)
 	reviewQualityRevision  = regexp.MustCompile(`quality revision ([0-9]+)`)
+	reviewTimeLine         = regexp.MustCompile(`(?m)^- \*\*Reviewed at:\*\* *(\S+) *$`)
+	reducedAcceptance      = regexp.MustCompile(`^No (?:hosted )?different-family reviewer was available; the user accepted (?:Reduced assurance|an advisory local review) at ([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)\.?$`)
 )
 
 // loadReviews parses the field lines of the recorded reviews. The records are
@@ -120,7 +123,7 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 		}
 		if match := reviewIndependenceLine.FindStringSubmatch(text); match != nil {
 			record.Independence = match[1]
-			record.IndependenceWhy = strings.ToLower(match[2])
+			record.IndependenceWhy = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(match[2]), "—"))
 		}
 		if match := reviewPlanRevision.FindStringSubmatch(text); match != nil {
 			fmt.Sscanf(match[1], "%d", &record.PlanRevision)
@@ -130,6 +133,9 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 		}
 		if match := reviewQualityRevision.FindStringSubmatch(text); match != nil {
 			fmt.Sscanf(match[1], "%d", &record.QualityRevision)
+		}
+		if match := reviewTimeLine.FindStringSubmatch(text); match != nil {
+			record.ReviewedAt = match[1]
 		}
 		reviews = append(reviews, record)
 	}
@@ -161,17 +167,13 @@ func (e *Engine) productionGate() error {
 	// A usable review names its decision and its independence, and it must have
 	// inspected the current Quality Contract revision as well. A non-independent
 	// review (D-0014: local-family, secondary, or reduced) counts only when its
-	// recorded reason carries the user's acceptance, because that acceptance is the
-	// method's condition for proceeding without a different family. Only the
-	// method's exact positive phrase counts: a looser match such as any word
-	// containing "accept" would also match a recorded refusal like "the user did
-	// not accept Reduced assurance".
+	// recorded acceptance names this draft and has a matching history transition.
 	usable := func(review reviewRecord) bool {
 		switch review.Independence {
 		case "independent":
 			return true
 		case "local-family", "secondary", "reduced":
-			return strings.Contains(review.IndependenceWhy, "user accepted reduced assurance")
+			return e.hasReducedAcceptance(review)
 		}
 		return false
 	}
@@ -212,6 +214,37 @@ func (e *Engine) productionGate() error {
 			"run peerfoil resume so the interrupted work is inspected before anything new starts")
 	}
 	return nil
+}
+
+// hasReducedAcceptance binds a positive, dated acceptance to the exact review and
+// its three revisions. Unstructured prose or a refusal cannot authorize production.
+func (e *Engine) hasReducedAcceptance(review reviewRecord) bool {
+	match := reducedAcceptance.FindStringSubmatch(review.IndependenceWhy)
+	if match == nil {
+		return false
+	}
+	accepted, err := time.Parse(time.RFC3339, match[1])
+	if err != nil {
+		return false
+	}
+	reviewed, err := time.Parse(time.RFC3339, review.ReviewedAt)
+	if err != nil || reviewed.Before(accepted) {
+		return false
+	}
+	summary := fmt.Sprintf("User accepted Reduced assurance for %s at %s; plan revision %d, architecture revision %d, quality revision %d.",
+		review.ID, match[1], review.PlanRevision, review.ArchRevision, review.QualityRevision)
+	for _, transition := range e.State.History {
+		at, err := time.Parse(time.RFC3339, transition.At)
+		if err != nil || at.Before(reviewed) || transition.PlanRevision != review.PlanRevision || transition.Summary != summary {
+			continue
+		}
+		for _, id := range transition.Refs["reviews"] {
+			if id == review.ID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // requireCleanOutsideRecords stops when the working tree holds changes other than the

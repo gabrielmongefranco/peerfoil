@@ -222,10 +222,23 @@ the user with `AskUserQuestion`, recommending the first option:
    agent with the packet from section 4. Record `independence: secondary` with the reason
    "No different-family reviewer was available; the user accepted Reduced assurance at
    <timestamp>". Record the acceptance in the `history.jsonl` summary of the next
-   transition. Show "Reduced assurance" wherever this artifact's status is shown.
+   transition as described below. Show "Reduced assurance" wherever this artifact's status is shown.
 
 The acceptance covers one draft. When a later draft needs review and the situation has
 not changed, ask again.
+
+For either Reduced assurance option, use this exact history summary, substituting the
+review identifier, UTC acceptance time, and that review's three revision numbers:
+
+```text
+User accepted Reduced assurance for rv-NNNN at YYYY-MM-DDTHH:MM:SSZ; plan revision N, architecture revision N, quality revision N.
+```
+
+Include `rv-NNNN` in the transition's `refs.reviews`, and use the review's plan revision
+for `plan_revision`. If the acceptance transition would change that revision, record
+the acceptance as a separate transition in the current state first. The acceptance
+time must precede or equal the review time; the transition must follow or equal it.
+Core checks this binding before permitting production from a reduced review.
 
 ## 8. Validating the review
 

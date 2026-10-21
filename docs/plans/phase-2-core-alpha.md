@@ -729,7 +729,7 @@ through validation after a complete journey, the Documentation fixture processed
 through the same controller code with its required inspection and human evidence
 pausing honestly, and the [Core Alpha documentation page](../core-alpha.md) covering
 installation, commands, recovery, privacy, and limits. The three-OS matrix (builds,
-tests, fixtures) runs in CI and is pending its first run on this change. A
+tests, fixtures) runs in CI; pull request 7 retains the results for each revision. A
 real-provider smoke test of one produced task passed on Windows; Stage 6's status holds
 the details. Not done, recorded as open checks for the user and later work: manual
 real-provider smoke tests on macOS and Linux, a real-provider journey through the phase
@@ -739,6 +739,64 @@ independent Claude and Codex review of the complete
 release candidate, which this change requests through the repository's pull-request
 review. P2-11 and the release rows of the acceptance matrix stay open until those runs
 exist.
+
+### Pull request 7 follow-up checks
+
+The 2026-10-21 follow-up addresses the remaining findings in
+[pull request 7](https://github.com/gabrielmongefranco/peerfoil/pull/7).
+It covers Stages 2, 4, 5, and 7 and corrects the Phase 1 skill-copy instructions.
+The release boundary and deferred work remain as listed above.
+
+| Finding | Implemented behavior | Regression evidence |
+|---|---|---|
+| Missing frozen review revision | Core refuses review without a recorded full commit; Guided records retain their existing nullable field | `TestPhaseReviewRequiresRecordedRevision`, `TestControllerReviewBoundaryRequiresRevision` |
+| Failed repair verifier cannot resume | Retain the repair commit, author, findings, revisions, and attempt count in the phase review; resume one fresh verification without rerunning the writer | `TestRepairVerificationResumesWithoutAnotherWriter` |
+| Repair verifier checked against the original producer | Check independence against the repair change set and reject the repair author's session | The retry test uses different producer and repair families |
+| Copied skill links break | State the two destination-relative instruction links in the template's copy instructions | Repository link checks |
+| Reviewer prose retains credentials | Scrub every free-text review field before either individual or merged review records are saved | `TestReviewProseIsScrubbedBeforeRetention` |
+| Blocked handoff retains credentials | Bound the blocker and scrub it before errors, history, or project state use it | `TestBlockedHandoffIsBoundedAndScrubbed` |
+| Tracked symlinks reach a writer | Reject symlink and submodule Git modes before task or review checkout creation, including on Windows without native links | `TestTrackedSymlinkRejectedWithoutOSLinkSupport` |
+| Capture and commit include different content | Derive scope, patch, and commit from one immutable Git tree; run checks in a separate checkout of that commit | `TestCommitUsesOnlyCapturedTree` |
+| Workflow saves erase setup checks | Preserve the schema's environment object through load and save | `TestSetupChecksSurviveWorkflowSaves` |
+| History identifiers repeat or regress | Require positive, increasing numeric identifiers and increment without machine-integer overflow | `TestHistoryIDsMustIncreaseNumerically` |
+| Reduced-assurance acceptance lacks matching history | Require the documented positive reason, valid times, exact review reference, and current plan, architecture, and quality revisions | `TestProductionGateNeedsThePositiveAcceptancePhrase` |
+
+The repair verification test also rejects a moved repair branch and pauses after two
+unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks
+that two valid, large answers still fit after recovery metadata and formatting are added.
+This implements the existing one-no-result-retry allowance;
+it does not add another repair cycle. The original repair checkout remains available
+after verification fails. Recovery of interruptions before a completed boundary still
+needs the explicit user decision described in the Core Alpha guide.
+
+Authorship: these follow-up repairs were produced by the `openai-gpt` model family.
+The requested same-family pull-request review is a secondary check. Different-family
+phase approval remains outstanding. Automatic approval review blocked an optional local
+different-family review because that provider destination lacked explicit authorization.
+No source was sent through that rejected invocation.
+
+Targeted Windows regressions and the full native suite passed, including
+`go test ./... -count=1 -timeout 9m`, `go vet ./...`, and `go build ./...`.
+Formatting, repository conformance, both fixture suites, and strict plugin validation
+also passed. The pull request records the new three-platform CI and review results.
+Local validation uses Go 1.26.5 and Node.js 26.8.1;
+CI checks the supported Go 1.22 and Node.js 20 versions. Strict plugin validation uses
+the CI-pinned version 2.1.260. The older installed validator cannot validate the current
+manifest metadata. No project dependency was added.
+
+Three full Windows runs stopped after Git returned an empty result, at different commands.
+Three isolated recovery-test repetitions passed without code or assertion changes.
+A separate read-only probe reproduced one empty result in 150 calls to the installed
+Git 2.39.2 Windows launcher; all 150 calls to its native Git executable returned hashes.
+The final local suite uses Git Bash, as Windows CI does, which selects that native
+executable. No system settings or tests were changed to bypass the failure. The pull
+request retains the final local and CI outcomes. The initial integration test also
+needed the new explicit capture call before commit; its integration assertions remain
+unchanged.
+
+Lesson: retain the exact capture and repair identity across retries. Re-reading a live
+checkout or choosing the original producer's lineage can change what the controller
+claims to have validated or independently reviewed.
 
 ## 16. Phase acceptance matrix
 

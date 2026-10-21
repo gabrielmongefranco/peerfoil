@@ -27,6 +27,7 @@ import (
 	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
 	"github.com/gabrielmongefranco/peerfoil/internal/project"
 	"github.com/gabrielmongefranco/peerfoil/internal/provider"
+	"github.com/gabrielmongefranco/peerfoil/internal/redact"
 	"github.com/gabrielmongefranco/peerfoil/internal/version"
 	"github.com/gabrielmongefranco/peerfoil/internal/workspace"
 )
@@ -120,7 +121,15 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	// The review binds to the revision recorded when validation entered review. A
 	// branch tip that moved since then was never put through the frozen-revision
 	// evidence checks, so approving it would approve unchecked code.
-	if recorded := e.reviewBoundaryRevision(); recorded != "" && recorded != frozen {
+	recorded := e.reviewBoundaryRevision()
+	if recorded == "" {
+		return errs.New(errs.Validation, "the phase review has no recorded source revision",
+			"restore the validated review boundary from history before running peerfoil resume")
+	}
+	if boundary := e.reviewBoundary(); boundary != nil && len(boundary.Refs["change_sets"]) > 0 {
+		return e.resumeRepairVerification(ctx, boundary)
+	}
+	if recorded != frozen {
 		return errs.New(errs.Git,
 			fmt.Sprintf("the integration branch now points at %s, not the revision %s recorded when the phase entered review", frozen, recorded),
 			"reset the peerfoil/integration branch to the recorded revision, or route the extra work through the PeerFoil skills change intake")
@@ -195,7 +204,7 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 			}
 			return errs.New(errs.Policy, reason, "read .peerfoil/reviews/"+phaseReviewID+".md")
 		}
-		return e.repairCycle(ctx, frozen, phaseReviewID, repairFindings, authors)
+		return e.repairCycle(ctx, frozen, phaseReviewID, repairFindings)
 	default:
 		reason := "the phase reviewers did not reach an agreed decision (" + decisionSummary(runs) + "); you decide how to proceed"
 		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
@@ -209,17 +218,21 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 // reviewBoundaryRevision returns the source revision recorded by the most recent
 // transition into review, or an empty string when that transition recorded none.
 func (e *Engine) reviewBoundaryRevision() string {
+	if transition := e.reviewBoundary(); transition != nil && transition.SourceRevision != nil {
+		return *transition.SourceRevision
+	}
+	return ""
+}
+
+func (e *Engine) reviewBoundary() *project.Transition {
 	for index := len(e.State.History) - 1; index >= 0; index-- {
-		transition := e.State.History[index]
+		transition := &e.State.History[index]
 		if transition.ToState != string(Review) {
 			continue
 		}
-		if transition.SourceRevision != nil {
-			return *transition.SourceRevision
-		}
-		return ""
+		return transition
 	}
-	return ""
+	return nil
 }
 
 // requireTwoFamilies confirms two reviewer seats from different, known families.
@@ -515,6 +528,15 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 	if len(problems) > 0 {
 		return nil, errs.New(errs.Provider, "the review answer failed validation: "+strings.Join(problems, "; "), "")
 	}
+	// Redact before either individual or merged records receive model-authored text.
+	for index := range answer.Findings {
+		finding := &answer.Findings[index]
+		for _, field := range []*string{&finding.Title, &finding.Location, &finding.Requirement,
+			&finding.Evidence, &finding.Recommendation} {
+			*field, _ = redact.ScrubString(*field)
+		}
+	}
+	answer.RemainingRisk, _ = redact.ScrubString(answer.RemainingRisk)
 	// A blocking finding with an approve decision is corrected, never trusted.
 	if answer.Decision == "approve" {
 		for _, finding := range answer.Findings {
@@ -618,8 +640,12 @@ func (e *Engine) writeReviewRecord(run *reviewRun, kind, frozen string, authors 
 		e.State.Project.Revisions.Quality, orDash(digest), orDash(changeSetID))
 	fmt.Fprintf(&b, "- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n",
 		run.seat.Tool, run.seat.Model, run.seat.Effort, run.lineage, valueOrNull(run.session))
-	fmt.Fprintf(&b, "- **Author under review:** producer (%s, %s, session null)\n",
-		e.State.Project.Settings.Roles["producer"].Tool, distinctLineages(authors))
+	authorRole := "producer"
+	if kind == "repair" {
+		authorRole = "repair_producer"
+	}
+	fmt.Fprintf(&b, "- **Author under review:** %s (%s, %s, session null)\n",
+		authorRole, e.State.Project.Settings.Roles[authorRole].Tool, distinctLineages(authors))
 	fmt.Fprintf(&b, "- **Independence:** %s — judged against each item's recorded author lineage\n", run.independence)
 	fmt.Fprintf(&b, "- **Passes used:** 1 of %d\n", e.State.Project.Settings.Review.DefaultPasses)
 	fmt.Fprintf(&b, "- **Reviewed at:** %s\n", Timestamp(e.Now()))
@@ -712,7 +738,7 @@ func (e *Engine) approvePhase(frozen string, refs map[string][]string, summary s
 // Every configuration check runs before the repair transition is recorded, so a
 // refusal leaves the workflow in a state the user can still act from.
 func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
-	blocking []Finding, authors map[string]string) error {
+	blocking []Finding) error {
 	// The wired repair adapter must be the one the settings configured. The seats
 	// carry the settings' tool identifiers (codex-cli, claude-code); an adapter's
 	// own short name is a different vocabulary and never compared against them.
@@ -733,12 +759,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 			"record an explicit model for the repair_producer seat, then run peerfoil resume")
 	}
 	var verifier provider.Adapter
-	var verifierSeat provider.Seat
 	for index, reviewer := range e.Reviewers {
 		lineage := reviewer.LineageRoot(e.ReviewerSeats[index].Model)
 		if lineage != provider.LineageUnknown && lineage != repairerLineage {
 			verifier = reviewer
-			verifierSeat = e.ReviewerSeats[index]
 			break
 		}
 	}
@@ -829,9 +853,9 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return rejectRepair("the repair run ended without a result; the worktree "+worktree.Branch+" is retained", invokeErr)
 	}
 
-	changes, err := worktree.Changes(ctx)
+	changes, patch, err := worktree.Capture(ctx)
 	if err != nil {
-		return err
+		return rejectRepair("the repair could not be captured; inspect the retained worktree", err)
 	}
 	if len(changes) == 0 {
 		return rejectRepair("the repair run changed nothing; you decide how to proceed", nil)
@@ -845,10 +869,6 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	}
 	if err := rejectSymlinks(worktree.Path, changes); err != nil {
 		return rejectRepair(fmt.Sprintf("the repair was not accepted: %v; the worktree %s is retained", err, worktree.Branch), err)
-	}
-	patch, err := worktree.Patch(ctx)
-	if err != nil {
-		return err
 	}
 	if hits := workspace.ScanSecrets(patch); len(hits) > 0 {
 		reason := "the repair may contain a credential: " + strings.Join(hits, "; ")
@@ -892,12 +912,17 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 
 	// The active phase's checks run again against the repaired revision; earlier
 	// phases are approved and closed, so their evidence is not re-litigated.
+	evidencePath, err := e.Repo.CreateReviewWorktree(ctx, repairCommit, "repair-evidence", e.WorktreeParent)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
 	var failed []string
 	for _, task := range e.State.Plan.ActiveTasks() {
 		if task.Status != "accepted" && task.Status != "validated" {
 			continue
 		}
-		_, taskFailed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, repairCommit)
+		_, taskFailed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, repairCommit)
 		if err != nil {
 			reason := fmt.Sprintf("an evidence command for %s could not run after the repair: %v", task.ID, err)
 			if pauseErr := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); pauseErr != nil {
@@ -914,53 +939,25 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 		return errs.New(errs.Evidence, reason, "the worktree "+worktree.Branch+" is retained; you decide how to proceed")
 	}
-	if err := e.AppendTransition(Review, map[string][]string{"change_sets": {changeSetID}},
+	checkpoint := repairVerification{
+		PhaseReview: phaseReviewID, ChangeSet: changeSetID, Task: lastTask,
+		Revisions: e.State.Project.Revisions, Base: frozen, Source: repairCommit,
+		Author: changeSet.Author, Findings: blocking,
+	}
+	if err := e.saveRepairVerification(&checkpoint); err != nil {
+		return err
+	}
+	if err := e.AppendTransition(Review, map[string][]string{"change_sets": {changeSetID}, "phase_reviews": {phaseReviewID}},
 		"Repair checks pass; fresh different-family verification runs next.", &repairCommit); err != nil {
 		return err
 	}
-
-	repairDigest := ""
-	if tree, err := e.Repo.TreeDigest(ctx, repairCommit); err == nil {
-		sum := sha256.Sum256(tree)
-		repairDigest = hex.EncodeToString(sum[:])
-	}
-	// The verifier reads the same directory the repair was committed from, whose
-	// .peerfoil records still predate this phase's work; the capture is already
-	// committed, so refreshing the records here cannot contaminate the change set.
-	if err := e.refreshRecordsInCheckout(worktree.Path); err != nil {
-		return err
-	}
-	verifyPacket := e.buildReviewPacket("repair", repairCommit, repairDigest, blocking)
-	verifyRun, err := e.runReviewer(ctx, verifier, verifierSeat, "repair", verifyPacket, worktree.Path, repairCommit, authors, repairDigest, changeSetID)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(e.Out, "Repair verification by %s: %s.\n", verifyRun.reviewerName, verifyRun.answer.Decision)
-	// Approval needs an independent verification, not just an approve word: the
-	// verifier's recorded lineage must differ from every material author's.
-	if verifyRun.answer.Decision != "approve" || verifyRun.independence != "independent" {
-		reason := "the repair did not receive an independent approval; you decide how to proceed"
-		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); err != nil {
-			return err
-		}
-		return errs.New(errs.Policy, reason,
-			"read .peerfoil/reviews/"+verifyRun.recordID+".md and continue with the PeerFoil skills")
-	}
-
-	integrationTip, err := e.Repo.Integrate(ctx, worktree, repairCommit)
-	if err != nil {
+	if err := e.resumeRepairVerification(ctx, e.reviewBoundary()); err != nil {
 		return err
 	}
 	if err := e.Repo.CleanupWorktree(ctx, worktree); err != nil {
 		fmt.Fprintf(e.Out, "Note: the repair worktree was not removed: %v\n", err)
 	}
-	// The approval names everything that proves it: the phase review, the fresh
-	// verification from the other family, and the repaired change set.
-	return e.approvePhase(integrationTip, map[string][]string{
-		"phase_reviews": {phaseReviewID},
-		"reviews":       {verifyRun.recordID},
-		"change_sets":   {changeSetID},
-	}, "Phase approved after a verified repair; see "+phaseReviewID+", "+verifyRun.recordID+", and "+changeSetID+".")
+	return nil
 }
 
 func (e *Engine) lastValidatedTaskID() string {

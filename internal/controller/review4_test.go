@@ -162,9 +162,8 @@ func TestPhaseReviewRefusesAMovedIntegrationBranch(t *testing.T) {
 	}
 }
 
-// TestProductionGateNeedsThePositiveAcceptancePhrase pins that a reduced-assurance
-// review only counts with the method's explicit acceptance wording; a recorded
-// refusal that merely contains the word "accept" is not authorization.
+// TestProductionGateNeedsThePositiveAcceptancePhrase checks that a reduced review
+// requires positive, dated acceptance in both its reason and its history reference.
 func TestProductionGateNeedsThePositiveAcceptancePhrase(t *testing.T) {
 	root := setupFixtureRepo(t)
 	// The architecture review is the right target: a plan review has a change-review
@@ -189,10 +188,18 @@ func TestProductionGateNeedsThePositiveAcceptancePhrase(t *testing.T) {
 		t.Fatalf("err = %v, want the production gate to refuse a recorded refusal", err)
 	}
 
-	rewrite("the user accepted Reduced assurance at 2026-10-21T00:00:00Z")
+	rewrite("No different-family reviewer was available; the user accepted Reduced assurance at 2026-10-20T14:29:00Z")
 	engine = testEngine(t, root, goodProducer(t), nil, nil, nil)
-	if err := engine.ProduceNext(context.Background()); err != nil {
+	if err := engine.productionGate(); err == nil {
+		t.Fatal("acceptance prose without matching history authorized production")
+	}
+	engine.State.History[2].Summary = "User accepted Reduced assurance for rv-0001 at 2026-10-20T14:29:00Z; plan revision 0, architecture revision 1, quality revision 1."
+	if err := engine.productionGate(); err != nil {
 		t.Fatalf("a recorded acceptance was refused: %v", err)
+	}
+	engine.State.History[2].Refs["reviews"] = []string{"rv-9999"}
+	if err := engine.productionGate(); err == nil {
+		t.Fatal("acceptance of another draft authorized production")
 	}
 }
 

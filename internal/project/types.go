@@ -73,23 +73,37 @@ type RulesSource struct {
 	Source string `json:"source,omitempty"`
 }
 
+// Environment retains the setup checks and their UTC check time across state saves.
+type Environment struct {
+	CheckedAt string             `json:"checked_at"`
+	Checks    []EnvironmentCheck `json:"checks"`
+}
+
+// EnvironmentCheck is one recorded prerequisite result; detail is bounded by the schema.
+type EnvironmentCheck struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
+}
+
 // Project is .peerfoil/project.json.
 type Project struct {
-	RecordType    string      `json:"record_type"`
-	SchemaVersion int         `json:"schema_version"`
-	ProjectID     string      `json:"project_id"`
-	Name          string      `json:"name"`
-	Goal          string      `json:"goal"`
-	Pack          Pack        `json:"pack"`
-	Profile       string      `json:"profile"`
-	RulesSource   RulesSource `json:"rules_source"`
-	Assurance     string      `json:"assurance"`
-	Release       string      `json:"release"`
-	CreatedAt     string      `json:"created_at"`
-	UpdatedAt     string      `json:"updated_at"`
-	Workflow      Workflow    `json:"workflow"`
-	Revisions     Revisions   `json:"revisions"`
-	Settings      Settings    `json:"settings"`
+	RecordType    string       `json:"record_type"`
+	SchemaVersion int          `json:"schema_version"`
+	ProjectID     string       `json:"project_id"`
+	Name          string       `json:"name"`
+	Goal          string       `json:"goal"`
+	Pack          Pack         `json:"pack"`
+	Profile       string       `json:"profile"`
+	RulesSource   RulesSource  `json:"rules_source"`
+	Assurance     string       `json:"assurance"`
+	Release       string       `json:"release"`
+	CreatedAt     string       `json:"created_at"`
+	UpdatedAt     string       `json:"updated_at"`
+	Workflow      Workflow     `json:"workflow"`
+	Revisions     Revisions    `json:"revisions"`
+	Settings      Settings     `json:"settings"`
+	Environment   *Environment `json:"environment,omitempty"`
 }
 
 // EvidenceRequirement names one kind of evidence a task needs.

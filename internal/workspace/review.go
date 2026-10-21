@@ -26,6 +26,9 @@ var reviewNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,40}[a-z0-9])?$
 // CreateReviewWorktree checks out the frozen commit in a detached worktree under
 // parentDir. It creates no branch, so cleanup removes only the worktree itself.
 func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir string) (string, error) {
+	if err := r.CheckTree(ctx, commit); err != nil {
+		return "", err
+	}
 	if !reviewNamePattern.MatchString(name) {
 		return "", errs.New(errs.Validation,
 			fmt.Sprintf("%q is not a valid review worktree name", name), "")

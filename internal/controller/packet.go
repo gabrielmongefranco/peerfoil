@@ -157,6 +157,9 @@ func ParseHandoff(text string, task *project.Task, planRevision, architectureRev
 			break
 		}
 	}
+	if handoff.Blocker != nil && len(*handoff.Blocker) > 2000 {
+		problems = append(problems, "blocker is longer than 2,000 characters")
+	}
 	seen := map[string]bool{}
 	for _, path := range handoff.ChangedPaths {
 		if len(path) > 2000 {

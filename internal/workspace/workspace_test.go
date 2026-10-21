@@ -415,6 +415,9 @@ func TestCommitAndIntegrate(t *testing.T) {
 	}
 
 	writeFile(t, wt.Path, "feature.txt", "feature content\n")
+	if _, err := wt.Patch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	c1, err := wt.Commit(ctx, "Add the feature file")
 	if err != nil {
 		t.Fatalf("Commit: %v", err)
@@ -445,6 +448,9 @@ func TestCommitAndIntegrate(t *testing.T) {
 
 	// A second commit on the same task fast-forwards the existing branch.
 	writeFile(t, wt.Path, "feature.txt", "feature content, improved\n")
+	if _, err := wt.Patch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	c2, err := wt.Commit(ctx, "Improve the feature file")
 	if err != nil {
 		t.Fatal(err)
@@ -462,6 +468,9 @@ func TestCommitAndIntegrate(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, otherWt.Path, "other.txt", "unrelated work\n")
+	if _, err := otherWt.Patch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	c3, err := otherWt.Commit(ctx, "Unrelated task work")
 	if err != nil {
 		t.Fatal(err)

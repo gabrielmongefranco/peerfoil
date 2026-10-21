@@ -25,6 +25,7 @@ import (
 	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
 	"github.com/gabrielmongefranco/peerfoil/internal/project"
 	"github.com/gabrielmongefranco/peerfoil/internal/provider"
+	"github.com/gabrielmongefranco/peerfoil/internal/redact"
 	"github.com/gabrielmongefranco/peerfoil/internal/store"
 	"github.com/gabrielmongefranco/peerfoil/internal/workspace"
 )
@@ -224,7 +225,14 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
-	evidenceIDs, failed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, taskCommit)
+	// Checks receive a fresh checkout so later writer edits cannot supply evidence
+	// for different committed bytes.
+	evidencePath, err := e.Repo.CreateReviewWorktree(ctx, taskCommit, "task-evidence", e.WorktreeParent)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
+	evidenceIDs, failed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, taskCommit)
 	if err != nil {
 		// The workflow is already in validate, which resume refuses as a boundary,
 		// so a runner failure pauses with the task blocked instead of stranding it.
@@ -448,12 +456,12 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 	if handoff.Result == "blocked" {
 		blocker := "the producer reported itself blocked"
 		if handoff.Blocker != nil && *handoff.Blocker != "" {
-			blocker = *handoff.Blocker
+			blocker, _ = redact.ScrubString(*handoff.Blocker)
 		}
 		return nil, errs.New(errs.Provider, "the producer reported no completed work: "+blocker, "")
 	}
 
-	changes, err := worktree.Changes(ctx)
+	changes, patch, err := worktree.Capture(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -481,10 +489,6 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 		}
 	}
 
-	patch, err := worktree.Patch(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if hits := workspace.ScanSecrets(patch); len(hits) > 0 {
 		return nil, errs.New(errs.Policy,
 			"the produced change may contain a credential: "+strings.Join(hits, "; "),

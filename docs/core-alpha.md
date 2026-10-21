@@ -77,6 +77,18 @@ discovered work is recorded in the change set for change intake instead of being
 A check command that cannot run at all is recorded as blocked evidence, and the
 workflow pauses so you can fix the environment and try again.
 
+Reduced assurance requires a dated acceptance for the exact review in both the review
+reason and history. A phrase alone cannot authorize production. The
+[review reference](../plugins/peerfoil/references/review.md) defines the shared format.
+Saving workflow progress preserves setup results, including the host-sandbox check.
+History identifiers must increase without duplicates.
+
+Core rejects tracked symbolic links and submodules before creating a writer's checkout,
+including when Windows would turn a link into an ordinary file. Capture freezes one Git
+tree. Scope checks, secret scanning, and the resulting commit use that same tree.
+Checks run in a separate checkout of the captured commit, so later writer edits cannot
+enter the accepted patch or supply its evidence.
+
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh
 Codex reviewer read the same frozen revision, with the current change-set, evidence,
@@ -91,6 +103,10 @@ result. A repair the controller refuses, such as an out-of-scope edit, is record
 blocked capture and the workflow pauses for you. Material disagreement stops for you
 instead of inventing consensus.
 
+Review findings and remaining-risk text are scrubbed before being saved. Producer
+blocker text is limited to 2,000 bytes and scrubbed before entering errors or records.
+Redaction recognizes common credential formats; it cannot identify every sensitive value.
+
 ### Recovery after an interruption
 
 Before every operation that changes work, the producer and repair runs, `peerfoil`
@@ -103,6 +119,20 @@ retained worktree and captured records for inspection, and pauses. Accepted reco
 written atomically, so a crash leaves the old complete file or the new complete file,
 never a torn one. The journal is a cache: deleting it loses recovery convenience, never
 project truth, which stays in Git under `.peerfoil/`.
+
+A repair that passes its checks records a pending verification in its phase review.
+If the verifier times out or returns an invalid answer, run `peerfoil resume` to retry
+that verification once. The retry uses the captured repair commit and its recorded
+author, even when a different model family produced the original phase. It creates a
+fresh read-only checkout and does not run another writer or ordinary phase review.
+Two failed or interrupted verification attempts pause for your decision. The original
+repair worktree remains available for inspection after a failed attempt.
+
+The recovery section retains the repair's findings, change set, author, base and source
+commits, accepted revisions, and attempt count. Core checks those against history and
+the change set before retrying. A missing review revision or changed branch stops the
+retry. Guided records may still use a null source commit with retained patch evidence;
+Core requires a full commit at its own review boundary.
 
 One narrow window is a known Alpha limit: a crash exactly between the history append
 and the project write leaves `project.json` one transition behind `history.jsonl`.
@@ -136,5 +166,6 @@ and is not enforced.
 - [Phase 2 implementation plan](plans/phase-2-core-alpha.md)
 - [Setup for the Skills release](setup.md)
 - [Fixtures to try the journey on](../fixtures/README.md)
+- [Review and reduced-assurance records](../plugins/peerfoil/references/review.md)
 
 [Return to the PeerFoil README](../README.md)

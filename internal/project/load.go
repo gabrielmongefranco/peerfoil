@@ -191,7 +191,21 @@ func (s *State) semanticProblems() []string {
 	// so without this check a recorded pause could skip lifecycle conditions, for
 	// example define to paused to approve.
 	pausedFrom := ""
+	previousID := ""
 	for index, transition := range s.History {
+		// Compare normalized decimal strings so arbitrarily long schema-valid IDs
+		// cannot overflow an integer or alias an earlier ID through leading zeroes.
+		id := strings.TrimLeft(strings.TrimPrefix(transition.TransitionID, "tr-"), "0")
+		if id == "" || (index > 0 && (len(id) < len(previousID) ||
+			(len(id) == len(previousID) && id <= previousID))) {
+			add("history.jsonl line %d: transition identifiers must be unique and increasing", index+1)
+		}
+		previousID = id
+		if transition.ToState == "review" && transition.Actor.Model != nil &&
+			*transition.Actor.Model == "peerfoil-core" &&
+			(transition.SourceRevision == nil || *transition.SourceRevision == "") {
+			add("history.jsonl line %d: a controller review boundary requires a source revision", index+1)
+		}
 		if transition.ProjectID != s.Project.ProjectID {
 			add("history.jsonl line %d: project_id %q differs from %q", index+1, transition.ProjectID, s.Project.ProjectID)
 		}
