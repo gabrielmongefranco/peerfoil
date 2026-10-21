@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/decision-log.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Records the accepted engineering decisions that shape PeerFoil's implementation.
 Notes: Each entry is short. A decision changes only through a new entry that supersedes it.
 
@@ -58,6 +58,7 @@ that supersedes the old one, never by editing history.
 | D-0026 | Phase review record with item-level primary reviewers and a merged finding list | Accepted | Phase 1, Stage 4 |
 | D-0027 | Repairer chosen by rule; reviewer agreement stands in for the repair task's plan review | Accepted | Phase 1, Stage 4 |
 | D-0028 | Lessons are verified at phase review and promoted only with the user; hints may stay unverified | Accepted | Phase 1, Stage 4 |
+| D-0029 | PeerFoil recommends and detects the host sandbox; it never provides or enforces one | Accepted | Phase 1, Stage 5 |
 
 ## D-0001 — Plugin location
 
@@ -540,6 +541,27 @@ that supersedes the old one, never by editing history.
 - **Consequences:** The lesson template gains `Verification` and `Promoted to` lines;
   `plugins/peerfoil/references/lessons.md` holds the procedure; the phase packet
   asks for lesson verdicts. Core keeps the same states.
+
+## D-0029 — Host sandbox recommendation and detection
+
+- **Status:** Accepted on 2026-10-21. Resolves the proposal in repository issue 4.
+- **Decision:** PeerFoil recommends the Claude Code Bash sandbox for low-supervision
+  runs and detects it without providing or enforcing one. The plugin documents a starter
+  `.claude/settings.json` fragment, `setup` and the production preflight report the
+  sandbox status with the `host-sandbox` environment check, and a missing sandbox asks
+  the user to confirm once per session instead of blocking. The architecture's trust
+  section states that this is a host feature PeerFoil detects and reports. Core performs
+  the same check programmatically in `peerfoil doctor`.
+- **Options considered:** Building or configuring a sandbox inside PeerFoil; blocking
+  production when the sandbox is absent; saying nothing.
+- **Reason:** The architecture keeps PeerFoil out of the sandbox business, but the host
+  tool already ships one aimed exactly at reduced-supervision runs. Recommending and
+  detecting it raises safety without new scope. Blocking would make native Windows,
+  where the sandbox needs WSL2, unusable.
+- **Consequences:** `plugins/peerfoil/references/sandbox.md` holds the fragment, the
+  check, and the honest limits: no native Windows support, a best-effort network
+  allowlist on WSL2, and hostname-only filtering. The setup skill and production
+  reference say so. Machine-level hardening stays outside PeerFoil.
 
 ## Conclusion
 

@@ -1,6 +1,6 @@
 ---
 name: setup
-description: This skill should be used when the user runs /peerfoil:setup or asks whether their computer and repository are ready for PeerFoil. It checks Git, the repository's AGENTS.md, Claude Code, the Codex CLI and its login, the Codex MCP server registration in Claude Code, the personal or work profile, and the tools declared by the selected project pack, then reports each result honestly with one next step. It finds Codex and Claude Code on the PATH or inside IDE extension folders.
+description: This skill should be used when the user runs /peerfoil:setup or asks whether their computer and repository are ready for PeerFoil. It checks Git, the repository's AGENTS.md, Claude Code, the Codex CLI and its login, the Codex MCP server registration in Claude Code, the host sandbox, the personal or work profile, and the tools declared by the selected project pack, then reports each result honestly with one next step. It finds Codex and Claude Code on the PATH or inside IDE extension folders.
 license: GPL-3.0-or-later
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(git --version), Bash(git rev-parse *), Bash(git status *), Bash(codex --version), Bash(codex login status), Bash(claude --version), Bash(claude mcp list), PowerShell(git --version), PowerShell(git rev-parse *), PowerShell(git status *), PowerShell(codex --version), PowerShell(codex login status), PowerShell(claude --version), PowerShell(claude mcp list)
@@ -10,8 +10,8 @@ This file is part of PeerFoil.
 plugins/peerfoil/skills/setup/SKILL.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
-Summary: Guides the PeerFoil setup check for prerequisites, Codex access, profile, and pack tools.
+Last Modified: 2026-10-21
+Summary: Guides the PeerFoil setup check for prerequisites, Codex access, the host sandbox, profile, and pack tools.
 Notes: Assurance is Guided. This skill reports; it installs nothing and changes the user's Claude Code configuration only with confirmation.
 
 Copyright © 2026 Gabriel Mongefranco
@@ -83,7 +83,13 @@ found file with `--version` as its own command.
    the user. Otherwise ask whether this project is `personal` or `work`, using
    `AskUserQuestion`. Explain in one sentence that both profiles follow the repository's
    own `AGENTS.md` and that PeerFoil never edits it. Report Pass with the chosen profile.
-9. **Pack tools.** If `.peerfoil/project.json` exists, read its `pack.id`, then read
+9. **Host sandbox.** Follow `${CLAUDE_PLUGIN_ROOT}/references/sandbox.md`, section 2.
+   Report Pass when the merged Claude Code settings enable the sandbox, Not verified
+   when they do not or cannot be read, and Not verified with the note "native Windows;
+   needs WSL2" on native Windows. This check informs; it never blocks, and setup never
+   edits the host's settings. When the sandbox is absent, the next step is the settings
+   fragment in that reference, section 1.
+10. **Pack tools.** If `.peerfoil/project.json` exists, read its `pack.id`, then read
    `${CLAUDE_PLUGIN_ROOT}/packs/<pack id>/pack.json`.
    - Run every entry in `tools[]` using its `command` array exactly. A missing required
      tool is Fail; a missing optional tool is Not verified.
@@ -98,8 +104,8 @@ found file with `--version` as its own command.
 - If `.peerfoil/project.json` exists, update its `environment` field with `checked_at`
   (UTC, ISO 8601, second precision) and one `checks[]` entry per check above. Use the
   check names `repository`, `repository-instructions`, `git`, `claude-code`,
-  `codex-cli`, `codex-login`, `codex-mcp`, `profile`, and one entry per pack tool by tool
-  name. Map the statuses to `pass`, `fail`, `not-verified`, and `skipped`. Keep each
+  `codex-cli`, `codex-login`, `codex-mcp`, `profile`, `host-sandbox`, and one entry per
+  pack tool by tool name. Map the statuses to `pass`, `fail`, `not-verified`, and `skipped`. Keep each
   `detail` under 300 characters and record versions only, never paths, user names, or
   tokens. Set `profile` if the user chose it now. Set `updated_at`.
 - If no project record exists, write nothing. Setup never creates files.

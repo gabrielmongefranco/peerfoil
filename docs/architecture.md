@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/architecture.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
 Notes: See README for an overview and full license information.
 
@@ -421,6 +421,11 @@ PeerFoil enforces:
 PeerFoil assumes the workspace, its installed tools, and invoked model applications are
 trusted. Version 1.0 does not provide an operating-system sandbox. Users who open untrusted
 projects need an outside disposable environment.
+
+PeerFoil recommends enabling the host tool's own sandbox where one exists, such as
+the Claude Code Bash sandbox on macOS, Linux, and WSL2, and checks for it before
+low-supervision phases. This is a host feature PeerFoil detects and reports, not a
+boundary PeerFoil provides or enforces.
 
 Git worktrees and Dagger-style build environments may improve change isolation or
 reproducibility. They are not treated as hostile-code security boundaries.

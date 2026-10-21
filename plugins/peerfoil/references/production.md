@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/references/production.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Guides one bounded production task, captures provenance, and resumes from retained files.
 Copyright © 2026 Gabriel Mongefranco
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -53,6 +53,10 @@ This is a written host procedure, not a controller or a crash-recovery guarantee
 6. Resolve the configured producer seat and login. This build supports `codex-cli`
    production only. An unavailable seat or permission blocks the task; do not silently
    substitute a writer, effort, or model. Apply repository effort rules before defaults.
+7. Once per session, before the first producer call, check the host sandbox following
+   [sandbox.md](sandbox.md), section 2. When the sandbox is absent or unsupported, say
+   so plainly and ask the user to confirm before proceeding; record the confirmation in
+   the transition's history line. The check informs and never blocks on its own.
 
 ## 2. Persist the launch, then send the packet
 
