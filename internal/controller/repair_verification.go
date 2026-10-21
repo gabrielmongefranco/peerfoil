@@ -61,7 +61,7 @@ func (e *Engine) saveRepairVerification(checkpoint *repairVerification) error {
 	if err != nil {
 		return errs.Wrap(errs.Configuration, "reading the repair's phase review", err)
 	}
-	prefix, _, _ := strings.Cut(string(raw), repairVerificationHeading)
+	prefix, _, _ := strings.Cut(strings.ReplaceAll(string(raw), "\r\n", "\n"), repairVerificationHeading)
 	data, err := json.MarshalIndent(checkpoint, "", "  ")
 	if err != nil {
 		return errs.Wrap(errs.Internal, "encoding repair verification recovery", err)
@@ -87,7 +87,7 @@ func (e *Engine) loadRepairVerification(boundary *project.Transition) (*repairVe
 	if err != nil {
 		return nil, errs.Wrap(errs.Configuration, "reading pending repair verification", err)
 	}
-	_, section, found := strings.Cut(string(raw), repairVerificationHeading)
+	_, section, found := strings.Cut(strings.ReplaceAll(string(raw), "\r\n", "\n"), repairVerificationHeading)
 	section = strings.TrimSpace(section)
 	// Two bounded reviewer answers gain indentation and provenance when retained.
 	if !found || len(section) > 8*maxHandoffBytes || !strings.HasPrefix(section, "```json\n") || !strings.HasSuffix(section, "\n```") {
@@ -116,11 +116,12 @@ func (e *Engine) loadRepairVerification(boundary *project.Transition) (*repairVe
 	author := checkpoint.Author
 	authorLine := fmt.Sprintf("- **Author:** %s (%s, %s, %s, %s, session %s)\n",
 		author.Role, author.Tool, deref(author.Model), deref(author.Effort), author.LineageRoot, deref(author.Session))
+	changeText := strings.ReplaceAll(string(change), "\r\n", "\n")
 	for _, line := range []string{
 		"- **Capture status:** captured\n", "- **Task:** " + checkpoint.Task + "\n",
 		"- **Base revision:** " + checkpoint.Base + "\n", "- **Source revision:** " + checkpoint.Source + "\n", authorLine,
 	} {
-		if !strings.Contains(string(change), "\n"+line) {
+		if !strings.Contains(changeText, "\n"+line) {
 			return invalid()
 		}
 	}

@@ -113,7 +113,7 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 		if err != nil {
 			return nil, errs.Wrap(errs.Configuration, "reading "+name, err)
 		}
-		text := string(raw)
+		text := strings.ReplaceAll(string(raw), "\r\n", "\n")
 		record := reviewRecord{ID: strings.TrimSuffix(name, ".md")}
 		if match := reviewKindLine.FindStringSubmatch(text); match != nil {
 			record.Kind = match[1]

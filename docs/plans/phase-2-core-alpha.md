@@ -794,6 +794,12 @@ request retains the final local and CI outcomes. The initial integration test al
 needed the new explicit capture call before commit; its integration assertions remain
 unchanged.
 
+The first follow-up CI run passed 11 of 12 jobs. Windows exposed a review-date parser
+that rejected carriage-return/line-feed (CRLF) endings. Review and repair recovery text
+now normalize line endings before parsing. The regressions check LF and CRLF records
+and confirm a recovery save keeps exactly one recovery section;
+the exact review, timestamp, and revision requirements remain unchanged.
+
 Lesson: retain the exact capture and repair identity across retries. Re-reading a live
 checkout or choosing the original producer's lineage can change what the controller
 claims to have validated or independently reviewed.

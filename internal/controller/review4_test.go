@@ -197,6 +197,18 @@ func TestProductionGateNeedsThePositiveAcceptancePhrase(t *testing.T) {
 	if err := engine.productionGate(); err != nil {
 		t.Fatalf("a recorded acceptance was refused: %v", err)
 	}
+	// Git can check Markdown out with CRLF on Windows; acceptance stays identical.
+	raw, err := os.ReadFile(architectureReview)
+	if err != nil {
+		t.Fatal(err)
+	}
+	crlf := strings.ReplaceAll(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n", "\r\n")
+	if err := os.WriteFile(architectureReview, []byte(crlf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.productionGate(); err != nil {
+		t.Fatalf("CRLF changed the recorded acceptance: %v", err)
+	}
 	engine.State.History[2].Refs["reviews"] = []string{"rv-9999"}
 	if err := engine.productionGate(); err == nil {
 		t.Fatal("acceptance of another draft authorized production")

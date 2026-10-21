@@ -223,11 +223,28 @@ func TestRepairRecoveryRetainsTwoMaximumReviewAnswers(t *testing.T) {
 	if err := engine.saveRepairVerification(&checkpoint); err != nil {
 		t.Fatal(err)
 	}
+	for _, record := range []string{path, filepath.Join(engine.State.Dir, "evidence", checkpoint.ChangeSet+".md")} {
+		raw, err := os.ReadFile(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		crlf := strings.ReplaceAll(strings.ReplaceAll(string(raw), "\r\n", "\n"), "\n", "\r\n")
+		if err := os.WriteFile(record, []byte(crlf), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	boundary := &project.Transition{SourceRevision: &frozen, PlanRevision: checkpoint.Revisions.Plan,
 		Refs: map[string][]string{"phase_reviews": {checkpoint.PhaseReview}, "change_sets": {checkpoint.ChangeSet}}}
 	loaded, err := engine.loadRepairVerification(boundary)
 	if err != nil || len(loaded.Findings) != 2*maxFindings {
 		t.Fatalf("large valid recovery record: %v", err)
+	}
+	if err := engine.saveRepairVerification(loaded); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil || strings.Count(string(raw), repairVerificationHeading) != 1 {
+		t.Fatalf("saving a CRLF record duplicated its recovery section: %v", err)
 	}
 }
 
