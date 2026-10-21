@@ -15,8 +15,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 // FindCodex returns candidate Codex CLI paths, best first: the PATH entry, then the
@@ -47,10 +50,45 @@ func findProgram(name string, globs []string) []string {
 		}
 		found = append(found, matches...)
 	}
-	// Extension folders carry the version in the path, so a descending sort puts the
-	// newest build first.
-	sort.Sort(sort.Reverse(sort.StringSlice(found)))
+	// Extension folders carry the version in the path; a numeric comparison puts the
+	// newest build first, which plain text ordering would not (0.9 sorts after 0.10).
+	sort.SliceStable(found, func(a, b int) bool { return newerVersionPath(found[a], found[b]) })
 	return append(candidates, found...)
+}
+
+// pathVersionPattern finds a dotted numeric version after a separator, such as the
+// "2.1.260" in "anthropic.claude-code-2.1.260" or a version-named folder.
+var pathVersionPattern = regexp.MustCompile(`[-/\\.]([0-9]+(?:\.[0-9]+)+)`)
+
+// pathVersion returns the numeric segments of the last version named in a path, or
+// nil when the path names none.
+func pathVersion(path string) []int {
+	matches := pathVersionPattern.FindAllStringSubmatch(path, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	parts := strings.Split(matches[len(matches)-1][1], ".")
+	version := make([]int, len(parts))
+	for index, part := range parts {
+		version[index], _ = strconv.Atoi(part)
+	}
+	return version
+}
+
+// newerVersionPath reports whether path a names a newer version than path b, comparing
+// each numeric segment; ties fall back to descending text order so the sort stays
+// deterministic for paths without a version.
+func newerVersionPath(a, b string) bool {
+	va, vb := pathVersion(a), pathVersion(b)
+	for index := 0; index < len(va) && index < len(vb); index++ {
+		if va[index] != vb[index] {
+			return va[index] > vb[index]
+		}
+	}
+	if len(va) != len(vb) {
+		return len(va) > len(vb)
+	}
+	return a > b
 }
 
 func codexGlobs() []string {

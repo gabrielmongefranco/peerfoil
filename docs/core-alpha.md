@@ -69,7 +69,10 @@ changed paths against the task's allowed paths, scans the patch's added lines fo
 credentials (removing an already committed credential is allowed, though that
 credential still needs rotation), runs
 the required checks against the exact produced commit, and integrates passing work onto
-the `peerfoil/integration` branch. Your own branch and checkout never change.
+the `peerfoil/integration` branch. Your own branch and checkout never change. A producer
+that reports a partial result, or that discovers new work along the way, stops the
+workflow with its change captured for inspection: nothing incomplete is integrated, and
+discovered work is recorded in the change set for change intake instead of being lost.
 
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh

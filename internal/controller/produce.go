@@ -157,7 +157,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	}
 
 	// Capture before anything else looks at the work.
-	captureErr := e.capture(ctx, worktree, changeSet, task, outcome.Text, baseCommit)
+	handoff, captureErr := e.capture(ctx, worktree, changeSet, task, outcome.Text, baseCommit)
 	if captureErr != nil {
 		_, _ = e.Journal.Result("producer", changeSetID, store.StatusFailed, map[string]string{"reason": "capture"})
 		changeSet.CaptureStatus = "blocked"
@@ -170,6 +170,36 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 			return err
 		}
 		return captureErr
+	}
+	// A partial result is captured work, never completed work: the patch and record
+	// stay for inspection, and the task cannot be validated or integrated until the
+	// remaining work is routed through change intake.
+	if handoff.Result == "partial" {
+		_, _ = e.Journal.Result("producer", changeSetID, store.StatusFailed, map[string]string{"reason": "partial"})
+		task.Status = "blocked"
+		_ = e.SavePlan()
+		reason := fmt.Sprintf("the producer finished only part of %s; the partial change is captured as %s and the worktree %s is retained",
+			task.ID, changeSetID, worktree.Branch)
+		if err := e.Pause(reason, map[string][]string{"tasks": {task.ID}, "change_sets": {changeSetID}}); err != nil {
+			return err
+		}
+		return errs.New(errs.Provider, reason,
+			"inspect the captured patch, then route the remaining work through the PeerFoil skills change intake")
+	}
+	// Discovered work must reach change intake, not evaporate: the entries are in the
+	// change-set record, and the workflow stops before integration so the plan can
+	// absorb them first.
+	if len(handoff.DiscoveredWork) > 0 {
+		_, _ = e.Journal.Result("producer", changeSetID, store.StatusSucceeded, map[string]string{"discovered": fmt.Sprint(len(handoff.DiscoveredWork))})
+		task.Status = "blocked"
+		_ = e.SavePlan()
+		reason := fmt.Sprintf("the producer finished %s but discovered %d new piece(s) of work, recorded in %s; the change is captured and the worktree %s is retained",
+			task.ID, len(handoff.DiscoveredWork), changeSetID, worktree.Branch)
+		if err := e.Pause(reason, map[string][]string{"tasks": {task.ID}, "change_sets": {changeSetID}}); err != nil {
+			return err
+		}
+		return errs.New(errs.Policy, reason,
+			"route the discovered work through the PeerFoil skills change intake, then run peerfoil start")
 	}
 	if _, err := e.Journal.Result("producer", changeSetID, store.StatusSucceeded, nil); err != nil {
 		return err
@@ -394,32 +424,32 @@ func (e *Engine) enterReview(sourceRevision, lastTask string, evidenceIDs []stri
 // capture validates the handoff, checks scope, scans for secrets, and retains the
 // patch and provenance before any other agent can edit the work.
 func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, changeSet *ChangeSet,
-	task *project.Task, handoffText, baseCommit string) error {
+	task *project.Task, handoffText, baseCommit string) (*Handoff, error) {
 	handoff, err := ParseHandoff(handoffText, task,
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, baseCommit)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if handoff.Result == "blocked" {
 		blocker := "the producer reported itself blocked"
 		if handoff.Blocker != nil && *handoff.Blocker != "" {
 			blocker = *handoff.Blocker
 		}
-		return errs.New(errs.Provider, "the producer reported no completed work: "+blocker, "")
+		return nil, errs.New(errs.Provider, "the producer reported no completed work: "+blocker, "")
 	}
 
 	changes, err := worktree.Changes(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(changes) == 0 {
-		return errs.New(errs.Provider, "the producer reported work but changed nothing", "")
+		return nil, errs.New(errs.Provider, "the producer reported work but changed nothing", "")
 	}
 	if err := workspace.CheckScope(changes, task.AllowedPaths); err != nil {
-		return err
+		return nil, err
 	}
 	if err := rejectSymlinks(worktree.Path, changes); err != nil {
-		return err
+		return nil, err
 	}
 	// The actual diff decides what changed; the handoff's list is only cross-checked.
 	actual := map[string]bool{}
@@ -431,24 +461,24 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 	}
 	for _, claimed := range handoff.ChangedPaths {
 		if !actual[filepath.ToSlash(claimed)] {
-			return errs.New(errs.Provider,
+			return nil, errs.New(errs.Provider,
 				fmt.Sprintf("the handoff claims a change to %s that Git does not show", claimed), "")
 		}
 	}
 
 	patch, err := worktree.Patch(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if hits := workspace.ScanSecrets(patch); len(hits) > 0 {
-		return errs.New(errs.Policy,
+		return nil, errs.New(errs.Policy,
 			"the produced change may contain a credential: "+strings.Join(hits, "; "),
 			"inspect the retained worktree and remove the secret; a committed secret must be rotated")
 	}
 	patchName := changeSet.ID + ".patch"
 	patchPath := filepath.Join(e.State.Dir, "evidence", patchName)
 	if err := fsx.WriteFileAtomic(patchPath, patch, 0o644); err != nil {
-		return err
+		return nil, err
 	}
 	digest := sha256.Sum256(patch)
 
@@ -457,6 +487,7 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 	changeSet.PatchPath = "evidence/" + patchName
 	changeSet.PatchSHA256 = hex.EncodeToString(digest[:])
 	changeSet.Summary = handoff.Summary
+	changeSet.Discovered = handoff.DiscoveredWork
 	for _, change := range changes {
 		kind := map[string]string{"A": "added", "M": "modified", "D": "deleted", "R": "renamed"}[change.Status]
 		if kind == "" {
@@ -464,7 +495,10 @@ func (e *Engine) capture(ctx context.Context, worktree *workspace.Worktree, chan
 		}
 		changeSet.Changed = append(changeSet.Changed, kind+"\t"+change.Path)
 	}
-	return e.WriteChangeSet(changeSet)
+	if err := e.WriteChangeSet(changeSet); err != nil {
+		return nil, err
+	}
+	return handoff, nil
 }
 
 // rejectSymlinks refuses a change set that adds or modifies a symbolic link, because a

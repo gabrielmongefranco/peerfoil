@@ -74,6 +74,19 @@ var validSeverities = map[string]bool{"blocking": true, "major": true, "minor": 
 // changeSetAuthorLine extracts the author lineage from a recorded change set.
 var changeSetAuthorLine = regexp.MustCompile(`(?m)^- \*\*Author:\*\* *[a-z_]+ \(([^)]+)\)`)
 
+// changeSetTaskLine extracts the task a recorded change set belongs to.
+var changeSetTaskLine = regexp.MustCompile(`(?m)^- \*\*Task:\*\* *(\S+)`)
+
+// hasActivePhase reports whether the plan has an active phase to review.
+func hasActivePhase(plan *project.Plan) bool {
+	for _, phase := range plan.Phases {
+		if phase.Status == "active" {
+			return true
+		}
+	}
+	return false
+}
+
 // PhaseReview runs the one fixed two-family review round and, when both reviewers
 // agree on a repair, one guided repair with fresh different-family verification.
 func (e *Engine) PhaseReview(ctx context.Context) error {
@@ -89,6 +102,12 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	}
 	if err := e.unreachableTaskError(); err != nil {
 		return err
+	}
+	// Review and approval act on exactly one active phase; with none, an approval
+	// would update nothing while still being recorded, so the review refuses to start.
+	if !hasActivePhase(e.State.Plan) {
+		return errs.New(errs.Validation, "no phase is active, so there is nothing to review",
+			"a phase becomes active when its plan is accepted; continue with the PeerFoil skills")
 	}
 	if err := e.requireTwoFamilies(); err != nil {
 		return err
@@ -196,7 +215,9 @@ func (e *Engine) requireTwoFamilies() error {
 	return nil
 }
 
-// materialAuthors maps each recorded change set to its author lineage.
+// materialAuthors maps each change set of the active phase to its author lineage.
+// Change sets from earlier approved phases are not under review, so their authors do
+// not count against a reviewer's independence for this phase.
 func (e *Engine) materialAuthors() (map[string]string, error) {
 	dir := filepath.Join(e.State.Dir, "evidence")
 	entries, err := os.ReadDir(dir)
@@ -205,6 +226,10 @@ func (e *Engine) materialAuthors() (map[string]string, error) {
 	}
 	if err != nil {
 		return nil, errs.Wrap(errs.Configuration, "reading the evidence directory", err)
+	}
+	activeTasks := map[string]bool{}
+	for _, task := range e.State.Plan.ActiveTasks() {
+		activeTasks[task.ID] = true
 	}
 	authors := map[string]string{}
 	for _, entry := range entries {
@@ -216,6 +241,14 @@ func (e *Engine) materialAuthors() (map[string]string, error) {
 		if err != nil {
 			return nil, errs.Wrap(errs.Configuration, "reading "+name, err)
 		}
+		// A change set that names a task outside the active phase belongs to an
+		// earlier, closed phase. One that names no task at all stays counted, which
+		// fails toward reduced independence rather than ignoring an unknown author.
+		if match := changeSetTaskLine.FindStringSubmatch(string(raw)); match != nil {
+			if taskID := strings.TrimSpace(match[1]); taskID != "null" && !activeTasks[taskID] {
+				continue
+			}
+		}
 		lineage := provider.LineageUnknown
 		if match := changeSetAuthorLine.FindStringSubmatch(string(raw)); match != nil {
 			fields := strings.Split(match[1], ",")
@@ -226,7 +259,7 @@ func (e *Engine) materialAuthors() (map[string]string, error) {
 		authors[strings.TrimSuffix(name, ".md")] = lineage
 	}
 	if len(authors) == 0 {
-		return nil, errs.New(errs.Validation, "no change sets exist to review", "produce at least one task first")
+		return nil, errs.New(errs.Validation, "no change sets exist to review for the active phase", "produce at least one task first")
 	}
 	return authors, nil
 }

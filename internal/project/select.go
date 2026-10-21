@@ -114,6 +114,12 @@ func (s *State) NextTask() (*Selection, error) {
 	}
 
 	for _, stage := range stagesByOrder(active.Stages) {
+		// A deferred or removed stage was dismissed by an accepted change; running
+		// its tasks would reverse that decision. The loader rejects records that
+		// leave runnable tasks inside such a stage, and selection skips it too.
+		if stage.Status == "deferred" || stage.Status == "removed" {
+			continue
+		}
 		ready := true
 		for _, dependency := range stage.DependsOn {
 			upstream, ok := stagesByID[dependency]

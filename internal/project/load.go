@@ -270,6 +270,15 @@ func planProblems(plan *Plan) []string {
 			seen[stage.ID] = true
 			stageIDs[stage.ID] = true
 			for _, task := range stage.Tasks {
+				// A dismissed stage must carry no live work: running such a task
+				// would reverse the accepted deferral or removal.
+				if stage.Status == "deferred" || stage.Status == "removed" {
+					switch task.Status {
+					case "planned", "ready", "in_progress", "produced":
+						add("%s is %s inside the %s stage %s; defer or remove the task with the stage",
+							task.ID, task.Status, stage.Status, stage.ID)
+					}
+				}
 				if seen[task.ID] {
 					add("duplicate identifier %s", task.ID)
 				}

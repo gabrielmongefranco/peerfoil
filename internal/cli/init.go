@@ -118,6 +118,10 @@ func runInit(ctx context.Context, env *Env, args []string) error {
 	}
 	for path, data := range writes {
 		if err := fsx.WriteFileAtomic(path, data, 0o644); err != nil {
+			// The directory did not exist before this run (checked above), so a
+			// failed write removes only what this run created; a partial .peerfoil
+			// would otherwise block every later init.
+			_ = os.RemoveAll(peerfoilDir)
 			return errs.Wrap(errs.Configuration, "writing "+filepath.Base(path), err)
 		}
 	}

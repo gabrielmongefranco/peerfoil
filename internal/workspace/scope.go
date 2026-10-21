@@ -192,9 +192,20 @@ func ScanSecrets(patch []byte) []string {
 		return nil
 	}
 	var hits []string
+	// Hunk state decides what a "+" prefix means: before the first "@@" of a file,
+	// "+++" is the new-file header; inside a hunk, every "+" line is added content,
+	// including an added line whose own text begins with "++".
+	inHunk := false
 	for i, line := range bytes.Split(patch, []byte("\n")) {
-		// In a unified diff, "+" marks added content and "+++" marks the file header.
-		if !bytes.HasPrefix(line, []byte("+")) || bytes.HasPrefix(line, []byte("+++")) {
+		switch {
+		case bytes.HasPrefix(line, []byte("diff ")):
+			inHunk = false
+			continue
+		case bytes.HasPrefix(line, []byte("@@")):
+			inHunk = true
+			continue
+		}
+		if !inHunk || !bytes.HasPrefix(line, []byte("+")) {
 			continue
 		}
 		for _, p := range secretPatterns {

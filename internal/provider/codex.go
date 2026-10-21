@@ -171,8 +171,12 @@ func (c *Codex) nudge(ctx context.Context, inv Invocation, threadID string, elap
 	}
 	defer os.Remove(answerPath)
 
+	// The resume subcommand takes no --sandbox flag, and without an explicit override
+	// it can reopen the session under the user's wider default sandbox, so the
+	// original mode is re-asserted through the equivalent configuration setting.
 	argv := []string{
 		c.exe, "exec", "resume", threadID,
+		"-c", "sandbox_mode=" + inv.Sandbox,
 		"--json",
 		"--output-last-message", answerPath,
 		codexNudgeMessage,

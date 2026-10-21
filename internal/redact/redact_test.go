@@ -194,3 +194,25 @@ func TestScrubString(t *testing.T) {
 		t.Errorf("ScrubString() = %q, %v; want input unchanged, false", got, changed)
 	}
 }
+
+// TestScrubProviderKeys pins that standalone Anthropic and OpenAI keys are redacted
+// even with no surrounding assignment for the generic rule to anchor on.
+func TestScrubProviderKeys(t *testing.T) {
+	for name, line := range map[string]string{
+		"anthropic key": "sk-ant-api03-SyntheticExampleValue0000000000",
+		"openai key":    "sk-proj-SyntheticExampleValue0000000000",
+		"bare sk key":   "sk-SyntheticExampleValue0000000000",
+	} {
+		out, changed := ScrubString("the command printed " + line + " on its own")
+		if !changed {
+			t.Errorf("%s was not redacted: %q", name, line)
+			continue
+		}
+		if strings.Contains(out, "SyntheticExampleValue") {
+			t.Errorf("%s value survives redaction: %q", name, out)
+		}
+	}
+	if _, changed := ScrubString("skim the sk-report quickly"); changed {
+		t.Error("ordinary text with a short sk- word was redacted")
+	}
+}

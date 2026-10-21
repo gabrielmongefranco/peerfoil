@@ -603,6 +603,146 @@ func mutatePlan(t *testing.T, root string, mutate func(doc map[string]any)) {
 	}
 }
 
+// partialProducer edits an allowed file but reports the explicitly supported
+// "partial" result, which must never become validated, integrated work.
+func partialProducer(t *testing.T) *scripted {
+	return &scripted{name: "codex-cli", lineage: provider.LineageOpenAIGPT,
+		invoke: func(inv provider.Invocation) (provider.Outcome, error) {
+			task := packetTask.FindStringSubmatch(inv.Packet)[1]
+			base := packetBase.FindStringSubmatch(inv.Packet)[1]
+			revisions := packetPlan.FindStringSubmatch(inv.Packet)
+			path := filepath.Join(inv.Dir, "main.go")
+			original, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(string(original)+"\n// half-done\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			handoff := fmt.Sprintf("```json\n{\"task\": %q, \"plan_revision\": %s, \"architecture_revision\": %s, \"base_revision\": %q, \"result\": \"partial\", \"changed_paths\": [\"main.go\"], \"summary\": \"Got halfway.\", \"checks_claimed\": [], \"discovered_work\": [], \"blocker\": null}\n```",
+				task, revisions[1], revisions[2], base)
+			return provider.Outcome{Text: handoff, SessionID: "thread-partial"}, nil
+		}}
+}
+
+// TestPartialHandoffStopsBeforeValidation pins that a partial result is captured for
+// inspection but never validated or integrated.
+func TestPartialHandoffStopsBeforeValidation(t *testing.T) {
+	root := setupFixtureRepo(t)
+	engine := testEngine(t, root, partialProducer(t), nil, nil, nil)
+	err := engine.ProduceNext(context.Background())
+	if err == nil || errs.CategoryOf(err) != errs.Provider {
+		t.Fatalf("err = %v, want a provider stop", err)
+	}
+	if !strings.Contains(err.Error(), "only part of") {
+		t.Errorf("error %q does not name the partial result", err.Error())
+	}
+	// The partial change stays captured, and nothing reached integration.
+	raw, readErr := os.ReadFile(filepath.Join(root, ".peerfoil", "evidence", "cs-0001.md"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if !strings.Contains(string(raw), "Capture status:** captured") {
+		t.Error("the partial change was not captured")
+	}
+	cmd := exec.Command("git", "rev-parse", "--verify", "peerfoil/integration")
+	cmd.Dir = root
+	if cmd.Run() == nil {
+		t.Error("partial work reached the integration branch")
+	}
+	if engine.State.Project.Workflow.State != string(Paused) {
+		t.Errorf("state = %s, want paused", engine.State.Project.Workflow.State)
+	}
+}
+
+// TestDiscoveredWorkPausesForChangeIntake pins that a handoff naming discovered work
+// is preserved in the change-set record and stops before integration.
+func TestDiscoveredWorkPausesForChangeIntake(t *testing.T) {
+	root := setupFixtureRepo(t)
+	discoverer := &scripted{name: "codex-cli", lineage: provider.LineageOpenAIGPT,
+		invoke: func(inv provider.Invocation) (provider.Outcome, error) {
+			task := packetTask.FindStringSubmatch(inv.Packet)[1]
+			base := packetBase.FindStringSubmatch(inv.Packet)[1]
+			revisions := packetPlan.FindStringSubmatch(inv.Packet)
+			path := filepath.Join(inv.Dir, "main.go")
+			original, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(string(original)+"\n// done\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			handoff := fmt.Sprintf("```json\n{\"task\": %q, \"plan_revision\": %s, \"architecture_revision\": %s, \"base_revision\": %q, \"result\": \"produced\", \"changed_paths\": [\"main.go\"], \"summary\": \"Done, but found more.\", \"checks_claimed\": [], \"discovered_work\": [\"The error paths need a logging decision.\"], \"blocker\": null}\n```",
+				task, revisions[1], revisions[2], base)
+			return provider.Outcome{Text: handoff, SessionID: "thread-discovery"}, nil
+		}}
+	engine := testEngine(t, root, discoverer, nil, nil, nil)
+	err := engine.ProduceNext(context.Background())
+	if err == nil || errs.CategoryOf(err) != errs.Policy {
+		t.Fatalf("err = %v, want a policy stop for change intake", err)
+	}
+	raw, readErr := os.ReadFile(filepath.Join(root, ".peerfoil", "evidence", "cs-0001.md"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if !strings.Contains(string(raw), "The error paths need a logging decision.") {
+		t.Error("the discovered work is missing from the change-set record")
+	}
+	cmd := exec.Command("git", "rev-parse", "--verify", "peerfoil/integration")
+	cmd.Dir = root
+	if cmd.Run() == nil {
+		t.Error("work with unabsorbed discoveries reached the integration branch")
+	}
+}
+
+// TestPhaseReviewNeedsAnActivePhase pins that review refuses records whose plan has
+// no active phase, instead of recording an approval that updates nothing.
+func TestPhaseReviewNeedsAnActivePhase(t *testing.T) {
+	root := setupFixtureRepo(t)
+	engine := testEngine(t, root, goodProducer(t), nil, nil, nil)
+	engine.State.Project.Workflow.State = string(Review)
+	for index := range engine.State.Plan.Phases {
+		engine.State.Plan.Phases[index].Status = "approved"
+		for stageIndex := range engine.State.Plan.Phases[index].Stages {
+			stage := &engine.State.Plan.Phases[index].Stages[stageIndex]
+			for taskIndex := range stage.Tasks {
+				stage.Tasks[taskIndex].Status = "accepted"
+			}
+		}
+	}
+	err := engine.PhaseReview(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "no phase is active") {
+		t.Errorf("err = %v, want a refusal naming the missing active phase", err)
+	}
+}
+
+// TestMaterialAuthorsCoverOnlyTheActivePhase pins that reviewer independence is
+// judged against the active phase's authors: an earlier phase's change sets are
+// closed and must not mark every available reviewer as secondary.
+func TestMaterialAuthorsCoverOnlyTheActivePhase(t *testing.T) {
+	root := setupFixtureRepo(t)
+	engine := testEngine(t, root, goodProducer(t), nil, nil, nil)
+	dir := filepath.Join(root, ".peerfoil", "evidence")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name, task, lineage string) {
+		content := "- **Task:** " + task + "\n- **Author:** producer (codex-cli, gpt-6-astra, medium, " + lineage + ", session null)\n"
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("cs-0001.md", "tk-001", "openai-gpt")       // a task of the active phase
+	write("cs-0002.md", "tk-900", "anthropic-claude") // a task outside the active phase
+	authors, err := engine.materialAuthors()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(authors) != 1 || authors["cs-0001"] != "openai-gpt" {
+		t.Errorf("authors = %v, want only cs-0001 from the active phase", authors)
+	}
+}
+
 // TestUnreachablePlannedTaskBlocksReview covers a phase whose remaining planned task
 // can never be selected because its dependency was deferred: the phase must refuse the
 // review boundary instead of approving around the dropped work.

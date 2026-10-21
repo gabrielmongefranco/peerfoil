@@ -202,7 +202,10 @@ func TestCodexInvokeTimeoutThenNudge(t *testing.T) {
 		t.Fatalf("run called %d times, want 2", len(calls))
 	}
 	nudgeArgv := calls[1].Argv
-	wantHead := []string{"codex", "exec", "resume", "thread-123", "--json", "--output-last-message"}
+	// The resume must re-assert the original sandbox: the subcommand has no
+	// --sandbox flag, and without the override the session could reopen writable.
+	wantHead := []string{"codex", "exec", "resume", "thread-123",
+		"-c", "sandbox_mode=read-only", "--json", "--output-last-message"}
 	for i, want := range wantHead {
 		if nudgeArgv[i] != want {
 			t.Fatalf("nudge argv[%d] = %q, want %q (full argv %q)", i, nudgeArgv[i], want, nudgeArgv)

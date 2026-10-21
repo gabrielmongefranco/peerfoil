@@ -47,6 +47,9 @@ var rules = []struct {
 	{regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}`), []byte(placeholder)},
 	// Slack bot, app, personal, refresh, and session tokens.
 	{regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{8,}`), []byte(placeholder)},
+	// Anthropic and OpenAI provider keys, which commands can print standalone with no
+	// surrounding assignment for the generic rule to anchor on.
+	{regexp.MustCompile(`\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\b`), []byte(placeholder)},
 	// Generic assignments such as "password: ..." or "api_key=...": keep the key and
 	// separator so the reader knows what was set, hide the value. The leading group
 	// stands in for a word boundary that also stops at underscores, so "CLIENT_SECRET="

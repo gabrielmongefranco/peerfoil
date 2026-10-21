@@ -206,6 +206,7 @@ func TestScanSecrets(t *testing.T) {
 	fakePassword := "correct-horse-battery"
 	patch := strings.Join([]string{
 		"diff --git a/config.py b/config.py",
+		"@@ -0,0 +1,3 @@",
 		"+aws_access_key_id = " + fakeAWSKey,
 		"+password = \"" + fakePassword + "\"",
 		"+comment = \"nothing secret here\"",
@@ -216,10 +217,10 @@ func TestScanSecrets(t *testing.T) {
 		t.Fatalf("ScanSecrets found %d hits, want at least 2: %v", len(hits), hits)
 	}
 	joined := strings.Join(hits, "\n")
-	if !strings.Contains(joined, "AWS access key ID") || !strings.Contains(joined, "line 2") {
+	if !strings.Contains(joined, "AWS access key ID") || !strings.Contains(joined, "line 3") {
 		t.Errorf("hits do not name the AWS key pattern and its line: %v", hits)
 	}
-	if !strings.Contains(joined, "credential assignment") || !strings.Contains(joined, "line 3") {
+	if !strings.Contains(joined, "credential assignment") || !strings.Contains(joined, "line 4") {
 		t.Errorf("hits do not name the credential assignment and its line: %v", hits)
 	}
 	// The report must never carry the matched value itself.
@@ -243,7 +244,7 @@ func TestScanSecretsMorePatterns(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hits := ScanSecrets([]byte(tt.line + "\n"))
+			hits := ScanSecrets([]byte("@@ -0,0 +1 @@\n" + tt.line + "\n"))
 			if len(hits) == 0 {
 				t.Fatalf("ScanSecrets found nothing in a line with a planted %s", tt.want)
 			}
@@ -262,6 +263,7 @@ func TestScanSecretsIgnoresRemovedAndContextLines(t *testing.T) {
 		"diff --git a/config.py b/config.py",
 		"--- a/config.py",
 		"+++ b/config.py",
+		"@@ -1,2 +1,2 @@",
 		"-aws_access_key_id = AKIAIOSFODNN7EXAMPLE", // the removal of a committed key
 		" password = \"correct-horse-battery\"",     // unchanged context near the edit
 		"+comment = \"removed the committed key; rotate it\"",
@@ -271,12 +273,29 @@ func TestScanSecretsIgnoresRemovedAndContextLines(t *testing.T) {
 	}
 }
 
+// TestScanSecretsCatchesAddedLineStartingWithPlusPlus pins that an added line whose
+// own content begins with two plus signs is still scanned: only the real "+++" file
+// header outside a hunk is exempt.
+func TestScanSecretsCatchesAddedLineStartingWithPlusPlus(t *testing.T) {
+	patch := strings.Join([]string{
+		"diff --git a/notes.txt b/notes.txt",
+		"--- a/notes.txt",
+		"+++ b/notes.txt",
+		"@@ -0,0 +1 @@",
+		`+++password = "correct-horse-battery"`, // added content starting with "++"
+	}, "\n")
+	if hits := ScanSecrets([]byte(patch)); len(hits) == 0 {
+		t.Fatal("an added line starting with ++ was not scanned")
+	}
+}
+
 func TestScanSecretsClean(t *testing.T) {
 	if hits := ScanSecrets(nil); hits != nil {
 		t.Errorf("ScanSecrets(nil) = %v, want nil", hits)
 	}
 	clean := strings.Join([]string{
 		"diff --git a/main.go b/main.go",
+		"@@ -0,0 +1,3 @@",
 		"+func main() {",
 		"+\tfmt.Println(\"hello\")",
 		"+}",
@@ -321,7 +340,7 @@ func TestScanSecretsEnvStyleAndProviderKeys(t *testing.T) {
 		"provider key":    "key = sk-ant-api03-SyntheticExampleValue0000000000",
 		"quoted password": `password: "synthetic-example-value"`,
 	} {
-		hits := ScanSecrets([]byte("+" + line + "\n"))
+		hits := ScanSecrets([]byte("@@ -0,0 +1 @@\n+" + line + "\n"))
 		if len(hits) == 0 {
 			t.Errorf("%s was not caught: %q", name, line)
 			continue
@@ -333,9 +352,9 @@ func TestScanSecretsEnvStyleAndProviderKeys(t *testing.T) {
 		}
 	}
 	clean := [][]byte{
-		[]byte("tokenizer := newTokenizer(input)\n"),
-		[]byte("// a passwordless login flow\n"),
-		[]byte("count := token.Count(items)\n"),
+		[]byte("@@ -0,0 +1 @@\n+tokenizer := newTokenizer(input)\n"),
+		[]byte("@@ -0,0 +1 @@\n+// a passwordless login flow\n"),
+		[]byte("@@ -0,0 +1 @@\n+count := token.Count(items)\n"),
 	}
 	for _, patch := range clean {
 		if hits := ScanSecrets(patch); hits != nil {

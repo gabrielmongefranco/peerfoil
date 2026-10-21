@@ -291,6 +291,17 @@ func TestRunnableTaskFromOlderRevisionNeedsRetention(t *testing.T) {
 	}
 }
 
+func TestRunnableTaskInDeferredStageRejected(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "plan.json"), func(doc map[string]any) {
+		stage := doc["phases"].([]any)[0].(map[string]any)["stages"].([]any)[0].(map[string]any)
+		stage["status"] = "deferred"
+	})
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "defer or remove the task with the stage") {
+		t.Errorf("err = %v", err)
+	}
+}
+
 func TestIllegalHistoryEdgeRejected(t *testing.T) {
 	root := copyFixture(t, "software-go")
 	path := filepath.Join(root, ".peerfoil", "history.jsonl")

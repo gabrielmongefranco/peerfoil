@@ -560,3 +560,45 @@ func TestCleanupWorktreeRefusals(t *testing.T) {
 		t.Errorf("nil worktree: err = %v, want a policy error", err)
 	}
 }
+
+// TestReviewWorktreeStaleRecovery pins that a review worktree left behind by a crash
+// does not block the retry: the fixed path is recovered before the new checkout.
+func TestReviewWorktreeStaleRecovery(t *testing.T) {
+	requireGit(t)
+	isolateGitEnv(t)
+	root := newTestRepo(t)
+	r := New(root)
+	ctx := context.Background()
+	head, err := r.HeadCommit(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := t.TempDir()
+	first, err := r.CreateReviewWorktree(ctx, head, "phase", parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A crash skips the deferred removal; the next attempt must still succeed.
+	second, err := r.CreateReviewWorktree(ctx, head, "phase", parent)
+	if err != nil {
+		t.Fatalf("retry after a stale review worktree failed: %v", err)
+	}
+	if second != first {
+		t.Errorf("retry path %q differs from %q", second, first)
+	}
+	if err := r.RemoveReviewWorktree(ctx, second); err != nil {
+		t.Fatal(err)
+	}
+
+	// A registration whose directory is already gone is recovered too.
+	third, err := r.CreateReviewWorktree(ctx, head, "phase", parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(third); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.CreateReviewWorktree(ctx, head, "phase", parent); err != nil {
+		t.Fatalf("retry after a missing review worktree directory failed: %v", err)
+	}
+}

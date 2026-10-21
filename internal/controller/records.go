@@ -279,6 +279,7 @@ type ChangeSet struct {
 	PatchSHA256   string
 	Changed       []string // "status<TAB>path" pairs rendered into the table
 	Summary       string
+	Discovered    []string // work the producer found that change intake must absorb
 }
 
 // WriteChangeSet renders the change-set record in the template's field shape.
@@ -322,7 +323,14 @@ func (e *Engine) WriteChangeSet(cs *ChangeSet) error {
 	// commit itself identifies every input; per-file snapshots are a guided-mode
 	// mechanism for uncommitted work (D-0025).
 	b.WriteString("| (all inputs are at the base revision) | file | absent |\n")
-	fmt.Fprintf(&b, "\n## Summary\n\n%s\n\n## Later edits by other agents\n\nNone.\n", cs.Summary)
+	fmt.Fprintf(&b, "\n## Summary\n\n%s\n\n## Discovered work\n\n", cs.Summary)
+	if len(cs.Discovered) == 0 {
+		b.WriteString("None.\n")
+	}
+	for _, item := range cs.Discovered {
+		fmt.Fprintf(&b, "- %s\n", item)
+	}
+	b.WriteString("\n## Later edits by other agents\n\nNone.\n")
 	return fsx.WriteFileAtomic(filepath.Join(dir, cs.ID+".md"), []byte(b.String()), 0o644)
 }
 

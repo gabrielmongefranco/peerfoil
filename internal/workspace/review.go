@@ -13,6 +13,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -35,6 +36,16 @@ func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir
 		parentDir = resolved
 	}
 	path := filepath.Join(parentDir, "review-"+name)
+	// A crash between creation and the deferred cleanup leaves this fixed path
+	// registered, and Git refuses to add a registered worktree again. A review
+	// worktree is always detached and disposable, so a stale one is removed before
+	// the retry; removing a path that does not exist is harmless.
+	if _, err := os.Stat(path); err == nil {
+		_, _ = git(ctx, r.Root, "worktree", "remove", "--force", path)
+		_ = os.RemoveAll(path)
+	}
+	// Pruning also clears a registration whose directory is already gone.
+	_, _ = git(ctx, r.Root, "worktree", "prune")
 	if _, err := git(ctx, r.Root, "worktree", "add", "--detach", path, commit); err != nil {
 		return "", errs.Wrap(errs.Git, "creating the review worktree", err)
 	}
