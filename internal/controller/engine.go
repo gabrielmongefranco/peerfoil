@@ -162,13 +162,16 @@ func (e *Engine) productionGate() error {
 	// inspected the current Quality Contract revision as well. A non-independent
 	// review (D-0014: local-family, secondary, or reduced) counts only when its
 	// recorded reason carries the user's acceptance, because that acceptance is the
-	// method's condition for proceeding without a different family.
+	// method's condition for proceeding without a different family. Only the
+	// method's exact positive phrase counts: a looser match such as any word
+	// containing "accept" would also match a recorded refusal like "the user did
+	// not accept Reduced assurance".
 	usable := func(review reviewRecord) bool {
 		switch review.Independence {
 		case "independent":
 			return true
 		case "local-family", "secondary", "reduced":
-			return strings.Contains(review.IndependenceWhy, "accept")
+			return strings.Contains(review.IndependenceWhy, "user accepted reduced assurance")
 		}
 		return false
 	}

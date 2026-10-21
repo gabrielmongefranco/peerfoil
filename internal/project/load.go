@@ -143,6 +143,17 @@ func (s *State) semanticProblems() []string {
 		if path == "" || strings.Contains(path, "\\") || strings.HasPrefix(path, "/") ||
 			strings.Contains(path, ":") || hasDotDot(path) {
 			add("rules_source.path %q must be a repository-relative path with no traversal", path)
+		} else if resolvedRoot, err := filepath.EvalSymlinks(s.Root); err == nil {
+			// A clean relative path can still be a link whose target sits outside
+			// the repository, which would quote an unrelated local file to models.
+			// A path that does not exist resolves to nothing and discloses nothing.
+			target := filepath.Join(s.Root, filepath.FromSlash(path))
+			if resolved, err := filepath.EvalSymlinks(target); err == nil {
+				relative, err := filepath.Rel(resolvedRoot, resolved)
+				if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+					add("rules_source.path %q is a link that resolves outside the repository", path)
+				}
+			}
 		}
 	}
 	for _, name := range []string{"architecture.md", "quality.md"} {
@@ -175,6 +186,11 @@ func (s *State) semanticProblems() []string {
 		problems = append(problems, planProblems(plan)...)
 	}
 
+	// A pause may interrupt any state, but leaving it must return to the state the
+	// pause interrupted: the lifecycle table necessarily lets paused reach anywhere,
+	// so without this check a recorded pause could skip lifecycle conditions, for
+	// example define to paused to approve.
+	pausedFrom := ""
 	for index, transition := range s.History {
 		if transition.ProjectID != s.Project.ProjectID {
 			add("history.jsonl line %d: project_id %q differs from %q", index+1, transition.ProjectID, s.Project.ProjectID)
@@ -198,6 +214,12 @@ func (s *State) semanticProblems() []string {
 			// which would let the project operate from a state it never legally reached.
 			add("history.jsonl line %d: the lifecycle permits no transition from %q to %q",
 				index+1, *transition.FromState, transition.ToState)
+		} else if previous == "paused" && transition.ToState != "paused" && transition.ToState != pausedFrom {
+			add("history.jsonl line %d: a paused workflow must resume to %q, the state it paused from, not %q",
+				index+1, pausedFrom, transition.ToState)
+		}
+		if transition.ToState == "paused" && previous != "paused" {
+			pausedFrom = previous
 		}
 	}
 	if len(s.History) > 0 {

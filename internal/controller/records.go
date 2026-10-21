@@ -25,6 +25,7 @@ import (
 	"github.com/gabrielmongefranco/peerfoil/internal/evidence"
 	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
 	"github.com/gabrielmongefranco/peerfoil/internal/project"
+	"github.com/gabrielmongefranco/peerfoil/internal/redact"
 	"github.com/gabrielmongefranco/peerfoil/internal/version"
 )
 
@@ -323,12 +324,17 @@ func (e *Engine) WriteChangeSet(cs *ChangeSet) error {
 	// commit itself identifies every input; per-file snapshots are a guided-mode
 	// mechanism for uncommitted work (D-0025).
 	b.WriteString("| (all inputs are at the base revision) | file | absent |\n")
-	fmt.Fprintf(&b, "\n## Summary\n\n%s\n\n## Discovered work\n\n", cs.Summary)
+	// The summary and discovered-work entries are model prose that can repeat a
+	// credential the patch itself removed, so they are scrubbed like evidence output
+	// before the record is retained.
+	summary, _ := redact.ScrubString(cs.Summary)
+	fmt.Fprintf(&b, "\n## Summary\n\n%s\n\n## Discovered work\n\n", summary)
 	if len(cs.Discovered) == 0 {
 		b.WriteString("None.\n")
 	}
 	for _, item := range cs.Discovered {
-		fmt.Fprintf(&b, "- %s\n", item)
+		scrubbed, _ := redact.ScrubString(item)
+		fmt.Fprintf(&b, "- %s\n", scrubbed)
 	}
 	b.WriteString("\n## Later edits by other agents\n\nNone.\n")
 	return fsx.WriteFileAtomic(filepath.Join(dir, cs.ID+".md"), []byte(b.String()), 0o644)

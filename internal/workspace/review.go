@@ -39,9 +39,17 @@ func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir
 	// A crash between creation and the deferred cleanup leaves this fixed path
 	// registered, and Git refuses to add a registered worktree again. A review
 	// worktree is always detached and disposable, so a stale one is removed before
-	// the retry; removing a path that does not exist is harmless.
+	// the retry — but only one this repository registers. A directory that merely
+	// sits at the same path is someone else's data and is never deleted.
 	if _, err := os.Stat(path); err == nil {
-		_, _ = git(ctx, r.Root, "worktree", "remove", "--force", path)
+		if !r.registeredWorktree(ctx, path) {
+			return "", errs.New(errs.Git,
+				fmt.Sprintf("the review checkout path %s already exists and is not a worktree of this repository", path),
+				"move or delete that directory yourself, then try again")
+		}
+		if _, err := git(ctx, r.Root, "worktree", "remove", "--force", path); err != nil {
+			return "", errs.Wrap(errs.Git, "removing the stale review worktree", err)
+		}
 		_ = os.RemoveAll(path)
 	}
 	// Pruning also clears a registration whose directory is already gone.
@@ -50,6 +58,28 @@ func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir
 		return "", errs.Wrap(errs.Git, "creating the review worktree", err)
 	}
 	return path, nil
+}
+
+// registeredWorktree reports whether the path is a worktree this repository
+// registers. Git prints worktree paths with forward slashes, so both sides are
+// normalized, and the comparison ignores case because the supported filesystems
+// on Windows and macOS do.
+func (r *Repo) registeredWorktree(ctx context.Context, path string) bool {
+	out, err := git(ctx, r.Root, "worktree", "list", "--porcelain")
+	if err != nil {
+		return false
+	}
+	want := filepath.Clean(path)
+	for _, line := range strings.Split(string(out), "\n") {
+		if !strings.HasPrefix(line, "worktree ") {
+			continue
+		}
+		listed := filepath.Clean(filepath.FromSlash(strings.TrimSpace(strings.TrimPrefix(line, "worktree "))))
+		if strings.EqualFold(listed, want) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsAncestor reports whether one commit is an ancestor of another. Both arguments

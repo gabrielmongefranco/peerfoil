@@ -117,6 +117,14 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// The review binds to the revision recorded when validation entered review. A
+	// branch tip that moved since then was never put through the frozen-revision
+	// evidence checks, so approving it would approve unchecked code.
+	if recorded := e.reviewBoundaryRevision(); recorded != "" && recorded != frozen {
+		return errs.New(errs.Git,
+			fmt.Sprintf("the integration branch now points at %s, not the revision %s recorded when the phase entered review", frozen, recorded),
+			"reset the peerfoil/integration branch to the recorded revision, or route the extra work through the PeerFoil skills change intake")
+	}
 	tree, err := e.Repo.TreeDigest(ctx, frozen)
 	if err != nil {
 		return err
@@ -196,6 +204,22 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 		return errs.New(errs.Policy, reason,
 			"read .peerfoil/reviews/"+phaseReviewID+".md, then continue with the PeerFoil skills or adjust the work")
 	}
+}
+
+// reviewBoundaryRevision returns the source revision recorded by the most recent
+// transition into review, or an empty string when that transition recorded none.
+func (e *Engine) reviewBoundaryRevision() string {
+	for index := len(e.State.History) - 1; index >= 0; index-- {
+		transition := e.State.History[index]
+		if transition.ToState != string(Review) {
+			continue
+		}
+		if transition.SourceRevision != nil {
+			return *transition.SourceRevision
+		}
+		return ""
+	}
+	return ""
 }
 
 // requireTwoFamilies confirms two reviewer seats from different, known families.
@@ -689,8 +713,11 @@ func (e *Engine) approvePhase(frozen string, refs map[string][]string, summary s
 // refusal leaves the workflow in a state the user can still act from.
 func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	blocking []Finding, authors map[string]string) error {
+	// The wired repair adapter must be the one the settings configured. The seats
+	// carry the settings' tool identifiers (codex-cli, claude-code); an adapter's
+	// own short name is a different vocabulary and never compared against them.
 	repairSeatSetting := e.State.Project.Settings.Roles["repair_producer"]
-	if e.RepairProducer == nil || repairSeatSetting.Tool != e.RepairProducer.Name() {
+	if e.RepairProducer == nil || e.RepairSeat.Tool != repairSeatSetting.Tool {
 		return errs.New(errs.Configuration,
 			"the configured repair_producer seat is not available", "run peerfoil doctor, then adjust the repair_producer seat")
 	}
@@ -741,6 +768,23 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		"worktree": worktree.Path, "branch": worktree.Branch}); err != nil {
 		return err
 	}
+	// The repair's authorship is persisted before the writer runs, exactly as a
+	// producer launch is: a crash mid-repair then still leaves a versioned record
+	// naming the authorized author, base revision, and pending capture.
+	repairAuthor := project.Actor{
+		Role: "repair_producer", Tool: e.RepairProducer.Name(), Model: &model,
+		Effort: &effort, LineageRoot: repairerLineage,
+	}
+	changeSet := &ChangeSet{
+		ID: changeSetID, TaskID: lastTask, TaskTitle: "Repair of the phase's agreed findings",
+		CaptureStatus: "pending", StartedAt: Timestamp(e.Now()), Attempt: 1,
+		Baseline: "frozen review revision", BaseRevision: frozen,
+		Author:  repairAuthor,
+		Summary: "Launch recorded before the repair producer ran.",
+	}
+	if err := e.WriteChangeSet(changeSet); err != nil {
+		return err
+	}
 
 	var packet strings.Builder
 	packet.WriteString("You are the PeerFoil repair producer. The current directory is a dedicated worktree at the reviewed revision. Apply the smallest change that resolves the agreed findings below. Edit only what the findings require; never edit .peerfoil/, Git history, or AGENTS.md. Do not commit.\n\nAgreed findings:\n")
@@ -753,23 +797,36 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	}
 	packet.WriteString("\nEnd with one short paragraph describing exactly what you changed.\n")
 
+	// A repair the controller rejects is a model error the user must decide about,
+	// so every rejection records the failed capture and pauses: the lifecycle has
+	// no automatic way out of the repair state, and returning without a pause
+	// would leave the workflow unable to resume.
+	rejectRepair := func(reason string, cause error) error {
+		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
+		changeSet.CaptureStatus = "blocked"
+		changeSet.Summary = reason
+		_ = e.WriteChangeSet(changeSet)
+		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); err != nil {
+			return err
+		}
+		if cause != nil {
+			return cause
+		}
+		return errs.New(errs.Provider, reason, "")
+	}
+
 	if _, err := e.Journal.Started("repair-producer", changeSetID); err != nil {
 		return err
 	}
-	fmt.Fprintf(e.Out, "Repairing with %s at %s.\n", e.Producer.Name(), repairSeatSetting.Effort)
-	outcome, invokeErr := e.Producer.Invoke(ctx, provider.Invocation{
+	fmt.Fprintf(e.Out, "Repairing with %s at %s.\n", e.RepairProducer.Name(), repairSeatSetting.Effort)
+	outcome, invokeErr := e.RepairProducer.Invoke(ctx, provider.Invocation{
 		Role:    "repair_producer",
 		Packet:  packet.String(),
 		Sandbox: provider.SandboxWorkspaceWrite,
 		Dir:     worktree.Path,
 	})
 	if invokeErr != nil {
-		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
-		reason := "the repair run ended without a result; the worktree " + worktree.Branch + " is retained"
-		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
-			return err
-		}
-		return invokeErr
+		return rejectRepair("the repair run ended without a result; the worktree "+worktree.Branch+" is retained", invokeErr)
 	}
 
 	changes, err := worktree.Changes(ctx)
@@ -777,54 +834,39 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return err
 	}
 	if len(changes) == 0 {
-		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
-		reason := "the repair run changed nothing; you decide how to proceed"
-		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
-			return err
-		}
-		return errs.New(errs.Provider, reason, "")
+		return rejectRepair("the repair run changed nothing; you decide how to proceed", nil)
 	}
 	// The repair may touch any path the user already approved for the active
 	// phase's tasks, and nothing else; .peerfoil, .git, instruction files, and
 	// model-tool configuration stay denied regardless.
 	allowed := e.unionAllowedPaths()
 	if err := workspace.CheckScope(changes, allowed); err != nil {
-		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
-		return err
+		return rejectRepair(fmt.Sprintf("the repair was not accepted: %v; the worktree %s is retained", err, worktree.Branch), err)
 	}
 	if err := rejectSymlinks(worktree.Path, changes); err != nil {
-		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
-		return err
+		return rejectRepair(fmt.Sprintf("the repair was not accepted: %v; the worktree %s is retained", err, worktree.Branch), err)
 	}
 	patch, err := worktree.Patch(ctx)
 	if err != nil {
 		return err
 	}
 	if hits := workspace.ScanSecrets(patch); len(hits) > 0 {
-		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
-		return errs.New(errs.Policy, "the repair may contain a credential: "+strings.Join(hits, "; "), "")
+		reason := "the repair may contain a credential: " + strings.Join(hits, "; ")
+		return rejectRepair(reason, errs.New(errs.Policy, reason, ""))
 	}
 	patchPath := filepath.Join(e.State.Dir, "evidence", changeSetID+".patch")
 	if err := fsx.WriteFileAtomic(patchPath, patch, 0o644); err != nil {
 		return err
 	}
 	digest := sha256.Sum256(patch)
-	session := outcome.SessionID
-	repairAuthor := project.Actor{
-		Role: "repair_producer", Tool: e.RepairProducer.Name(), Model: &model,
-		Effort: &effort, LineageRoot: repairerLineage,
+	if session := outcome.SessionID; session != "" {
+		changeSet.Author.Session = &session
 	}
-	if session != "" {
-		repairAuthor.Session = &session
-	}
-	changeSet := &ChangeSet{
-		ID: changeSetID, TaskID: lastTask, TaskTitle: "Repair of the phase's agreed findings",
-		CaptureStatus: "captured", StartedAt: Timestamp(e.Now()), Attempt: 1,
-		Baseline: "frozen review revision", BaseRevision: frozen,
-		Author: repairAuthor, CapturedAt: Timestamp(e.Now()),
-		PatchPath: "evidence/" + changeSetID + ".patch", PatchSHA256: hex.EncodeToString(digest[:]),
-		Summary: firstParagraph(outcome.Text),
-	}
+	changeSet.CaptureStatus = "captured"
+	changeSet.CapturedAt = Timestamp(e.Now())
+	changeSet.PatchPath = "evidence/" + changeSetID + ".patch"
+	changeSet.PatchSHA256 = hex.EncodeToString(digest[:])
+	changeSet.Summary = firstParagraph(outcome.Text)
 	for _, change := range changes {
 		changeSet.Changed = append(changeSet.Changed, change.Status+"\t"+change.Path)
 	}
@@ -857,6 +899,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 		_, taskFailed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, repairCommit)
 		if err != nil {
+			reason := fmt.Sprintf("an evidence command for %s could not run after the repair: %v", task.ID, err)
+			if pauseErr := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); pauseErr != nil {
+				return pauseErr
+			}
 			return err
 		}
 		failed = append(failed, taskFailed...)

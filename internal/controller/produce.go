@@ -226,6 +226,15 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	}
 	evidenceIDs, failed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, taskCommit)
 	if err != nil {
+		// The workflow is already in validate, which resume refuses as a boundary,
+		// so a runner failure pauses with the task blocked instead of stranding it.
+		task.Status = "blocked"
+		_ = e.SavePlan()
+		reason := fmt.Sprintf("an evidence command for %s could not run: %v; the worktree %s is retained",
+			task.ID, err, worktree.Branch)
+		if pauseErr := e.Pause(reason, map[string][]string{"tasks": {task.ID}, "change_sets": {changeSetID}, "evidence": evidenceIDs}); pauseErr != nil {
+			return pauseErr
+		}
 		return err
 	}
 	if len(failed) > 0 {
@@ -283,6 +292,9 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	}
 	frozenEvidence, err := e.revalidatePhaseEvidence(ctx, integrationTip)
 	if err != nil {
+		if pauseErr := e.Pause(fmt.Sprintf("the phase's evidence re-check stopped: %v", err), nil); pauseErr != nil {
+			return pauseErr
+		}
 		return err
 	}
 	return e.enterReview(integrationTip, task.ID, append(evidenceIDs, frozenEvidence...))
@@ -399,6 +411,9 @@ func (e *Engine) finishPhaseProduction(ctx context.Context) error {
 	}
 	frozenEvidence, err := e.revalidatePhaseEvidence(ctx, head)
 	if err != nil {
+		if pauseErr := e.Pause(fmt.Sprintf("the phase's evidence re-check stopped: %v", err), nil); pauseErr != nil {
+			return pauseErr
+		}
 		return err
 	}
 	return e.enterReview(head, "", frozenEvidence)
@@ -557,6 +572,7 @@ func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 			return recorded, nil, err
 		}
 		fmt.Fprintf(e.Out, "Running %s: %s\n", requirement.Name, strings.Join(argv, " "))
+		procedure := fmt.Sprintf("%q in the task worktree", argv)
 		record, err := evidence.Run(ctx, e.Evidence, evidence.Command{
 			Name:           requirement.Name,
 			Argv:           argv,
@@ -574,9 +590,16 @@ func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 			Now:                  e.Now,
 		}, filepath.Join(e.State.Dir, "evidence"))
 		if err != nil {
+			// A command that could not run still produced a record with its retained
+			// output; that record belongs in the versioned evidence, not only in the
+			// returned error, so the failure stays visible after the run ends.
+			if record.Status == evidence.StatusError {
+				if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure); writeErr == nil {
+					recorded = append(recorded, evidenceID)
+				}
+			}
 			return recorded, nil, err
 		}
-		procedure := fmt.Sprintf("%q in the task worktree", argv)
 		if err := e.WriteEvidenceRecord(record, changeSetID, procedure); err != nil {
 			return recorded, nil, err
 		}

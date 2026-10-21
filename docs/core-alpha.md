@@ -67,22 +67,29 @@ deterministically, sends one bounded request to the producer in a fresh worktree
 captures the patch and authorship before anything else touches the work, checks the
 changed paths against the task's allowed paths, scans the patch's added lines for
 credentials (removing an already committed credential is allowed, though that
-credential still needs rotation), runs
+credential still needs rotation), scrubs likely credentials from the producer's own
+summary text before it is kept in the records, runs
 the required checks against the exact produced commit, and integrates passing work onto
 the `peerfoil/integration` branch. Your own branch and checkout never change. A producer
 that reports a partial result, or that discovers new work along the way, stops the
 workflow with its change captured for inspection: nothing incomplete is integrated, and
 discovered work is recorded in the change set for change intake instead of being lost.
+A check command that cannot run at all is recorded as blocked evidence, and the
+workflow pauses so you can fix the environment and try again.
 
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh
 Codex reviewer read the same frozen revision, with the current change-set, evidence,
 and review records refreshed into the checkout, their findings are merged without hiding
 disagreement, and approval requires the reviewer from a different model family than the
-work's author. When both ask for a repair, one repair cycle runs with the repair
-producer, the affected checks run again, and a fresh reviewer from the other family
-verifies the result. Material disagreement stops for you instead of inventing
-consensus.
+work's author. The review only accepts the exact revision recorded when validation
+finished; if the integration branch moved after that, resume stops instead of reviewing
+the newer, unchecked commits. When both ask for a repair, one repair cycle runs with the
+configured repair seat, whose authorship is recorded before the writer runs, the
+affected checks run again, and a fresh reviewer from the other family verifies the
+result. A repair the controller refuses, such as an out-of-scope edit, is recorded as a
+blocked capture and the workflow pauses for you. Material disagreement stops for you
+instead of inventing consensus.
 
 ### Recovery after an interruption
 
@@ -102,7 +109,7 @@ and the project write leaves `project.json` one transition behind `history.jsonl
 Every command then refuses with a message that names the exact one-line repair, instead
 of guessing which file is right.
 
-### What Core Alpha does not do
+### Boundaries of Core Alpha
 
 - It runs the production part of the journey. Decisions, architecture, planning, and
   change intake stay with the PeerFoil skills in this release.

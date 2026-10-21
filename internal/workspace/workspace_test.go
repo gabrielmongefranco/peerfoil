@@ -602,3 +602,33 @@ func TestReviewWorktreeStaleRecovery(t *testing.T) {
 		t.Fatalf("retry after a missing review worktree directory failed: %v", err)
 	}
 }
+
+// TestReviewWorktreeRefusesForeignDirectory pins that stale recovery deletes only a
+// worktree this repository registers, never an unrelated directory at the same path.
+func TestReviewWorktreeRefusesForeignDirectory(t *testing.T) {
+	requireGit(t)
+	isolateGitEnv(t)
+	root := newTestRepo(t)
+	r := New(root)
+	ctx := context.Background()
+	head, err := r.HeadCommit(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := t.TempDir()
+	foreign := filepath.Join(parent, "review-phase")
+	if err := os.MkdirAll(foreign, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := filepath.Join(foreign, "keep.txt")
+	if err := os.WriteFile(sentinel, []byte("not a worktree"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.CreateReviewWorktree(ctx, head, "phase", parent)
+	if errs.CategoryOf(err) != errs.Git || !strings.Contains(err.Error(), "not a worktree of this repository") {
+		t.Fatalf("err = %v, want a refusal naming the foreign directory", err)
+	}
+	if _, statErr := os.Stat(sentinel); statErr != nil {
+		t.Errorf("the foreign directory's contents were deleted: %v", statErr)
+	}
+}

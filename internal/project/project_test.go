@@ -13,6 +13,7 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -383,5 +384,96 @@ func TestInheritedRulesPathMustStayInRepository(t *testing.T) {
 	})
 	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "rules_source.path") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+// appendHistory adds transitions to the fixture history, continuing from its last
+// recorded state, so a test can extend the lifecycle without rebuilding the file.
+func appendHistory(t *testing.T, root string, edges ...[2]string) {
+	t.Helper()
+	path := filepath.Join(root, ".peerfoil", "history.jsonl")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	var last map[string]any
+	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &last); err != nil {
+		t.Fatal(err)
+	}
+	number := len(lines)
+	for _, edge := range edges {
+		number++
+		entry := map[string]any{}
+		for key, value := range last {
+			entry[key] = value
+		}
+		entry["transition_id"] = fmt.Sprintf("tr-%04d", number)
+		entry["from_state"] = edge[0]
+		entry["to_state"] = edge[1]
+		line, err := json.Marshal(entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines = append(lines, string(line))
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestPausedHistoryMustResumeToThePausedState pins that a recorded pause can only
+// return to the state it interrupted, so the pause edge cannot skip the lifecycle.
+func TestPausedHistoryMustResumeToThePausedState(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	projectPath := filepath.Join(root, ".peerfoil", "project.json")
+	// A pause in produce that "resumes" straight to approve skips validate and review.
+	appendHistory(t, root, [2]string{"produce", "paused"}, [2]string{"paused", "approve"})
+	mutateJSON(t, projectPath, func(doc map[string]any) {
+		doc["workflow"].(map[string]any)["state"] = "approve"
+	})
+	_, err := Load(root, schemas(t))
+	if err == nil || !strings.Contains(err.Error(), "must resume to \"produce\"") {
+		t.Errorf("err = %v", err)
+	}
+
+	// The same pause resuming to produce is the recorded, legal recovery.
+	legal := copyFixture(t, "software-go")
+	appendHistory(t, legal, [2]string{"produce", "paused"}, [2]string{"paused", "produce"})
+	if _, err := Load(legal, schemas(t)); err != nil {
+		t.Errorf("a pause that resumed to its own state was rejected: %v", err)
+	}
+}
+
+// TestSymlinkedRulesPathRejected pins that an inherited rules path that is a link
+// resolving outside the repository is refused before it can be quoted to a model.
+func TestSymlinkedRulesPathRejected(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "outside.md")
+	if err := os.WriteFile(outside, []byte("private"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := copyFixture(t, "software-go")
+	link := filepath.Join(root, "RULES.md")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skipf("symbolic links are not available here: %v", err)
+	}
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "project.json"), func(doc map[string]any) {
+		doc["rules_source"] = map[string]any{"mode": "inherit", "path": "RULES.md"}
+	})
+	_, err := Load(root, schemas(t))
+	if err == nil || !strings.Contains(err.Error(), "resolves outside the repository") {
+		t.Errorf("err = %v", err)
+	}
+
+	// A link that stays inside the repository remains acceptable.
+	inside := copyFixture(t, "software-go")
+	if err := os.Symlink(filepath.Join(inside, "README.md"), filepath.Join(inside, "RULES.md")); err != nil {
+		t.Skipf("symbolic links are not available here: %v", err)
+	}
+	mutateJSON(t, filepath.Join(inside, ".peerfoil", "project.json"), func(doc map[string]any) {
+		doc["rules_source"] = map[string]any{"mode": "inherit", "path": "RULES.md"}
+	})
+	if _, err := Load(inside, schemas(t)); err != nil {
+		t.Errorf("an in-repository link was rejected: %v", err)
 	}
 }
