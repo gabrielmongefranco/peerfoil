@@ -25,7 +25,7 @@ PeerFoil has not been released yet, so the only supported path today is loading 
 plugin from a local checkout for testing. Everything here was tested with the exact
 versions named below; newer versions usually work but are not claimed.
 
-### What you need
+### Requirements
 
 1. **Git.** Any recent version. Your project must be a Git repository.
 2. **Claude Code.** The plugin was tested with version 2.1.260. PeerFoil runs inside it.
@@ -79,9 +79,11 @@ long review short.
 - **Local models.** If [Ollama](https://ollama.com/) is installed, PeerFoil can use a
   local model for advisory reading and review. See the known limits page for what
   advisory means.
-- **Host sandbox.** On macOS, Linux, and WSL2, Claude Code ships a Bash sandbox that
-  fits reduced-supervision runs. PeerFoil recommends it and checks for it. The settings
-  fragment lives in the plugin's sandbox reference.
+- **Host sandbox.** PeerFoil recommends isolating the agent tools and checks for the
+  strongest layer it can see. Best is a container that holds the whole toolchain, such
+  as [Agent Airlock](https://github.com/gabrielmongefranco/agent-airlock). On macOS,
+  Linux, and WSL2, Claude Code also ships a Bash sandbox that fits reduced-supervision
+  runs; its settings fragment lives in the plugin's sandbox reference.
 
 ### Start working
 

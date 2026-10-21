@@ -67,6 +67,7 @@ that supersedes the old one, never by editing history.
 | D-0035 | Alpha cancellation kills the direct child process and reports the descendant limit | Accepted | Phase 2, Stage 1 |
 | D-0036 | The tested structured-output interfaces are Claude Code JSON output and codex exec JSON events | Accepted | Phase 2, Stage 1 |
 | D-0037 | Core Alpha writes a reduced phase-review record and the full template shape waits for Review Beta | Accepted | Phase 2, Stage 7 |
+| D-0038 | The sandbox recommendation is layered and tool-neutral: outside isolation first, then the agent tools' own sandboxes | Accepted | Phase 2, Stage 7 |
 
 ## D-0001 — Plugin location
 
@@ -553,6 +554,8 @@ that supersedes the old one, never by editing history.
 ## D-0029 — Host sandbox recommendation and detection
 
 - **Status:** Accepted on 2026-10-21. Resolves the proposal in repository issue 4.
+  Amended by D-0038, which reorders the recommendation so that outside isolation comes
+  first and no single vendor's tool is the only named option.
 - **Decision:** PeerFoil recommends the Claude Code Bash sandbox for low-supervision
   runs and detects it without providing or enforcing one. The plugin documents a starter
   `.claude/settings.json` fragment, `setup` and the production preflight report the
@@ -728,6 +731,36 @@ that supersedes the old one, never by editing history.
 - **Consequences:** Readers of `pr-` records check the generating release in the
   record's first line. Review Beta replaces the reduced shape and this entry records
   when and why the shapes differ.
+
+## D-0038 — The sandbox recommendation is layered and tool-neutral
+
+- **Status:** Accepted on 2026-10-21. Amends D-0029 after the owner's direction on
+  repository issue 4.
+- **Decision:** PeerFoil's sandbox recommendation names layers in order of preference
+  and depends on no single vendor's tool. First, an outside isolation layer that holds
+  the whole agent toolchain: a container or virtual machine such as
+  [Agent Airlock](https://github.com/gabrielmongefranco/agent-airlock), a rootless
+  Podman container for the agent CLIs, their editors, and their tools on Linux, WSL2,
+  and macOS. Second, the agent tools' own sandboxes: PeerFoil already requests a
+  sandbox level on every producer, repair, and reviewer call it makes, and Claude
+  Code's Bash sandbox can cover the rest of a guided session through one settings
+  fragment. Other isolation tools, such as Vetto on Linux, are acceptable alternatives
+  the user may choose. Detection reports the strongest layer it can see: running inside
+  a container counts as configured, then the host tool's settings; a missing sandbox
+  informs and never blocks.
+- **Options considered:** Keeping the recommendation centered on the Claude Code
+  sandbox alone (D-0029 as first accepted); recommending one third-party sandbox as the
+  required path.
+- **Reason:** The method must not depend on one vendor's harness for a safety property,
+  and an outside container isolates every tool in the chain at once, including the
+  Codex CLI, editors, and MCP servers, where a per-tool sandbox covers only its own
+  tool. Naming the layers in preference order keeps the advice honest about what each
+  one covers.
+- **Consequences:** `plugins/peerfoil/references/sandbox.md` leads with outside
+  isolation and keeps the Claude Code fragment as the host-tool example, the
+  `host-sandbox` check in `peerfoil doctor` and the setup skill treat a detected
+  container as the isolation boundary, and the architecture's trust section states the
+  layered wording. PeerFoil still provides and enforces no sandbox of its own.
 
 ## Conclusion
 

@@ -89,11 +89,12 @@ found file with `--version` as its own command.
    `AskUserQuestion`. Explain in one sentence that both profiles follow the repository's
    own `AGENTS.md` and that PeerFoil never edits it. Report Pass with the chosen profile.
 10. **Host sandbox.** Follow `${CLAUDE_PLUGIN_ROOT}/references/sandbox.md`, section 2.
-   Report Pass when the merged Claude Code settings enable the sandbox, Not verified
-   when they do not or cannot be read, and Not verified with the note "native Windows;
-   needs WSL2" on native Windows. This check informs; it never blocks, and setup never
-   edits the host's settings. When the sandbox is absent, the next step is the settings
-   fragment in that reference, section 1.
+   Report Pass when the session runs inside a container or the merged Claude Code
+   settings enable the sandbox, Not verified when neither is found or the settings
+   cannot be read, and Not verified with the note "native Windows; a container or WSL2
+   provides isolation" on native Windows. This check informs; it never blocks, and
+   setup never edits the host's settings. When no isolation is found, the next step is
+   that reference's layer list and settings fragment.
 11. **Pack tools.** If `.peerfoil/project.json` exists, read its `pack.id`, then read
    `${CLAUDE_PLUGIN_ROOT}/packs/<pack id>/pack.json`.
    - Run every entry in `tools[]` using its `command` array exactly. A missing required

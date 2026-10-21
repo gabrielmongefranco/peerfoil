@@ -44,7 +44,7 @@ mechanically enforce:
 Skills 0.1 shows **Guided** in setup, status, and every phase result. A status line
 claiming Enforced in this release is wrong by definition.
 
-### What Core Alpha 0.2 adds, and what it still lacks
+### Core Alpha 0.2 additions and remaining gaps
 
 Core Alpha is the first release with an enforced path: a local `peerfoil` application
 validates project records, runs one software task in a dedicated Git worktree, runs the
@@ -58,9 +58,13 @@ resumes at completed task boundaries. Its limits are also firm:
 
 ### Limits that apply to every release
 
-- **No operating-system sandbox.** PeerFoil recommends and detects the host's own
-  sandbox, such as the Claude Code Bash sandbox, but provides none. That sandbox does
-  not support native Windows, and its network allowlist on WSL2 is best effort.
+- **No operating-system sandbox.** PeerFoil recommends and detects isolation the host
+  provides, but provides none itself. The preferred layer is an outside container or
+  virtual machine that holds the whole agent toolchain, such as
+  [Agent Airlock](https://github.com/gabrielmongefranco/agent-airlock); the agent
+  tools' own sandboxes, such as the Claude Code Bash sandbox, come second. The Claude
+  Code sandbox does not support native Windows, and its network allowlist on WSL2 is
+  best effort.
 - **Git worktrees are change isolation, not security.** Nothing in PeerFoil contains
   hostile code. Untrusted projects need an outside disposable environment.
 - **Independence needs two model families.** With only one family signed in, every

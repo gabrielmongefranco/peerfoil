@@ -222,12 +222,32 @@ func runDoctor(ctx context.Context, env *Env, args []string) error {
 	return nil
 }
 
-// sandboxCheck reads the merged Claude Code settings for sandbox.enabled. It reports;
-// a missing sandbox never fails doctor (D-0029).
+// containerMarkers are the files container runtimes leave at the root of the guest
+// filesystem. Running inside a container means an outside isolation layer already
+// holds the agent tools, which is the preferred setup (D-0038).
+var containerMarkers = []string{"/run/.containerenv", "/.dockerenv"}
+
+// insideContainer reports whether any of the marker files exists.
+func insideContainer(markers []string) bool {
+	for _, marker := range markers {
+		if _, err := os.Stat(marker); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// sandboxCheck reports the strongest isolation it can detect: an outside container
+// holding the tools, then the host tool's own sandbox from the merged Claude Code
+// settings. It reports; a missing sandbox never fails doctor (D-0029, D-0038).
 func sandboxCheck(root string) doctorCheck {
+	if insideContainer(containerMarkers) {
+		return doctorCheck{Name: "host-sandbox", Status: "pass",
+			Detail: "running inside a container; the container is the isolation boundary"}
+	}
 	if runtime.GOOS == "windows" {
 		return doctorCheck{Name: "host-sandbox", Status: "not-verified",
-			Detail: "the Claude Code sandbox needs WSL2; native Windows runs without it"}
+			Detail: "native Windows has no operating-system sandbox for the agent tools; a container or WSL2 provides one"}
 	}
 	paths := []string{filepath.Join(root, ".claude", "settings.json")}
 	if home, err := os.UserHomeDir(); err == nil {
@@ -250,7 +270,7 @@ func sandboxCheck(root string) doctorCheck {
 	}
 	return doctorCheck{Name: "host-sandbox", Status: "not-verified",
 		Detail: "not configured; production will run without an operating-system sandbox",
-		Next:   "see the sandbox settings fragment in the plugin's sandbox reference"}
+		Next:   "run the agent tools inside an isolating container, or see the plugin's sandbox reference for the host tool's own sandbox"}
 }
 
 func firstFound(ctx context.Context, tool string) provider.Adapter {
