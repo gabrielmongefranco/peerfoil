@@ -41,6 +41,14 @@ func (r *Repo) CreateReviewWorktree(ctx context.Context, commit, name, parentDir
 	return path, nil
 }
 
+// IsAncestor reports whether one commit is an ancestor of another. Both arguments
+// must already be verified commit hashes; with those, a nonzero exit means only that
+// the first commit is not an ancestor of the second.
+func (r *Repo) IsAncestor(ctx context.Context, ancestor, descendant string) bool {
+	_, err := git(ctx, r.Root, "merge-base", "--is-ancestor", ancestor, descendant)
+	return err == nil
+}
+
 // CommitOf resolves a branch or other reference to its commit hash.
 func (r *Repo) CommitOf(ctx context.Context, ref string) (string, error) {
 	out, err := git(ctx, r.Root, "rev-parse", "--verify", ref+"^{commit}")

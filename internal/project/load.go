@@ -135,6 +135,15 @@ func (s *State) semanticProblems() []string {
 	if s.Project.Revisions.Plan > 0 && s.Plan == nil {
 		add("project.json names plan revision %d but plan.json is missing", s.Project.Revisions.Plan)
 	}
+	// An inherited rules path is later read and quoted to models, so it must stay a
+	// plain repository-relative path; anything else could expose unrelated files.
+	if s.Project.RulesSource.Mode == "inherit" {
+		path := s.Project.RulesSource.Path
+		if path == "" || strings.Contains(path, "\\") || strings.HasPrefix(path, "/") ||
+			strings.Contains(path, ":") || hasDotDot(path) {
+			add("rules_source.path %q must be a repository-relative path with no traversal", path)
+		}
+	}
 	for _, name := range []string{"architecture.md", "quality.md"} {
 		revision := s.Project.Revisions.Architecture
 		if name == "quality.md" {
@@ -157,6 +166,10 @@ func (s *State) semanticProblems() []string {
 		if plan.ArchitectureRevision != s.Project.Revisions.Architecture {
 			add("plan.json architecture revision %d does not match the accepted architecture revision %d",
 				plan.ArchitectureRevision, s.Project.Revisions.Architecture)
+		}
+		if plan.QualityRevision != s.Project.Revisions.Quality {
+			add("plan.json quality revision %d does not match the accepted Quality Contract revision %d",
+				plan.QualityRevision, s.Project.Revisions.Quality)
 		}
 		problems = append(problems, planProblems(plan)...)
 	}
@@ -202,14 +215,25 @@ func planProblems(plan *Plan) []string {
 		problems = append(problems, fmt.Sprintf("plan.json: "+format, args...))
 	}
 
+	retained := map[string]bool{}
+	for _, change := range plan.Changes {
+		for _, taskID := range change.RetainedTasks {
+			retained[taskID] = true
+		}
+	}
+
 	seen := map[string]bool{}
 	taskIDs := map[string]bool{}
 	stageIDs := map[string]bool{}
+	activePhases := 0
 	for _, phase := range plan.Phases {
 		if seen[phase.ID] {
 			add("duplicate identifier %s", phase.ID)
 		}
 		seen[phase.ID] = true
+		if phase.Status == "active" {
+			activePhases++
+		}
 		for _, stage := range phase.Stages {
 			if seen[stage.ID] {
 				add("duplicate identifier %s", stage.ID)
@@ -225,6 +249,14 @@ func planProblems(plan *Plan) []string {
 				if task.PlanRevision > plan.PlanRevision {
 					add("%s names plan revision %d, later than the plan's own revision %d",
 						task.ID, task.PlanRevision, plan.PlanRevision)
+				}
+				// Runnable work from an older revision is valid only when change
+				// intake retained it; otherwise its scope was never re-tied to the
+				// current plan and it must not be selected.
+				if (task.Status == "planned" || task.Status == "ready") &&
+					task.PlanRevision < plan.PlanRevision && !retained[task.ID] {
+					add("%s is runnable but tied to the older plan revision %d without being retained by a recorded change",
+						task.ID, task.PlanRevision)
 				}
 				if task.ArchitectureRevision > plan.ArchitectureRevision {
 					add("%s names architecture revision %d, later than the plan's %d",
@@ -246,7 +278,12 @@ func planProblems(plan *Plan) []string {
 		}
 	}
 
+	if activePhases > 1 {
+		add("%d phases are active at once; task selection and review operate on exactly one", activePhases)
+	}
+
 	dependencies := map[string][]string{}
+	stageDependencies := map[string][]string{}
 	for _, phase := range plan.Phases {
 		for _, stage := range phase.Stages {
 			for _, dependency := range stage.DependsOn {
@@ -254,6 +291,7 @@ func planProblems(plan *Plan) []string {
 					add("%s depends on missing stage %s", stage.ID, dependency)
 				}
 			}
+			stageDependencies[stage.ID] = stage.DependsOn
 			for _, task := range stage.Tasks {
 				for _, dependency := range task.DependsOn {
 					if !taskIDs[dependency] {
@@ -266,6 +304,9 @@ func planProblems(plan *Plan) []string {
 	}
 	if cycle := findCycle(dependencies); cycle != "" {
 		add("task dependencies form a cycle through %s", cycle)
+	}
+	if cycle := findCycle(stageDependencies); cycle != "" {
+		add("stage dependencies form a cycle through %s", cycle)
 	}
 
 	changeIDs := map[string]bool{}
@@ -288,6 +329,16 @@ func planProblems(plan *Plan) []string {
 		}
 	}
 	return problems
+}
+
+// hasDotDot reports whether any slash-separated component of a path is "..".
+func hasDotDot(path string) bool {
+	for _, component := range strings.Split(path, "/") {
+		if component == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // findCycle returns one task on a dependency cycle, or an empty string.

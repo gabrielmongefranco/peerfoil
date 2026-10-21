@@ -66,7 +66,11 @@ func runDoctor(ctx context.Context, env *Env, args []string) error {
 	if _, err := repo.HeadCommit(ctx); err != nil {
 		add(doctorCheck{Name: "repository", Status: "fail",
 			Detail: "the repository has no commit yet", Next: "make an initial commit"})
-	} else if clean, dirty, err := repo.IsClean(ctx); err == nil && !clean {
+	} else if clean, dirty, err := repo.IsClean(ctx); err != nil {
+		add(doctorCheck{Name: "repository", Status: "fail",
+			Detail: "the working tree could not be inspected",
+			Next:   "run git status to see what Git reports"})
+	} else if !clean {
 		add(doctorCheck{Name: "repository", Status: "pass",
 			Detail: fmt.Sprintf("found, with %d uncommitted change(s)", len(dirty))})
 	} else {

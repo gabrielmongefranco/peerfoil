@@ -241,3 +241,62 @@ func TestNextTaskOrderAndDependencies(t *testing.T) {
 		t.Fatalf("in-flight %+v, want tk-002", open)
 	}
 }
+
+func TestStageDependencyCycle(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "plan.json"), func(doc map[string]any) {
+		stages := doc["phases"].([]any)[0].(map[string]any)["stages"].([]any)
+		stages[0].(map[string]any)["depends_on"] = []any{"st-01"}
+	})
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "stage dependencies form a cycle") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestMultipleActivePhasesRejected(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "plan.json"), func(doc map[string]any) {
+		phases := doc["phases"].([]any)
+		first := phases[0].(map[string]any)
+		second := map[string]any{
+			"id": "ph-02", "title": "Second", "outcome": "Another outcome.",
+			"order": 2.0, "status": "active", "stages": []any{},
+		}
+		doc["phases"] = []any{first, second}
+	})
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "phases are active at once") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestRunnableTaskFromOlderRevisionNeedsRetention(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	// tk-001 drops to revision 1 and the recorded change no longer retains it.
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "plan.json"), func(doc map[string]any) {
+		tasks := doc["phases"].([]any)[0].(map[string]any)["stages"].([]any)[0].(map[string]any)["tasks"].([]any)
+		tasks[0].(map[string]any)["plan_revision"] = 1.0
+		changes := doc["changes"].([]any)
+		changes[0].(map[string]any)["retained_tasks"] = []any{}
+	})
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "without being retained") {
+		t.Errorf("err = %v", err)
+	}
+	// Once the change retains it, the older revision is legitimate carried work.
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "plan.json"), func(doc map[string]any) {
+		changes := doc["changes"].([]any)
+		changes[0].(map[string]any)["retained_tasks"] = []any{"tk-001"}
+	})
+	if _, err := Load(root, schemas(t)); err != nil {
+		t.Errorf("retained task rejected: %v", err)
+	}
+}
+
+func TestInheritedRulesPathMustStayInRepository(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	mutateJSON(t, filepath.Join(root, ".peerfoil", "project.json"), func(doc map[string]any) {
+		doc["rules_source"] = map[string]any{"mode": "inherit", "path": "../../secrets/AGENTS.md"}
+	})
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "rules_source.path") {
+		t.Errorf("err = %v", err)
+	}
+}

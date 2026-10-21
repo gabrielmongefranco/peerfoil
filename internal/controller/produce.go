@@ -62,14 +62,9 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err := e.Repo.DetectUnsupported(ctx); err != nil {
 		return err
 	}
-	// Later tasks build on the already-integrated work, so the integration branch tip
-	// is the base once it exists; the first task starts from the user's HEAD.
-	baseCommit, err := e.Repo.CommitOf(ctx, e.Repo.IntegrationBranch(e.State.Project.Revisions.Plan))
+	baseCommit, err := e.productionBase(ctx)
 	if err != nil {
-		baseCommit, err = e.Repo.HeadCommit(ctx)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	changeSetID, err := e.nextEvidenceDirID("cs")
@@ -199,7 +194,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
-	evidenceIDs, failed, err := e.runTaskEvidence(ctx, worktree, task, changeSetID, taskCommit)
+	evidenceIDs, failed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, taskCommit)
 	if err != nil {
 		return err
 	}
@@ -248,11 +243,71 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 		return nil
 	}
 	// The review boundary is only reachable when no task in the phase carries a
-	// failed required check: a blocked task cannot be approved around.
+	// failed required check, and the required evidence must hold at the exact
+	// revision the reviewers will freeze, not only at each task's own commit.
 	if err := e.blockedTaskError(); err != nil {
 		return err
 	}
-	return e.enterReview(integrationTip, task.ID, evidenceIDs)
+	frozenEvidence, err := e.revalidatePhaseEvidence(ctx, integrationTip)
+	if err != nil {
+		return err
+	}
+	return e.enterReview(integrationTip, task.ID, append(evidenceIDs, frozenEvidence...))
+}
+
+// revalidatePhaseEvidence reruns every validated task's executable evidence against
+// the frozen revision, so approval can never rest on results from an earlier commit
+// that later tasks changed.
+func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]string, error) {
+	checkout, err := e.Repo.CreateReviewWorktree(ctx, frozen, "evidence", e.WorktreeParent)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, checkout) }()
+	var recorded []string
+	var failed []string
+	for _, task := range e.State.Plan.Tasks() {
+		if task.Status != "validated" && task.Status != "accepted" {
+			continue
+		}
+		ids, taskFailed, err := e.runTaskEvidence(ctx, checkout, task, "", frozen)
+		if err != nil {
+			return recorded, err
+		}
+		recorded = append(recorded, ids...)
+		failed = append(failed, taskFailed...)
+	}
+	if len(failed) > 0 {
+		return recorded, errs.New(errs.Evidence,
+			"required checks failed at the frozen revision: "+strings.Join(failed, ", "),
+			"the phase cannot enter review; route the fix through the PeerFoil skills change intake")
+	}
+	return recorded, nil
+}
+
+// productionBase picks the commit a task builds on. Mid-phase that is the integration
+// tip, so later tasks see earlier integrated work. When the user has merged the
+// integration branch and moved HEAD past it, the next work starts from HEAD and the
+// integration branch fast-forwards onto it. Divergence between the two is not
+// something Alpha resolves, so it stops for the user.
+func (e *Engine) productionBase(ctx context.Context) (string, error) {
+	head, err := e.Repo.HeadCommit(ctx)
+	if err != nil {
+		return "", err
+	}
+	tip, err := e.Repo.CommitOf(ctx, e.Repo.IntegrationBranch(e.State.Project.Revisions.Plan))
+	if err != nil {
+		return head, nil
+	}
+	switch {
+	case e.Repo.IsAncestor(ctx, head, tip):
+		return tip, nil
+	case e.Repo.IsAncestor(ctx, tip, head):
+		return head, nil
+	}
+	return "", errs.New(errs.Git,
+		"the peerfoil/integration branch and your current HEAD have diverged",
+		"merge or rebase one onto the other, or delete the integration branch if its work is already merged, then run peerfoil start")
 }
 
 // blockedTaskError refuses to move toward review while any task is blocked or stale,
@@ -286,7 +341,11 @@ func (e *Engine) finishPhaseProduction(ctx context.Context) error {
 		"No eligible task remains; the phase's evidence is re-checked before review.", &head); err != nil {
 		return err
 	}
-	return e.enterReview(head, "", nil)
+	frozenEvidence, err := e.revalidatePhaseEvidence(ctx, head)
+	if err != nil {
+		return err
+	}
+	return e.enterReview(head, "", frozenEvidence)
 }
 
 func (e *Engine) enterReview(sourceRevision, lastTask string, evidenceIDs []string) error {
@@ -410,7 +469,7 @@ func rejectSymlinks(worktreePath string, changes []workspace.Change) error {
 // runTaskEvidence runs every executable evidence requirement the task declares, using
 // the pack's procedure for this repository. It returns the record identifiers and the
 // names of required checks that did not pass.
-func (e *Engine) runTaskEvidence(ctx context.Context, worktree *workspace.Worktree,
+func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 	task *project.Task, changeSetID, taskCommit string) ([]string, []string, error) {
 	var recorded []string
 	var failedRequired []string
@@ -424,7 +483,7 @@ func (e *Engine) runTaskEvidence(ctx context.Context, worktree *workspace.Worktr
 			}
 			continue
 		}
-		argv := e.Pack.CommandFor(requirement.Name, worktree.Path)
+		argv := e.Pack.CommandFor(requirement.Name, checkoutDir)
 		if argv == nil {
 			if requirement.Level == "required" {
 				return recorded, nil, errs.New(errs.Evidence,
@@ -451,7 +510,7 @@ func (e *Engine) runTaskEvidence(ctx context.Context, worktree *workspace.Worktr
 			PlanRevision:         e.State.Project.Revisions.Plan,
 			ArchitectureRevision: e.State.Project.Revisions.Architecture,
 			SourceRevision:       taskCommit,
-			RepoRoot:             worktree.Path,
+			RepoRoot:             checkoutDir,
 			Now:                  e.Now,
 		}, filepath.Join(e.State.Dir, "evidence"))
 		if err != nil {

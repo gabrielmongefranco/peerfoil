@@ -107,3 +107,42 @@ func TestDifferentClonesGetDifferentDirectories(t *testing.T) {
 		t.Errorf("unexpected layout %s", first)
 	}
 }
+
+func TestTruncatedTailIsRepairedOnOpen(t *testing.T) {
+	repo := t.TempDir()
+	st := testStore(t, repo)
+	if _, err := st.Intent("producer", "inv-0001", nil); err != nil {
+		t.Fatal(err)
+	}
+	// A crash mid-write leaves a torn final line.
+	file, err := os.OpenFile(filepath.Join(st.Dir, "journal.jsonl"), os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(`{"seq":2,"kind":"res`); err != nil {
+		t.Fatal(err)
+	}
+	file.Close()
+	// Reopening repairs the file, and a later append lands on its own clean line.
+	reopened, err := Open("example-project", repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reopened.Result("producer", "inv-0001", StatusSucceeded, nil); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := reopened.Entries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 || entries[1].Status != StatusSucceeded {
+		t.Fatalf("entries after repair: %+v", entries)
+	}
+	open, err := reopened.OpenInvocations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(open) != 0 {
+		t.Errorf("the result after repair was ignored: %+v", open)
+	}
+}

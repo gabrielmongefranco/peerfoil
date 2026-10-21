@@ -137,9 +137,32 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 
 	switch decision {
 	case "approve":
-		return e.approvePhase(frozen, phaseReviewID)
+		return e.approvePhase(frozen, map[string][]string{"phase_reviews": {phaseReviewID}},
+			"Phase approved by both reviewers; see "+phaseReviewID+".")
 	case "repair":
-		return e.repairCycle(ctx, frozen, phaseReviewID, blockingFindings(merged), authors)
+		if e.State.Project.Settings.Review.RepairCycles < 1 {
+			reason := "both reviewers asked for a repair, and this project's repair cycle allowance is zero; you decide how to proceed"
+			if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
+				return err
+			}
+			return errs.New(errs.Policy, reason,
+				"read .peerfoil/reviews/"+phaseReviewID+".md, then continue with the PeerFoil skills")
+		}
+		// The repair gets the full agreed finding list: when neither reviewer marked
+		// a finding blocking, the repair's work is the merged list itself. A repair
+		// decision with no findings at all is incoherent and goes to the user.
+		repairFindings := blockingFindings(merged)
+		if len(repairFindings) == 0 {
+			repairFindings = merged
+		}
+		if len(repairFindings) == 0 {
+			reason := "both reviewers asked for a repair but reported no findings; you decide how to proceed"
+			if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
+				return err
+			}
+			return errs.New(errs.Policy, reason, "read .peerfoil/reviews/"+phaseReviewID+".md")
+		}
+		return e.repairCycle(ctx, frozen, phaseReviewID, repairFindings, authors)
 	default:
 		reason := "the phase reviewers did not reach an agreed decision (" + decisionSummary(runs) + "); you decide how to proceed"
 		if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
@@ -557,8 +580,8 @@ func (e *Engine) writePhaseReviewRecord(id, frozen, bundleDigest string, authors
 }
 
 // approvePhase closes the reviewed phase: tasks accepted, statuses approved, and the
-// review-to-approve transition recorded.
-func (e *Engine) approvePhase(frozen, phaseReviewID string) error {
+// review-to-approve transition recorded with every record that proves it.
+func (e *Engine) approvePhase(frozen string, refs map[string][]string, summary string) error {
 	for index := range e.State.Plan.Phases {
 		phase := &e.State.Plan.Phases[index]
 		if phase.Status != "active" {
@@ -579,8 +602,7 @@ func (e *Engine) approvePhase(frozen, phaseReviewID string) error {
 	if err := e.SavePlan(); err != nil {
 		return err
 	}
-	if err := e.AppendTransition(Approve, map[string][]string{"phase_reviews": {phaseReviewID}},
-		"Phase approved by both reviewers; see "+phaseReviewID+".", &frozen); err != nil {
+	if err := e.AppendTransition(Approve, refs, summary, &frozen); err != nil {
 		return err
 	}
 	fmt.Fprintf(e.Out, "The phase is approved. The reviewed work sits on %s at %s.\n",
@@ -590,27 +612,44 @@ func (e *Engine) approvePhase(frozen, phaseReviewID string) error {
 }
 
 // repairCycle runs the one allowed repair: a different-family-verified bounded fix.
+// Every configuration check runs before the repair transition is recorded, so a
+// refusal leaves the workflow in a state the user can still act from.
 func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	blocking []Finding, authors map[string]string) error {
-	if err := e.AppendTransition(Repair, map[string][]string{"phase_reviews": {phaseReviewID}},
-		"Both reviewers asked for a repair; one repair cycle begins.", &frozen); err != nil {
-		return err
-	}
 	repairSeatSetting := e.State.Project.Settings.Roles["repair_producer"]
-	if repairSeatSetting.Tool != e.Producer.Name() {
+	if e.RepairProducer == nil || repairSeatSetting.Tool != e.RepairProducer.Name() {
 		return errs.New(errs.Configuration,
-			"Core Alpha supports codex-cli repair production only", "adjust the repair_producer seat")
+			"the configured repair_producer seat is not available", "run peerfoil doctor, then adjust the repair_producer seat")
 	}
 	if repairSeatSetting.Effort == "low" {
 		return errs.New(errs.Policy, "a repair never runs at low effort", "raise the repair_producer seat's effort")
 	}
-	repairerLineage := e.Producer.LineageRoot(repairSeatSetting.Model)
+	repairerLineage := e.RepairProducer.LineageRoot(repairSeatSetting.Model)
 	if repairerLineage == provider.LineageUnknown {
 		// Unknown lineage fails closed: different-family verification cannot be
 		// proven for a repairer whose family is not established.
 		return errs.New(errs.Configuration,
 			"the repair producer's model lineage is unknown, so different-family verification cannot be proven",
 			"record an explicit model for the repair_producer seat, then run peerfoil resume")
+	}
+	var verifier provider.Adapter
+	var verifierSeat provider.Seat
+	for index, reviewer := range e.Reviewers {
+		lineage := reviewer.LineageRoot(e.ReviewerSeats[index].Model)
+		if lineage != provider.LineageUnknown && lineage != repairerLineage {
+			verifier = reviewer
+			verifierSeat = e.ReviewerSeats[index]
+			break
+		}
+	}
+	if verifier == nil {
+		return errs.New(errs.Configuration, "no reviewer from a different family than the repairer is available",
+			"install and sign in to the other model family, then run peerfoil resume")
+	}
+
+	if err := e.AppendTransition(Repair, map[string][]string{"phase_reviews": {phaseReviewID}},
+		"Both reviewers asked for a repair; one repair cycle begins.", &frozen); err != nil {
+		return err
 	}
 
 	// The repair works on a fresh worktree at the frozen revision.
@@ -672,9 +711,9 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 		return errs.New(errs.Provider, reason, "")
 	}
-	// The repair may touch any path the user already approved for this phase's
-	// tasks, and nothing else. This is the write grant the user accepted when they
-	// approved the plan; .peerfoil, .git, and AGENTS.md stay denied regardless.
+	// The repair may touch any path the user already approved for the active
+	// phase's tasks, and nothing else; .peerfoil, .git, instruction files, and
+	// model-tool configuration stay denied regardless.
 	allowed := e.unionAllowedPaths()
 	if err := workspace.CheckScope(changes, allowed); err != nil {
 		_, _ = e.Journal.Result("repair-producer", changeSetID, "failed", nil)
@@ -699,7 +738,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	digest := sha256.Sum256(patch)
 	session := outcome.SessionID
 	repairAuthor := project.Actor{
-		Role: "repair_producer", Tool: e.Producer.Name(), Model: &model,
+		Role: "repair_producer", Tool: e.RepairProducer.Name(), Model: &model,
 		Effort: &effort, LineageRoot: repairerLineage,
 	}
 	if session != "" {
@@ -742,7 +781,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		if task.Status != "accepted" && task.Status != "validated" {
 			continue
 		}
-		_, taskFailed, err := e.runTaskEvidence(ctx, worktree, task, changeSetID, repairCommit)
+		_, taskFailed, err := e.runTaskEvidence(ctx, worktree.Path, task, changeSetID, repairCommit)
 		if err != nil {
 			return err
 		}
@@ -760,22 +799,6 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return err
 	}
 
-	// The verifier is a reviewer whose family is known and differs from the
-	// repairer's; an unknown lineage never counts as a different family.
-	var verifier provider.Adapter
-	var verifierSeat provider.Seat
-	for index, reviewer := range e.Reviewers {
-		lineage := reviewer.LineageRoot(e.ReviewerSeats[index].Model)
-		if lineage != provider.LineageUnknown && lineage != repairerLineage {
-			verifier = reviewer
-			verifierSeat = e.ReviewerSeats[index]
-			break
-		}
-	}
-	if verifier == nil {
-		return errs.New(errs.Configuration, "no reviewer from a different family than the repairer is available",
-			"install and sign in to the other model family, then run peerfoil resume")
-	}
 	repairDigest := ""
 	if tree, err := e.Repo.TreeDigest(ctx, repairCommit); err == nil {
 		sum := sha256.Sum256(tree)
@@ -805,7 +828,13 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	if err := e.Repo.CleanupWorktree(ctx, worktree); err != nil {
 		fmt.Fprintf(e.Out, "Note: the repair worktree was not removed: %v\n", err)
 	}
-	return e.approvePhase(integrationTip, phaseReviewID)
+	// The approval names everything that proves it: the phase review, the fresh
+	// verification from the other family, and the repaired change set.
+	return e.approvePhase(integrationTip, map[string][]string{
+		"phase_reviews": {phaseReviewID},
+		"reviews":       {verifyRun.recordID},
+		"change_sets":   {changeSetID},
+	}, "Phase approved after a verified repair; see "+phaseReviewID+", "+verifyRun.recordID+", and "+changeSetID+".")
 }
 
 func (e *Engine) lastValidatedTaskID() string {
@@ -818,14 +847,23 @@ func (e *Engine) lastValidatedTaskID() string {
 	return last
 }
 
+// unionAllowedPaths is the write grant for a repair: every path pattern the user
+// approved for the tasks of the active phase, and nothing from other phases.
 func (e *Engine) unionAllowedPaths() []string {
 	seen := map[string]bool{}
 	var union []string
-	for _, task := range e.State.Plan.Tasks() {
-		for _, pattern := range task.AllowedPaths {
-			if !seen[pattern] {
-				seen[pattern] = true
-				union = append(union, pattern)
+	for _, phase := range e.State.Plan.Phases {
+		if phase.Status != "active" {
+			continue
+		}
+		for _, stage := range phase.Stages {
+			for _, task := range stage.Tasks {
+				for _, pattern := range task.AllowedPaths {
+					if !seen[pattern] {
+						seen[pattern] = true
+						union = append(union, pattern)
+					}
+				}
 			}
 		}
 	}

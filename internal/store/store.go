@@ -84,14 +84,34 @@ func Open(projectID, repoRoot string) (*Store, error) {
 		return nil, errs.Wrap(errs.Configuration, "cannot create the local state directory", err)
 	}
 	st := &Store{Dir: dir, path: filepath.Join(dir, "journal.jsonl"), now: time.Now}
-	entries, err := st.Entries()
+	entries, validLength, damaged, err := st.read()
 	if err != nil {
 		return nil, err
+	}
+	if damaged {
+		// A crash mid-write leaves a torn final line. Appending after it would glue
+		// the next entry onto the fragment and silently lose every later record, so
+		// the file is cut back to its last complete line first.
+		if err := truncateTo(st.path, validLength); err != nil {
+			return nil, errs.Wrap(errs.Configuration, "repairing the journal after an interrupted write", err)
+		}
 	}
 	if len(entries) > 0 {
 		st.lastSeq = entries[len(entries)-1].Seq
 	}
 	return st, nil
+}
+
+func truncateTo(path string, length int64) error {
+	file, err := os.OpenFile(path, os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if err := file.Truncate(length); err != nil {
+		return err
+	}
+	return file.Sync()
 }
 
 // SetClock replaces the time source; tests use it for stable timestamps.
@@ -127,27 +147,42 @@ func (s *Store) Append(entry Entry) (Entry, error) {
 // a write, is dropped with its loss noted in the returned entries' flow rather than
 // failing the read, because the journal exists exactly to survive interruption.
 func (s *Store) Entries() ([]Entry, error) {
+	entries, _, _, err := s.read()
+	return entries, err
+}
+
+// read returns the valid entries, the byte length of the valid prefix, and whether
+// damaged content followed it.
+func (s *Store) read() ([]Entry, int64, bool, error) {
 	raw, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {
-		return nil, nil
+		return nil, 0, false, nil
 	}
 	if err != nil {
-		return nil, errs.Wrap(errs.Configuration, "reading the journal", err)
+		return nil, 0, false, errs.Wrap(errs.Configuration, "reading the journal", err)
 	}
 	var entries []Entry
-	for _, line := range strings.Split(string(raw), "\n") {
-		if strings.TrimSpace(line) == "" {
-			continue
+	var validLength int64
+	consumed := 0
+	for {
+		lineEnd := strings.IndexByte(string(raw[consumed:]), '\n')
+		if lineEnd < 0 {
+			// Content with no final newline is an incomplete write.
+			return entries, validLength, consumed < len(raw), nil
 		}
-		var entry Entry
-		if err := json.Unmarshal([]byte(line), &entry); err != nil {
-			// A damaged line ends the trustworthy prefix; everything before it
-			// stands, and recovery treats the rest as unknown.
-			break
+		line := strings.TrimSpace(string(raw[consumed : consumed+lineEnd]))
+		if line != "" {
+			var entry Entry
+			if err := json.Unmarshal([]byte(line), &entry); err != nil {
+				// A damaged line ends the trustworthy prefix; everything before it
+				// stands, and recovery treats the rest as unknown.
+				return entries, validLength, true, nil
+			}
+			entries = append(entries, entry)
 		}
-		entries = append(entries, entry)
+		consumed += lineEnd + 1
+		validLength = int64(consumed)
 	}
-	return entries, nil
 }
 
 // Intent records that an outside operation is about to run. Record the result with

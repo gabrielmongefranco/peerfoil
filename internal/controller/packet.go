@@ -50,8 +50,14 @@ func (e *Engine) BuildProducerPacket(selection *project.Selection, changeSetID, 
 	b.WriteString("You are the PeerFoil producer for exactly one bounded task. ")
 	b.WriteString("Work only inside the current directory, which is a dedicated Git worktree for this task.\n\n")
 
-	if e.State.Project.RulesSource.Mode == "inherit" && e.State.Project.RulesSource.Path != "" {
-		fmt.Fprintf(&b, "Repository rules: read %s at the repository root first and follow it.\n", e.State.Project.RulesSource.Path)
+	// The rules path is loader-validated, and this guard keeps the packet safe even
+	// against a record edited after loading: only a plain repository-relative path
+	// may be quoted as something to read.
+	rulesPath := e.State.Project.RulesSource.Path
+	if e.State.Project.RulesSource.Mode == "inherit" && rulesPath != "" &&
+		!strings.ContainsAny(rulesPath, "\\:") && !strings.HasPrefix(rulesPath, "/") &&
+		!strings.Contains("/"+rulesPath+"/", "/../") {
+		fmt.Fprintf(&b, "Repository rules: read %s at the repository root first and follow it.\n", rulesPath)
 	}
 	fmt.Fprintf(&b, "Project: %s · goal: %s\n", e.State.Project.ProjectID, e.State.Project.Goal)
 	fmt.Fprintf(&b, "Identifiers: phase %s, stage %s, task %s, change set %s\n",

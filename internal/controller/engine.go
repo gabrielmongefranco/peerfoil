@@ -38,6 +38,8 @@ type Deps struct {
 	Pack           *pack.Pack
 	Producer       provider.Adapter
 	ProducerSeat   provider.Seat
+	RepairProducer provider.Adapter
+	RepairSeat     provider.Seat
 	Reviewers      []provider.Adapter
 	ReviewerSeats  []provider.Seat
 	Evidence       evidence.Runner
@@ -64,20 +66,23 @@ func NewEngine(deps Deps) *Engine {
 
 // reviewRecord is the part of a recorded review the production gate needs.
 type reviewRecord struct {
-	ID           string
-	Kind         string
-	Decision     string
-	Independence string
-	PlanRevision int
-	ArchRevision int
+	ID              string
+	Kind            string
+	Decision        string
+	Independence    string
+	IndependenceWhy string
+	PlanRevision    int
+	ArchRevision    int
+	QualityRevision int
 }
 
 var (
 	reviewKindLine         = regexp.MustCompile(`(?m)^- \*\*Kind:\*\* *([a-z-]+)`)
 	reviewDecisionLine     = regexp.MustCompile(`(?m)^- \*\*Decision:\*\* *([a-z-]+)`)
-	reviewIndependenceLine = regexp.MustCompile(`(?m)^- \*\*Independence:\*\* *([a-z-]+)`)
+	reviewIndependenceLine = regexp.MustCompile(`(?m)^- \*\*Independence:\*\* *([a-z-]+)(.*)$`)
 	reviewPlanRevision     = regexp.MustCompile(`plan revision ([0-9]+)`)
 	reviewArchRevision     = regexp.MustCompile(`architecture revision ([0-9]+)`)
+	reviewQualityRevision  = regexp.MustCompile(`quality revision ([0-9]+)`)
 )
 
 // loadReviews parses the field lines of the recorded reviews. The records are
@@ -115,12 +120,16 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 		}
 		if match := reviewIndependenceLine.FindStringSubmatch(text); match != nil {
 			record.Independence = match[1]
+			record.IndependenceWhy = strings.ToLower(match[2])
 		}
 		if match := reviewPlanRevision.FindStringSubmatch(text); match != nil {
 			fmt.Sscanf(match[1], "%d", &record.PlanRevision)
 		}
 		if match := reviewArchRevision.FindStringSubmatch(text); match != nil {
 			fmt.Sscanf(match[1], "%d", &record.ArchRevision)
+		}
+		if match := reviewQualityRevision.FindStringSubmatch(text); match != nil {
+			fmt.Sscanf(match[1], "%d", &record.QualityRevision)
 		}
 		reviews = append(reviews, record)
 	}
@@ -149,17 +158,24 @@ func (e *Engine) productionGate() error {
 	if err != nil {
 		return err
 	}
-	// A usable review names its decision and its independence; a record without a
-	// recorded independence value cannot prove the review rule was followed. The
-	// non-independent values are still accepted here because D-0014 lets the user
-	// accept a reduced-assurance review, and that acceptance lives in the record.
-	validIndependence := map[string]bool{
-		"independent": true, "local-family": true, "secondary": true, "reduced": true,
+	// A usable review names its decision and its independence, and it must have
+	// inspected the current Quality Contract revision as well. A non-independent
+	// review (D-0014: local-family, secondary, or reduced) counts only when its
+	// recorded reason carries the user's acceptance, because that acceptance is the
+	// method's condition for proceeding without a different family.
+	usable := func(review reviewRecord) bool {
+		switch review.Independence {
+		case "independent":
+			return true
+		case "local-family", "secondary", "reduced":
+			return strings.Contains(review.IndependenceWhy, "accept")
+		}
+		return false
 	}
 	approved := func(kind string, matches func(reviewRecord) bool) bool {
 		for _, review := range reviews {
-			if review.Kind == kind && review.Decision == "approve" &&
-				validIndependence[review.Independence] && matches(review) {
+			if review.Kind == kind && review.Decision == "approve" && usable(review) &&
+				review.QualityRevision == p.Revisions.Quality && matches(review) {
 				return true
 			}
 		}

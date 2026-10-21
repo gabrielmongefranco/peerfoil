@@ -115,6 +115,16 @@ func buildEngine(ctx context.Context, env *Env) (*controller.Engine, error) {
 		return nil, err
 	}
 
+	// The repair seat may differ from the producer seat in model and effort, so it
+	// gets its own adapter; recording one seat while running another would corrupt
+	// provenance.
+	repairSeatSetting := state.Project.Settings.Roles["repair_producer"]
+	repairSeat := provider.Seat{Tool: repairSeatSetting.Tool, Model: repairSeatSetting.Model, Effort: repairSeatSetting.Effort}
+	repairProducer, err := findAdapter(ctx, repairSeatSetting.Tool, repairSeat)
+	if err != nil {
+		repairProducer = nil
+	}
+
 	var reviewers []provider.Adapter
 	var reviewerSeats []provider.Seat
 	for _, reviewerSeat := range state.Project.Settings.PhaseReviewers {
@@ -140,6 +150,8 @@ func buildEngine(ctx context.Context, env *Env) (*controller.Engine, error) {
 		Pack:           loadedPack,
 		Producer:       producer,
 		ProducerSeat:   seat,
+		RepairProducer: repairProducer,
+		RepairSeat:     repairSeat,
 		Reviewers:      reviewers,
 		ReviewerSeats:  reviewerSeats,
 		Evidence:       evidenceRunner,
