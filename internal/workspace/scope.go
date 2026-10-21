@@ -17,6 +17,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 )
@@ -48,6 +50,10 @@ func CheckScope(changes []Change, allowedPatterns []string) error {
 			return
 		}
 		seen[changed] = true
+		if reason := unsafeDisplayPathReason(changed); reason != "" {
+			violations = append(violations, "[withheld filename] ("+reason+")")
+			return
+		}
 		if reason := unsafePathReason(changed); reason != "" {
 			violations = append(violations, fmt.Sprintf("%s (%s)", changed, reason))
 			return
@@ -72,6 +78,25 @@ func CheckScope(changes []Change, allowedPatterns []string) error {
 		fmt.Sprintf("the change touches paths outside the task's allowed scope: %s%s",
 			strings.Join(violations, "; "), extra),
 		"revise the plan to allow these paths, or remove the out-of-scope changes")
+}
+
+// unsafeDisplayPathReason prevents untrusted filenames from injecting retained
+// Markdown or terminal controls, or exposing a credential through a path report.
+func unsafeDisplayPathReason(p string) string {
+	if !utf8.ValidString(p) || strings.ContainsAny(p, "|`<>[]") {
+		return "unsafe filename encoding or markup"
+	}
+	for _, r := range p {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			return "filename contains control characters"
+		}
+	}
+	for _, pattern := range secretPatterns {
+		if pattern.re.MatchString(p) {
+			return "filename may contain a credential"
+		}
+	}
+	return ""
 }
 
 // unsafePathReason explains why a changed path can never be accepted, or returns an

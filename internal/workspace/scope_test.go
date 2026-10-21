@@ -18,6 +18,17 @@ import (
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 )
 
+func TestUnsafeFilenamesNeverReachReports(t *testing.T) {
+	for _, name := range []string{"src/forged\nrecord.go", "src/table|row.go", "src/\x1b[2J.go", "src/\u202eevil.go", "src/`markup`.go", "src/" + "sk-proj-" + strings.Repeat("synthetic", 4)} {
+		for _, changes := range [][]Change{{{Path: name, Status: "A"}}, {{Path: "safe.go", OldPath: name, Status: "R"}}} {
+			err := CheckScope(changes, []string{"**"})
+			if err == nil || strings.Contains(err.Error(), name) {
+				t.Fatal("unsafe filename was accepted or echoed in its rejection")
+			}
+		}
+	}
+}
+
 func TestCheckScope(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -190,13 +190,9 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 			return errs.New(errs.Policy, reason,
 				"read .peerfoil/reviews/"+phaseReviewID+".md, then continue with the PeerFoil skills")
 		}
-		// The repair gets the full agreed finding list: when neither reviewer marked
-		// a finding blocking, the repair's work is the merged list itself. A repair
-		// decision with no findings at all is incoherent and goes to the user.
-		repairFindings := blockingFindings(merged)
-		if len(repairFindings) == 0 {
-			repairFindings = merged
-		}
+		// Both the writer and verifier receive every agreed finding, so resolving a
+		// blocking finding cannot silently discard the remaining repair obligations.
+		repairFindings := merged
 		if len(repairFindings) == 0 {
 			reason := "both reviewers asked for a repair but reported no findings; you decide how to proceed"
 			if err := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}}); err != nil {
@@ -592,16 +588,6 @@ func decisionSummary(runs []reviewRun) string {
 	return strings.Join(parts, ", ")
 }
 
-func blockingFindings(findings []Finding) []Finding {
-	var blocking []Finding
-	for _, finding := range findings {
-		if finding.Severity == "blocking" {
-			blocking = append(blocking, finding)
-		}
-	}
-	return blocking
-}
-
 // mergeFindings combines both reviewers' findings, joining duplicates by title and
 // location without losing either reviewer's severity.
 func mergeFindings(runs []reviewRun) []Finding {
@@ -713,6 +699,9 @@ func (e *Engine) approvePhase(frozen string, refs map[string][]string, summary s
 		phase.Status = "approved"
 		for stageIndex := range phase.Stages {
 			stage := &phase.Stages[stageIndex]
+			if stage.Status == "deferred" || stage.Status == "removed" {
+				continue
+			}
 			stage.Status = "approved"
 			for taskIndex := range stage.Tasks {
 				if stage.Tasks[taskIndex].Status == "validated" {
@@ -738,7 +727,7 @@ func (e *Engine) approvePhase(frozen string, refs map[string][]string, summary s
 // Every configuration check runs before the repair transition is recorded, so a
 // refusal leaves the workflow in a state the user can still act from.
 func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
-	blocking []Finding) error {
+	blocking []Finding) (resultErr error) {
 	// The wired repair adapter must be the one the settings configured. The seats
 	// carry the settings' tool identifiers (codex-cli, claude-code); an adapter's
 	// own short name is a different vocabulary and never compared against them.
@@ -771,11 +760,6 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 			"install and sign in to the other model family, then run peerfoil resume")
 	}
 
-	if err := e.AppendTransition(Repair, map[string][]string{"phase_reviews": {phaseReviewID}},
-		"Both reviewers asked for a repair; one repair cycle begins.", &frozen); err != nil {
-		return err
-	}
-
 	// The repair works on a fresh worktree at the frozen revision.
 	lastTask := e.lastValidatedTaskID()
 	worktree, err := e.Repo.CreateTaskWorktree(ctx, frozen, lastTask, e.State.Project.Revisions.Plan+1, e.WorktreeParent)
@@ -806,6 +790,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		Author:  repairAuthor,
 		Summary: "Launch recorded before the repair producer ran.",
 	}
+	inputPacket, quality, err := e.snapshotInputs(changeSet)
+	if err != nil {
+		return err
+	}
 	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
@@ -820,6 +808,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		packet.WriteString("- Resolve the repair findings recorded in .peerfoil/reviews/" + phaseReviewID + ".md\n")
 	}
 	packet.WriteString("\nEnd with one short paragraph describing exactly what you changed.\n")
+	packet.WriteString(inputPacket)
 
 	// A repair the controller rejects is a model error the user must decide about,
 	// so every rejection records the failed capture and pauses: the lifecycle has
@@ -842,6 +831,18 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	if _, err := e.Journal.Started("repair-producer", changeSetID); err != nil {
 		return err
 	}
+	if err := e.AppendTransition(Repair, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}},
+		"Both reviewers asked for a repair; one repair cycle begins.", &frozen); err != nil {
+		return err
+	}
+	defer func() {
+		if resultErr != nil && (State(e.State.Project.Workflow.State) == Repair || State(e.State.Project.Workflow.State) == Validate) {
+			if pauseErr := e.Pause("repair could not finish; inspect the retained change set and worktree before continuing through change intake",
+				map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); pauseErr != nil {
+				resultErr = pauseErr
+			}
+		}
+	}()
 	fmt.Fprintf(e.Out, "Repairing with %s at %s.\n", e.RepairProducer.Name(), repairSeatSetting.Effort)
 	outcome, invokeErr := e.RepairProducer.Invoke(ctx, provider.Invocation{
 		Role:    "repair_producer",
@@ -922,7 +923,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		if task.Status != "accepted" && task.Status != "validated" {
 			continue
 		}
-		_, taskFailed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, repairCommit)
+		_, taskFailed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, repairCommit, quality)
 		if err != nil {
 			reason := fmt.Sprintf("an evidence command for %s could not run after the repair: %v", task.ID, err)
 			if pauseErr := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); pauseErr != nil {

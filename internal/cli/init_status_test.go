@@ -15,7 +15,22 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/gabrielmongefranco/peerfoil/internal/project"
 )
+
+func TestNextActionExplainsUnfinishedTasks(t *testing.T) {
+	for _, status := range []string{"blocked", "stale", "ready"} {
+		state := &project.State{Project: &project.Project{Workflow: project.Workflow{State: "produce"}},
+			Plan: &project.Plan{Phases: []project.Phase{{ID: "ph-001", Status: "active", Stages: []project.Stage{{ID: "st-001", Status: "active", Tasks: []project.Task{
+				{ID: "tk-001", Status: "deferred"}, {ID: "tk-002", Status: status, DependsOn: []string{"tk-001"}},
+			}}}}}}}
+		action := nextAction(state)
+		if !strings.Contains(action, "change intake") || strings.Contains(action, "every eligible task is done") {
+			t.Fatalf("misleading next action for %s: %s", status, action)
+		}
+	}
+}
 
 // newRepo creates a bare-bones repository marker so discovery succeeds without Git.
 func newRepo(t *testing.T) string {

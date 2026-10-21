@@ -14,6 +14,13 @@ evidence blocks completion when it is missing or failed. Recommended evidence is
 practical and its absence is recorded. Not-applicable evidence names the reason it does
 not apply. A model's statement that a check passed is a claim, not evidence.
 
+For Core executable checks, use a JSON argument list in backticks followed by its
+working directory: `["go", "test", "./..."]` in the repository root. A subdirectory
+uses `in ` followed by a backtick-quoted relative path, such as `tools`. Join multiple
+argument lists with ` then ` and name their shared directory once, at the end.
+Core runs these commands in order without a shell and stops the procedure on failure.
+Text after a semicolon following the directory is a note, not another command.
+
 ## Required evidence
 
 | Name | Kind | Procedure |

@@ -123,6 +123,20 @@ func nextAction(state *project.State) string {
 		if selection, err := state.NextTask(); err == nil && selection != nil {
 			return "run peerfoil start to produce " + selection.Task.ID
 		}
+		if state.Plan != nil {
+			for _, task := range state.Plan.Tasks() {
+				if task.Status == "blocked" || task.Status == "stale" {
+					return "task " + task.ID + " is " + task.Status + "; resolve it through the PeerFoil skills change intake"
+				}
+			}
+			for _, task := range state.Plan.ActiveTasks() {
+				switch task.Status {
+				case "validated", "accepted", "deferred", "removed":
+					continue
+				}
+				return "task " + task.ID + " cannot be selected; resolve its dependencies through the PeerFoil skills change intake"
+			}
+		}
 		return "every eligible task is done; run peerfoil start to move the phase to review"
 	case "validate":
 		return "the workflow stopped inside a task; inspect the latest change set and continue with the PeerFoil skills"

@@ -65,7 +65,7 @@ func (e *Engine) BuildProducerPacket(selection *project.Selection, changeSetID, 
 	fmt.Fprintf(&b, "Revisions: plan %d, architecture %d, quality %d · base commit %s\n",
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture,
 		e.State.Project.Revisions.Quality, baseCommit)
-	fmt.Fprintf(&b, "Accepted records to read when present: .peerfoil/architecture.md, .peerfoil/quality.md, .peerfoil/decisions.md\n\n")
+	b.WriteString("The appended accepted input snapshot supplies the current records; checkout copies may be older.\n\n")
 
 	fmt.Fprintf(&b, "Task %s — %s\nScope: %s\nExpected output: %s\n", task.ID, task.Title, task.Scope, task.Output)
 	fmt.Fprintf(&b, "Allowed paths (edit nothing else): %s\n", strings.Join(task.AllowedPaths, ", "))
@@ -167,7 +167,7 @@ func ParseHandoff(text string, task *project.Task, planRevision, architectureRev
 			continue
 		}
 		if seen[path] {
-			problems = append(problems, "duplicate changed path "+path)
+			problems = append(problems, "duplicate changed path")
 		}
 		seen[path] = true
 	}

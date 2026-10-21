@@ -93,6 +93,10 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 		Author:        author,
 		Summary:       "Launch recorded before the producer ran.",
 	}
+	inputPacket, quality, err := e.snapshotInputs(changeSet)
+	if err != nil {
+		return err
+	}
 	// The launch is persisted before the producer runs, so an interruption leaves a
 	// pending capture to inspect instead of silent uncertainty (D-0025).
 	if err := e.WriteChangeSet(changeSet); err != nil {
@@ -118,7 +122,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 		return err
 	}
 
-	packet := e.BuildProducerPacket(selection, changeSetID, baseCommit)
+	packet := e.BuildProducerPacket(selection, changeSetID, baseCommit) + inputPacket
 	if _, err := e.Journal.Started("producer", changeSetID); err != nil {
 		return err
 	}
@@ -232,7 +236,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 		return err
 	}
 	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
-	evidenceIDs, failed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, taskCommit)
+	evidenceIDs, failed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, taskCommit, quality)
 	if err != nil {
 		// The workflow is already in validate, which resume refuses as a boundary,
 		// so a runner failure pauses with the task blocked instead of stranding it.
@@ -264,6 +268,14 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 
 	integrationTip, err := e.Repo.Integrate(ctx, worktree, taskCommit)
 	if err != nil {
+		task.Status = "blocked"
+		if saveErr := e.SavePlan(); saveErr != nil {
+			return saveErr
+		}
+		if pauseErr := e.Pause("integration failed; inspect the retained task branch and resolve the branch conflict through change intake",
+			map[string][]string{"tasks": {task.ID}, "change_sets": {changeSetID}, "evidence": evidenceIDs}); pauseErr != nil {
+			return pauseErr
+		}
 		return err
 	}
 	task.Status = "validated"
@@ -314,6 +326,10 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 // closed, so their evidence, including human and inspection results the controller
 // cannot rerun, is not re-litigated here.
 func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]string, error) {
+	quality, err := e.readAcceptedRecord("quality.md", e.State.Project.Revisions.Quality)
+	if err != nil {
+		return nil, err
+	}
 	checkout, err := e.Repo.CreateReviewWorktree(ctx, frozen, "evidence", e.WorktreeParent)
 	if err != nil {
 		return nil, err
@@ -325,7 +341,7 @@ func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]
 		if task.Status != "validated" && task.Status != "accepted" {
 			continue
 		}
-		ids, taskFailed, err := e.runTaskEvidence(ctx, checkout, task, "", frozen)
+		ids, taskFailed, err := e.runTaskEvidence(ctx, checkout, task, "", frozen, quality)
 		if err != nil {
 			return recorded, err
 		}
@@ -546,10 +562,10 @@ func rejectSymlinks(worktreePath string, changes []workspace.Change) error {
 }
 
 // runTaskEvidence runs every executable evidence requirement the task declares, using
-// the pack's procedure for this repository. It returns the record identifiers and the
+// the accepted Quality Contract. It returns the record identifiers and the
 // names of required checks that did not pass.
 func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
-	task *project.Task, changeSetID, taskCommit string) ([]string, []string, error) {
+	task *project.Task, changeSetID, taskCommit string, quality []byte) ([]string, []string, error) {
 	var recorded []string
 	var failedRequired []string
 	for _, requirement := range task.RequiredEvidence {
@@ -562,56 +578,59 @@ func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 			}
 			continue
 		}
-		argv := e.Pack.CommandFor(requirement.Name, checkoutDir)
-		if argv == nil {
-			if requirement.Level == "required" {
-				return recorded, nil, errs.New(errs.Evidence,
-					fmt.Sprintf("no executable procedure is known for the required evidence %q in this repository", requirement.Name),
-					"declare the command in the Quality Contract with the PeerFoil skills, or adjust the task's evidence")
-			}
-			continue
-		}
-		evidenceID, err := e.nextEvidenceDirID("ev")
+		commands, err := acceptedCommands(quality, requirement, checkoutDir)
 		if err != nil {
 			return recorded, nil, err
 		}
-		fmt.Fprintf(e.Out, "Running %s: %s\n", requirement.Name, strings.Join(argv, " "))
-		procedure := fmt.Sprintf("%q in the task worktree", argv)
-		record, err := evidence.Run(ctx, e.Evidence, evidence.Command{
-			Name:           requirement.Name,
-			Argv:           argv,
-			TimeoutSeconds: 600,
-			Env:            provider.BaseEnv(),
-		}, evidence.Requirement{
-			Name: requirement.Name, Kind: requirement.Kind, Level: requirement.Level,
-		}, evidence.Meta{
-			ID:                   evidenceID,
-			TaskID:               task.ID,
-			PlanRevision:         e.State.Project.Revisions.Plan,
-			ArchitectureRevision: e.State.Project.Revisions.Architecture,
-			SourceRevision:       taskCommit,
-			RepoRoot:             checkoutDir,
-			Now:                  e.Now,
-		}, filepath.Join(e.State.Dir, "evidence"))
-		if err != nil {
-			// A command that could not run still produced a record with its retained
-			// output; that record belongs in the versioned evidence, not only in the
-			// returned error, so the failure stays visible after the run ends.
-			if record.Status == evidence.StatusError {
-				if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure); writeErr == nil {
-					recorded = append(recorded, evidenceID)
+		for _, command := range commands {
+			evidenceID, err := e.nextEvidenceDirID("ev")
+			if err != nil {
+				return recorded, nil, err
+			}
+			fmt.Fprintf(e.Out, "Running %s: %s\n", requirement.Name, strings.Join(command.Argv, " "))
+			procedure := fmt.Sprintf("%q in %s relative to the repository root", command.Argv, valueOrDot(command.Dir))
+			command.Env = provider.BaseEnv()
+			record, err := evidence.Run(ctx, e.Evidence, command, evidence.Requirement{
+				Name: requirement.Name, Kind: requirement.Kind, Level: requirement.Level,
+			}, evidence.Meta{
+				ID:                   evidenceID,
+				TaskID:               task.ID,
+				PlanRevision:         e.State.Project.Revisions.Plan,
+				ArchitectureRevision: e.State.Project.Revisions.Architecture,
+				SourceRevision:       taskCommit,
+				RepoRoot:             checkoutDir,
+				Now:                  e.Now,
+			}, filepath.Join(e.State.Dir, "evidence"))
+			if err != nil {
+				// A command that could not run still produced a record with its retained
+				// output; that record belongs in the versioned evidence, not only in the
+				// returned error, so the failure stays visible after the run ends.
+				if record.Status == evidence.StatusError {
+					if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure); writeErr == nil {
+						recorded = append(recorded, evidenceID)
+					}
 				}
+				return recorded, nil, err
 			}
-			return recorded, nil, err
+			if err := e.WriteEvidenceRecord(record, changeSetID, procedure); err != nil {
+				return recorded, nil, err
+			}
+			recorded = append(recorded, evidenceID)
+			if record.Status != evidence.StatusPass && requirement.Level == "required" {
+				failedRequired = append(failedRequired, requirement.Name)
+			}
+			fmt.Fprintf(e.Out, "  %s: %s\n", requirement.Name, record.Status)
+			if record.Status != evidence.StatusPass {
+				break
+			}
 		}
-		if err := e.WriteEvidenceRecord(record, changeSetID, procedure); err != nil {
-			return recorded, nil, err
-		}
-		recorded = append(recorded, evidenceID)
-		if record.Status != evidence.StatusPass && requirement.Level == "required" {
-			failedRequired = append(failedRequired, requirement.Name)
-		}
-		fmt.Fprintf(e.Out, "  %s: %s\n", requirement.Name, record.Status)
 	}
 	return recorded, failedRequired, nil
+}
+
+func valueOrDot(value string) string {
+	if value == "" {
+		return "."
+	}
+	return value
 }

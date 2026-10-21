@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -216,8 +217,8 @@ func (r *Repo) DetectUnsupported(ctx context.Context) error {
 	return nil
 }
 
-// CheckTree rejects links and submodules in a Git tree before any writer or check
-// receives its checkout. Git modes work even when Windows checks links out as files.
+// CheckTree rejects links, submodules, and LFS attributes in the exact Git tree
+// before checkout or integration, independently of the user's current working files.
 func (r *Repo) CheckTree(ctx context.Context, revision string) error {
 	entries, err := git(ctx, r.Root, "ls-tree", "-r", "-z", revision)
 	if err != nil {
@@ -227,6 +228,25 @@ func (r *Repo) CheckTree(ctx context.Context, revision string) error {
 		if bytes.HasPrefix(entry, []byte("120000 ")) || bytes.HasPrefix(entry, []byte("160000 ")) {
 			return errs.New(errs.Policy, "the source tree contains symbolic links or submodules, which this release does not support",
 				"replace links with regular files and use a repository without submodules before starting a task")
+		}
+		metadata, name, found := bytes.Cut(entry, []byte{'\t'})
+		if !found || path.Base(string(name)) != ".gitattributes" {
+			continue
+		}
+		fields := strings.Fields(string(metadata))
+		if len(fields) != 3 || fields[1] != "blob" {
+			return errs.New(errs.Git, "could not decode attributes in the source tree", "")
+		}
+		attributes, err := git(ctx, r.Root, "cat-file", "blob", fields[2])
+		if err != nil {
+			return errs.Wrap(errs.Git, "could not read source tree attributes", err)
+		}
+		for _, line := range strings.Split(string(attributes), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "#") && strings.Contains(line, "filter=lfs") {
+				return errs.New(errs.Policy, "the source tree enables Git LFS, which this release does not support",
+					"remove LFS attributes through change intake before starting or capturing a task")
+			}
 		}
 	}
 	return nil

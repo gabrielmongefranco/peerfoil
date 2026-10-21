@@ -83,11 +83,30 @@ reason and history. A phrase alone cannot authorize production. The
 Saving workflow progress preserves setup results, including the host-sandbox check.
 History identifiers must increase without duplicates.
 
+Your accepted records may remain uncommitted. Before a producer or repair starts, Core
+copies the current accepted architecture, Quality Contract, decisions, project, and
+plan into a bounded JSON snapshot. Its path and SHA-256 hash are retained in the change
+set under `Accepted input records` and `Accepted input SHA-256`. The producer receives
+that snapshot as data in its packet. It uses those records even if the checkout contains
+older copies. Source files still come from the recorded base commit. Core refuses a
+snapshot over 256 KiB, likely credentials, links, or a mismatched accepted document header.
+
+Executable checks use the accepted Quality Contract's argument lists and working
+directories. Pack hints cannot replace them. For example, write `["go", "test", "./..."]`
+in backticks followed by `in the repository root`. For a subdirectory, use `in` followed
+by its backtick-quoted relative path. Separate multiple argument lists with `then` and
+give their shared directory at the end. Core runs them in order and stops on the first
+failure. Notes after a semicolon following the directory do not run. Missing, duplicate,
+or unsafe procedures stop validation with an actionable error.
+
 Core rejects tracked symbolic links and submodules before creating a writer's checkout,
 including when Windows would turn a link into an ordinary file. Capture freezes one Git
 tree. Scope checks, secret scanning, and the resulting commit use that same tree.
 Checks run in a separate checkout of the captured commit, so later writer edits cannot
 enter the accepted patch or supply its evidence.
+Core also rejects LFS attributes in that tree, including nested attribute files and
+attributes introduced by a producer. Unsafe filenames are withheld from reports and
+rejected before capture is retained. This includes controls, table markup, and likely credentials.
 
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh
@@ -102,12 +121,20 @@ affected checks run again, and a fresh reviewer from the other family verifies t
 result. A repair the controller refuses, such as an out-of-scope edit, is recorded as a
 blocked capture and the workflow pauses for you. Material disagreement stops for you
 instead of inventing consensus.
+The repair producer and verifier receive every agreed finding, including major findings
+alongside blocking ones. Phase approval preserves deferred and removed stage statuses.
+Status directs blocked, stale, or unreachable tasks to change intake.
 
 Review findings and remaining-risk text are scrubbed before being saved. Producer
 blocker text is limited to 2,000 bytes and scrubbed before entering errors or records.
 Redaction recognizes common credential formats; it cannot identify every sensitive value.
 
 ### Recovery after an interruption
+
+An integration failure pauses with the blocked task, captured change set, and evidence
+linked for inspection. Resolve the branch problem through change intake before retrying.
+A repair worktree setup failure leaves the workflow at review. Later repair failures
+pause with the retained change set; they do not silently strand the repair state.
 
 Before every operation that changes work, the producer and repair runs, `peerfoil`
 writes an intent to a local journal in your user cache directory, and a result

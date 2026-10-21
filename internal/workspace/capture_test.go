@@ -15,6 +15,34 @@ import (
 	"testing"
 )
 
+func TestLFSAttributesRejectedInBaseAndCapturedTrees(t *testing.T) {
+	for _, attributes := range []string{".gitattributes", "nested/.gitattributes"} {
+		t.Run(attributes, func(t *testing.T) {
+			root := newTestRepo(t)
+			repo := New(root)
+			ctx := context.Background()
+			base := runGit(t, root, "rev-parse", "HEAD")
+			wt, err := repo.CreateTaskWorktree(ctx, base, "tk-001", 1, t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, wt.Path, attributes, "*.bin filter=lfs diff=lfs merge=lfs -text\n")
+			if _, _, err := wt.Capture(ctx); err == nil || !strings.Contains(err.Error(), "Git LFS") {
+				t.Fatalf("capture accepted LFS attributes: %v", err)
+			}
+			writeFile(t, root, attributes, "[attr]binary filter=lfs\n*.bin binary\n")
+			runGit(t, root, "add", "-A")
+			runGit(t, root, "commit", "-m", "Synthetic unsupported attributes")
+			if err := repo.DetectUnsupported(ctx); err == nil {
+				t.Fatal("preflight accepted nested LFS attributes")
+			}
+			if _, err := repo.CreateReviewWorktree(ctx, runGit(t, root, "rev-parse", "HEAD"), "lfs-test", t.TempDir()); err == nil {
+				t.Fatal("a review checkout was created with LFS")
+			}
+		})
+	}
+}
+
 func TestCommitUsesOnlyCapturedTree(t *testing.T) {
 	root := newTestRepo(t)
 	repo := New(root)

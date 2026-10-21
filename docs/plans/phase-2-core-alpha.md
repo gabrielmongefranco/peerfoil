@@ -760,6 +760,15 @@ The release boundary and deferred work remain as listed above.
 | Workflow saves erase setup checks | Preserve the schema's environment object through load and save | `TestSetupChecksSurviveWorkflowSaves` |
 | History identifiers repeat or regress | Require positive, increasing numeric identifiers and increment without machine-integer overflow | `TestHistoryIDsMustIncreaseNumerically` |
 | Reduced-assurance acceptance lacks matching history | Require the documented positive reason, valid times, exact review reference, and current plan, architecture, and quality revisions | `TestProductionGateNeedsThePositiveAcceptancePhrase` |
+| Approval overwrites dismissed stage statuses | Preserve deferred and removed stages and tasks | `TestApprovePreservesDismissedStages` |
+| Integration failure strands validation | Block the task and pause with its change set and executable evidence | `TestIntegrationFailurePausesWithEvidence` |
+| Repair setup failure strands repair | Create the worktree and pending records before entering repair; pause subsequent failures | `TestRepairSetupFailureLeavesReviewBoundary` |
+| Producer reads stale accepted files | Retain a bounded, hashed snapshot of current accepted records and send it as packet data | `TestProducerReceivesCurrentSnapshotAndUsesItsProcedure` |
+| Checks substitute pack hints for accepted procedures | Parse accepted argument lists and directories; run every command in order; reject missing, duplicate, or unsafe procedures | `TestAcceptedCommandsUseAllArgumentsAndWorkingDirectory` and the snapshot journey |
+| Status hides unfinished tasks | Direct blocked, stale, and unreachable tasks to change intake | `TestNextActionExplainsUnfinishedTasks` |
+| Repairs omit major findings | Send the full agreed finding list to both repair producer and verifier | `TestRepairIncludesBlockingAndMajorFindings` |
+| Filenames inject records or reveal credentials | Reject controls, markup, and likely credentials without echoing the offending filename | `TestUnsafeFilenamesNeverReachReports` |
+| Captured trees introduce unsupported LFS | Inspect root and nested attribute blobs in the exact base and captured Git trees | `TestLFSAttributesRejectedInBaseAndCapturedTrees` |
 
 The repair verification test also rejects a moved repair branch and pauses after two
 unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks
@@ -803,6 +812,18 @@ the exact review, timestamp, and revision requirements remain unchanged.
 Lesson: retain the exact capture and repair identity across retries. Re-reading a live
 checkout or choosing the original producer's lineage can change what the controller
 claims to have validated or independently reviewed.
+
+The next review returned nine further findings, covered in the table above. The accepted
+input snapshot uses additive change-set fields and preserves the Guided `Input snapshot`
+meaning. Source identity remains the base commit; accepted record contents are retained
+separately because they may not yet be committed. No shell or scanner installation is
+inferred from a Quality Contract note. A synthetic repair-setup test initially targeted
+the previous plan revision's branch; it now creates the actual repair branch before
+asserting the same recovery behavior. No production failure was hidden by changing an assertion.
+
+Lesson: accepted requirements must reach both the writer and the check runner as the
+same current data. A toolchain marker or a committed copy is not proof that either
+matches the accepted contract.
 
 ## 16. Phase acceptance matrix
 

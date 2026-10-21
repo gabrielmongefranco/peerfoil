@@ -289,6 +289,8 @@ type ChangeSet struct {
 	CapturedAt    string
 	PatchPath     string
 	PatchSHA256   string
+	InputSnapshot string
+	InputSHA256   string
 	Changed       []string // "status<TAB>path" pairs rendered into the table
 	Summary       string
 	Discovered    []string // work the producer found that change intake must absorb
@@ -318,7 +320,9 @@ func (e *Engine) WriteChangeSet(cs *ChangeSet) error {
 	fmt.Fprintf(&b, "- **Captured at:** %s\n", valueOrNull(cs.CapturedAt))
 	fmt.Fprintf(&b, "- **Patch:** %s\n", valueOrNull(cs.PatchPath))
 	fmt.Fprintf(&b, "- **Patch SHA-256:** %s\n", valueOrNull(cs.PatchSHA256))
-	fmt.Fprintf(&b, "- **Input snapshot:** null\n")
+	b.WriteString("- **Input snapshot:** null\n")
+	fmt.Fprintf(&b, "- **Accepted input records:** %s\n", valueOrNull(cs.InputSnapshot))
+	fmt.Fprintf(&b, "- **Accepted input SHA-256:** %s\n", valueOrNull(cs.InputSHA256))
 	fmt.Fprintf(&b, "- **Quality revision:** %d\n", e.State.Project.Revisions.Quality)
 	fmt.Fprintf(&b, "- **Plan revision:** %d · **Architecture revision:** %d\n\n",
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture)
@@ -331,10 +335,10 @@ func (e *Engine) WriteChangeSet(cs *ChangeSet) error {
 		fmt.Fprintf(&b, "| %s | %s |\n", kind, path)
 	}
 	b.WriteString("\n## Input files\n\n| Path | Kind | SHA-256 or absent |\n|---|---|---|\n")
-	// The controller launches producers from a committed base revision, so the base
-	// commit itself identifies every input; per-file snapshots are a guided-mode
-	// mechanism for uncommitted work (D-0025).
-	b.WriteString("| (all inputs are at the base revision) | file | absent |\n")
+	b.WriteString("| (source files at the base revision) | file | absent |\n")
+	if cs.InputSnapshot != "" {
+		fmt.Fprintf(&b, "| %s | file | %s |\n", cs.InputSnapshot, cs.InputSHA256)
+	}
 	// The summary and discovered-work entries are model prose that can repeat a
 	// credential the patch itself removed, so they are scrubbed like evidence output
 	// before the record is retained.
