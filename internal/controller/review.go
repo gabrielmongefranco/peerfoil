@@ -87,6 +87,9 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	if err := e.blockedTaskError(); err != nil {
 		return err
 	}
+	if err := e.unreachableTaskError(); err != nil {
+		return err
+	}
 	if err := e.requireTwoFamilies(); err != nil {
 		return err
 	}
@@ -112,6 +115,9 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 		return err
 	}
 	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, reviewPath) }()
+	if err := e.refreshRecordsInCheckout(reviewPath); err != nil {
+		return err
+	}
 
 	packet := e.buildReviewPacket("phase", frozen, bundleDigest, nil)
 	var runs []reviewRun
@@ -235,7 +241,7 @@ func (e *Engine) buildReviewPacket(kind, frozen, bundleDigest string, repairFind
 	fmt.Fprintf(&b, "Revisions: plan %d, architecture %d, quality %d\n\n",
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, e.State.Project.Revisions.Quality)
 	b.WriteString("Read the accepted records under .peerfoil/ (architecture.md, quality.md, plan.md, decisions.md, evidence/) and the deliverables they describe.\n")
-	b.WriteString("Note: the .peerfoil records in this checkout reflect the phase's start; the deliverable files are the reviewed revision, and this packet's revisions and requirement list are current.\n")
+	b.WriteString("Note: the accepted .peerfoil records in this checkout reflect the phase's start; the deliverable files are the reviewed revision, and this packet's revisions and requirement list are current. The controller has refreshed .peerfoil/evidence and .peerfoil/reviews with the current change-set, evidence, and review records for the revision under review.\n")
 
 	if e.State.Plan != nil {
 		b.WriteString("\nRequirements to check:\n")
@@ -274,6 +280,40 @@ End your answer with exactly one fenced JSON object:
 }
 ` + "```\n")
 	return b.String()
+}
+
+// refreshRecordsInCheckout copies the current .peerfoil evidence and review records
+// into a review checkout, which is otherwise frozen at a commit that predates them.
+// Without this, reviewers and repair verifiers would see phase-start records and could
+// approve without reading the controller-run results for the revision under review.
+func (e *Engine) refreshRecordsInCheckout(checkout string) error {
+	for _, name := range []string{"evidence", "reviews"} {
+		source := filepath.Join(e.State.Dir, name)
+		entries, err := os.ReadDir(source)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return errs.Wrap(errs.Configuration, "reading the "+name+" records", err)
+		}
+		target := filepath.Join(checkout, ".peerfoil", name)
+		if err := os.MkdirAll(target, 0o755); err != nil {
+			return errs.Wrap(errs.Configuration, "preparing the review checkout's "+name+" records", err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			raw, err := os.ReadFile(filepath.Join(source, entry.Name()))
+			if err != nil {
+				return errs.Wrap(errs.Configuration, "reading "+entry.Name(), err)
+			}
+			if err := fsx.WriteFileAtomic(filepath.Join(target, entry.Name()), raw, 0o644); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // runReviewer invokes one fresh reviewer session, validates its answer, and records it
@@ -775,9 +815,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return err
 	}
 
-	// Affected checks run again against the repaired revision.
+	// The active phase's checks run again against the repaired revision; earlier
+	// phases are approved and closed, so their evidence is not re-litigated.
 	var failed []string
-	for _, task := range e.State.Plan.Tasks() {
+	for _, task := range e.State.Plan.ActiveTasks() {
 		if task.Status != "accepted" && task.Status != "validated" {
 			continue
 		}
@@ -803,6 +844,12 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	if tree, err := e.Repo.TreeDigest(ctx, repairCommit); err == nil {
 		sum := sha256.Sum256(tree)
 		repairDigest = hex.EncodeToString(sum[:])
+	}
+	// The verifier reads the same directory the repair was committed from, whose
+	// .peerfoil records still predate this phase's work; the capture is already
+	// committed, so refreshing the records here cannot contaminate the change set.
+	if err := e.refreshRecordsInCheckout(worktree.Path); err != nil {
+		return err
 	}
 	verifyPacket := e.buildReviewPacket("repair", repairCommit, repairDigest, blocking)
 	verifyRun, err := e.runReviewer(ctx, verifier, verifierSeat, "repair", verifyPacket, worktree.Path, repairCommit, authors, repairDigest, changeSetID)

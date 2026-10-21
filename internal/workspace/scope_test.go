@@ -254,6 +254,23 @@ func TestScanSecretsMorePatterns(t *testing.T) {
 	}
 }
 
+// TestScanSecretsIgnoresRemovedAndContextLines pins that only added content is
+// scanned: deleting an already committed credential, or editing code near one, must
+// not be rejected, because the change introduces nothing new.
+func TestScanSecretsIgnoresRemovedAndContextLines(t *testing.T) {
+	patch := strings.Join([]string{
+		"diff --git a/config.py b/config.py",
+		"--- a/config.py",
+		"+++ b/config.py",
+		"-aws_access_key_id = AKIAIOSFODNN7EXAMPLE", // the removal of a committed key
+		" password = \"correct-horse-battery\"",     // unchanged context near the edit
+		"+comment = \"removed the committed key; rotate it\"",
+	}, "\n")
+	if hits := ScanSecrets([]byte(patch)); hits != nil {
+		t.Errorf("a removal-only patch was flagged: %v", hits)
+	}
+}
+
 func TestScanSecretsClean(t *testing.T) {
 	if hits := ScanSecrets(nil); hits != nil {
 		t.Errorf("ScanSecrets(nil) = %v, want nil", hits)

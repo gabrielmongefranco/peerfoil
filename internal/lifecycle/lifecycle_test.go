@@ -1,5 +1,5 @@
 // This file is part of PeerFoil.
-// internal/controller/states_test.go
+// internal/lifecycle/lifecycle_test.go
 // Author(s): Gabriel Mongefranco.
 // Created: 2026-10-21
 // Last Modified: 2026-10-21
@@ -7,7 +7,7 @@
 // Copyright © 2026 Gabriel Mongefranco
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package controller
+package lifecycle
 
 import "testing"
 

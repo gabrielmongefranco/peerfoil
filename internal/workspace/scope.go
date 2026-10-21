@@ -180,15 +180,23 @@ var secretPatterns = []secretPattern{
 }
 
 // ScanSecrets looks through a captured patch for obvious credentials and returns one
-// line per hit naming the pattern and the line number. The matched text itself is
-// deliberately absent from the result: the report may be logged or shown, and a
-// report must never become a second copy of the secret. A clean patch returns nil.
+// line per hit naming the pattern and the patch line number. Only added lines are
+// scanned: a change that deletes an already committed credential, or merely edits code
+// near one, introduces nothing new and must not be rejected for it. A credential that
+// was already committed is compromised and needs rotation, but that is the repository
+// owner's cleanup, not a reason to block the removal. The matched text itself is
+// deliberately absent from the result: the report may be logged or shown, and a report
+// must never become a second copy of the secret. A clean patch returns nil.
 func ScanSecrets(patch []byte) []string {
 	if len(patch) == 0 {
 		return nil
 	}
 	var hits []string
 	for i, line := range bytes.Split(patch, []byte("\n")) {
+		// In a unified diff, "+" marks added content and "+++" marks the file header.
+		if !bytes.HasPrefix(line, []byte("+")) || bytes.HasPrefix(line, []byte("+++")) {
+			continue
+		}
 		for _, p := range secretPatterns {
 			if p.re.Match(line) {
 				hits = append(hits, fmt.Sprintf("possible %s on line %d", p.name, i+1))

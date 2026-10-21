@@ -36,6 +36,24 @@ func satisfied(ids []string, byID map[string]*Task) bool {
 	return true
 }
 
+// ActiveTasks returns the tasks of the active phase, in plan order. Evidence
+// revalidation and the review boundary operate on exactly this set: earlier approved
+// phases are closed, and their evidence is not re-litigated by a later phase.
+func (p *Plan) ActiveTasks() []*Task {
+	var tasks []*Task
+	for _, phase := range phasesByOrder(p.Phases) {
+		if phase.Status != "active" {
+			continue
+		}
+		for _, stage := range stagesByOrder(phase.Stages) {
+			for index := range stage.Tasks {
+				tasks = append(tasks, &stage.Tasks[index])
+			}
+		}
+	}
+	return tasks
+}
+
 // InFlight returns a task that is already being worked on, which the controller must
 // continue before selecting new work. At most one exists when the records are honest;
 // with more than one, the first in plan order is returned and the controller stops.

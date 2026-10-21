@@ -65,13 +65,16 @@ counts, exactly as D-0014 allows), the working tree must be clean outside
 `.peerfoil/`, and no interrupted operation may be waiting. It then selects the next eligible task
 deterministically, sends one bounded request to the producer in a fresh worktree,
 captures the patch and authorship before anything else touches the work, checks the
-changed paths against the task's allowed paths, scans the patch for credentials, runs
+changed paths against the task's allowed paths, scans the patch's added lines for
+credentials (removing an already committed credential is allowed, though that
+credential still needs rotation), runs
 the required checks against the exact produced commit, and integrates passing work onto
 the `peerfoil/integration` branch. Your own branch and checkout never change.
 
 `resume` continues from recorded boundaries only. When the phase's tasks are all
 validated, it runs the two-family phase review: one fresh Claude reviewer and one fresh
-Codex reviewer read the same frozen revision, their findings are merged without hiding
+Codex reviewer read the same frozen revision, with the current change-set, evidence,
+and review records refreshed into the checkout, their findings are merged without hiding
 disagreement, and approval requires the reviewer from a different model family than the
 work's author. When both ask for a repair, one repair cycle runs with the repair
 producer, the affected checks run again, and a fresh reviewer from the other family

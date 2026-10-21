@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
+	"github.com/gabrielmongefranco/peerfoil/internal/lifecycle"
 	"github.com/gabrielmongefranco/peerfoil/internal/schema"
 )
 
@@ -181,11 +182,22 @@ func (s *State) semanticProblems() []string {
 		if index > 0 && transition.At < s.History[index-1].At {
 			add("history.jsonl line %d: timestamp moves backwards", index+1)
 		}
-		if index > 0 {
-			previous := s.History[index-1].ToState
-			if transition.FromState == nil || *transition.FromState != previous {
-				add("history.jsonl line %d: from_state does not continue the previous transition's %q", index+1, previous)
+		if index == 0 {
+			// Every project history starts by entering define from no prior state;
+			// anything else is a fabricated or truncated record.
+			if transition.FromState != nil || transition.ToState != "define" {
+				add("history.jsonl line 1: the first transition must enter define from no prior state")
 			}
+			continue
+		}
+		previous := s.History[index-1].ToState
+		if transition.FromState == nil || *transition.FromState != previous {
+			add("history.jsonl line %d: from_state does not continue the previous transition's %q", index+1, previous)
+		} else if !lifecycle.CanMove(lifecycle.State(*transition.FromState), lifecycle.State(transition.ToState)) {
+			// A chained history can still record an edge the lifecycle never permits,
+			// which would let the project operate from a state it never legally reached.
+			add("history.jsonl line %d: the lifecycle permits no transition from %q to %q",
+				index+1, *transition.FromState, transition.ToState)
 		}
 	}
 	if len(s.History) > 0 {
@@ -215,11 +227,28 @@ func planProblems(plan *Plan) []string {
 		problems = append(problems, fmt.Sprintf("plan.json: "+format, args...))
 	}
 
-	retained := map[string]bool{}
+	// Retention is recorded per intake: the change moving the plan off revision N
+	// lists the older tasks it keeps. A task is only legitimately carried when every
+	// intake between its own revision and the current one retained it, so a later
+	// change cannot silently inherit work it never re-tied to the plan.
+	retainedAt := map[int]map[string]bool{}
 	for _, change := range plan.Changes {
-		for _, taskID := range change.RetainedTasks {
-			retained[taskID] = true
+		set := retainedAt[change.PriorRevision]
+		if set == nil {
+			set = map[string]bool{}
+			retainedAt[change.PriorRevision] = set
 		}
+		for _, taskID := range change.RetainedTasks {
+			set[taskID] = true
+		}
+	}
+	retainedThrough := func(taskID string, fromRevision int) (bool, int) {
+		for revision := fromRevision; revision < plan.PlanRevision; revision++ {
+			if !retainedAt[revision][taskID] {
+				return false, revision
+			}
+		}
+		return true, 0
 	}
 
 	seen := map[string]bool{}
@@ -250,13 +279,15 @@ func planProblems(plan *Plan) []string {
 					add("%s names plan revision %d, later than the plan's own revision %d",
 						task.ID, task.PlanRevision, plan.PlanRevision)
 				}
-				// Runnable work from an older revision is valid only when change
-				// intake retained it; otherwise its scope was never re-tied to the
-				// current plan and it must not be selected.
+				// Runnable work from an older revision is valid only when every
+				// intervening change intake retained it; otherwise its scope was never
+				// re-tied to the current plan and it must not be selected.
 				if (task.Status == "planned" || task.Status == "ready") &&
-					task.PlanRevision < plan.PlanRevision && !retained[task.ID] {
-					add("%s is runnable but tied to the older plan revision %d without being retained by a recorded change",
-						task.ID, task.PlanRevision)
+					task.PlanRevision < plan.PlanRevision {
+					if ok, missing := retainedThrough(task.ID, task.PlanRevision); !ok {
+						add("%s is runnable but tied to the older plan revision %d without being retained by the change recorded at revision %d",
+							task.ID, task.PlanRevision, missing)
+					}
 				}
 				if task.ArchitectureRevision > plan.ArchitectureRevision {
 					add("%s names architecture revision %d, later than the plan's %d",

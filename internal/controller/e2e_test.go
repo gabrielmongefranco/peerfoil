@@ -580,3 +580,77 @@ func TestDocumentationFixtureJourney(t *testing.T) {
 		t.Fatalf("records after the documentation stop do not load: %v", reloadErr)
 	}
 }
+
+// mutatePlan edits the fixture copy's plan.json in place before an engine loads it.
+func mutatePlan(t *testing.T, root string, mutate func(doc map[string]any)) {
+	t.Helper()
+	path := filepath.Join(root, ".peerfoil", "plan.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	mutate(doc)
+	out, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestUnreachablePlannedTaskBlocksReview covers a phase whose remaining planned task
+// can never be selected because its dependency was deferred: the phase must refuse the
+// review boundary instead of approving around the dropped work.
+func TestUnreachablePlannedTaskBlocksReview(t *testing.T) {
+	root := setupFixtureRepo(t)
+	mutatePlan(t, root, func(doc map[string]any) {
+		tasks := doc["phases"].([]any)[0].(map[string]any)["stages"].([]any)[0].(map[string]any)["tasks"].([]any)
+		tasks[0].(map[string]any)["status"] = "deferred"
+		tasks[1].(map[string]any)["depends_on"] = []any{"tk-001"}
+	})
+	engine := testEngine(t, root, goodProducer(t), nil, nil, nil)
+	err := engine.ProduceNext(context.Background())
+	if err == nil || errs.CategoryOf(err) != errs.Policy {
+		t.Fatalf("err = %v, want a policy stop", err)
+	}
+	if !strings.Contains(err.Error(), "cannot enter review") {
+		t.Errorf("error %q does not refuse the review boundary", err.Error())
+	}
+}
+
+// TestApprovedPhaseEvidenceIsNotRelitigated covers the review boundary of a later
+// phase: an earlier approved phase's human-checked evidence must not be rerun, and
+// must not block the new phase.
+func TestApprovedPhaseEvidenceIsNotRelitigated(t *testing.T) {
+	root := setupFixtureRepo(t)
+	mutatePlan(t, root, func(doc map[string]any) {
+		first := doc["phases"].([]any)[0].(map[string]any)
+		first["status"] = "approved"
+		tasks := first["stages"].([]any)[0].(map[string]any)["tasks"].([]any)
+		for _, task := range tasks {
+			task.(map[string]any)["status"] = "accepted"
+		}
+		// The approved phase's evidence needed a person; the controller cannot rerun
+		// it, and it must not block the next phase's review boundary.
+		tasks[0].(map[string]any)["required_evidence"] = []any{map[string]any{
+			"name": "manual-walkthrough", "kind": "human", "level": "required",
+		}}
+		second := map[string]any{
+			"id": "ph-02", "title": "Follow-up", "outcome": "A later bounded outcome.",
+			"order": 2.0, "status": "active", "stages": []any{},
+		}
+		doc["phases"] = append(doc["phases"].([]any), second)
+	})
+	engine := testEngine(t, root, goodProducer(t), nil, nil, nil)
+	if err := engine.ProduceNext(context.Background()); err != nil {
+		t.Fatalf("the later phase's review boundary re-litigated approved evidence: %v", err)
+	}
+	if engine.State.Project.Workflow.State != string(Review) {
+		t.Errorf("state = %s, want review", engine.State.Project.Workflow.State)
+	}
+}

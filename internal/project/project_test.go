@@ -291,6 +291,80 @@ func TestRunnableTaskFromOlderRevisionNeedsRetention(t *testing.T) {
 	}
 }
 
+func TestIllegalHistoryEdgeRejected(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	path := filepath.Join(root, ".peerfoil", "history.jsonl")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	// A chained but illegal edge: the last transition claims define went straight to
+	// produce, which the lifecycle never permits.
+	last := strings.Replace(lines[len(lines)-1], `"from_state":"produce"`, `"from_state":"define"`, 1)
+	if err := os.WriteFile(path, []byte(lines[0]+"\n"+last+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "permits no transition") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestFirstTransitionMustEnterDefine(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	path := filepath.Join(root, ".peerfoil", "history.jsonl")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	// Dropping the first line leaves a history that starts mid-lifecycle.
+	if err := os.WriteFile(path, []byte(strings.Join(lines[1:], "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(root, schemas(t)); err == nil || !strings.Contains(err.Error(), "must enter define") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestRetentionMustChainThroughEveryRevision(t *testing.T) {
+	root := copyFixture(t, "software-go")
+	planPath := filepath.Join(root, ".peerfoil", "plan.json")
+	projectPath := filepath.Join(root, ".peerfoil", "project.json")
+	// The plan moves to revision 3, but the only recorded change is the revision-1
+	// intake: the revision-2 intake never re-tied the still-planned tasks.
+	mutateJSON(t, projectPath, func(doc map[string]any) {
+		doc["revisions"].(map[string]any)["plan"] = 3.0
+	})
+	mutateJSON(t, planPath, func(doc map[string]any) {
+		doc["plan_revision"] = 3.0
+		tasks := doc["phases"].([]any)[0].(map[string]any)["stages"].([]any)[0].(map[string]any)["tasks"].([]any)
+		tasks[0].(map[string]any)["plan_revision"] = 1.0 // retained only by the revision-1 intake
+		tasks[1].(map[string]any)["plan_revision"] = 3.0 // current work, no retention needed
+	})
+	_, err := Load(root, schemas(t))
+	if err == nil || !strings.Contains(err.Error(), "without being retained by the change recorded at revision 2") {
+		t.Errorf("err = %v", err)
+	}
+	// A second change covering the revision-2 step completes the chain.
+	mutateJSON(t, planPath, func(doc map[string]any) {
+		changes := doc["changes"].([]any)
+		var second map[string]any
+		raw, _ := json.Marshal(changes[0])
+		if err := json.Unmarshal(raw, &second); err != nil {
+			t.Fatal(err)
+		}
+		second["id"] = "cr-0002"
+		second["prior_revision"] = 2.0
+		second["retained_tasks"] = []any{"tk-001"}
+		second["affected_tasks"] = []any{}
+		doc["changes"] = append(changes, second)
+	})
+	if _, err := Load(root, schemas(t)); err != nil {
+		t.Errorf("a fully chained retention was rejected: %v", err)
+	}
+}
+
 func TestInheritedRulesPathMustStayInRepository(t *testing.T) {
 	root := copyFixture(t, "software-go")
 	mutateJSON(t, filepath.Join(root, ".peerfoil", "project.json"), func(doc map[string]any) {

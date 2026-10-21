@@ -146,7 +146,21 @@ func runDoctor(ctx context.Context, env *Env, args []string) error {
 
 	// Pack tools.
 	if state != nil {
-		if loadedPack, err := pack.Load(state.Project.Pack.ID, schemas); err == nil {
+		loadedPack, packErr := pack.Load(state.Project.Pack.ID, schemas)
+		switch {
+		case packErr != nil:
+			add(doctorCheck{Name: "project-pack", Status: "fail", Detail: packErr.Error(),
+				Next: "set the project's pack to a built-in pack: software, generic, or documentation"})
+		case loadedPack.Version != state.Project.Pack.Version:
+			add(doctorCheck{Name: "project-pack", Status: "fail",
+				Detail: fmt.Sprintf("the project records pack version %s, but this build ships %s",
+					state.Project.Pack.Version, loadedPack.Version),
+				Next: "install the peerfoil release that ships the recorded pack version, or update the project's pack with the PeerFoil skills"})
+		default:
+			add(doctorCheck{Name: "project-pack", Status: "pass",
+				Detail: loadedPack.ID + " " + loadedPack.Version})
+		}
+		if packErr == nil {
 			for _, tool := range loadedPack.Tools {
 				answer := probeCommand(ctx, tool.Command[0], tool.Command[1:]...)
 				if answer != "" {

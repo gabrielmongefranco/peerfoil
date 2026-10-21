@@ -248,6 +248,9 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err := e.blockedTaskError(); err != nil {
 		return err
 	}
+	if err := e.unreachableTaskError(); err != nil {
+		return err
+	}
 	frozenEvidence, err := e.revalidatePhaseEvidence(ctx, integrationTip)
 	if err != nil {
 		return err
@@ -255,9 +258,11 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	return e.enterReview(integrationTip, task.ID, append(evidenceIDs, frozenEvidence...))
 }
 
-// revalidatePhaseEvidence reruns every validated task's executable evidence against
-// the frozen revision, so approval can never rest on results from an earlier commit
-// that later tasks changed.
+// revalidatePhaseEvidence reruns the active phase's validated tasks' executable
+// evidence against the frozen revision, so approval can never rest on results from an
+// earlier commit that later tasks changed. Earlier phases are already approved and
+// closed, so their evidence, including human and inspection results the controller
+// cannot rerun, is not re-litigated here.
 func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]string, error) {
 	checkout, err := e.Repo.CreateReviewWorktree(ctx, frozen, "evidence", e.WorktreeParent)
 	if err != nil {
@@ -266,7 +271,7 @@ func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]
 	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, checkout) }()
 	var recorded []string
 	var failed []string
-	for _, task := range e.State.Plan.Tasks() {
+	for _, task := range e.State.Plan.ActiveTasks() {
 		if task.Status != "validated" && task.Status != "accepted" {
 			continue
 		}
@@ -323,11 +328,32 @@ func (e *Engine) blockedTaskError() error {
 	return nil
 }
 
+// unreachableTaskError refuses the review boundary while the active phase still holds
+// a task that is neither finished nor dismissed. Selection can return no task even
+// then, when a dependency was deferred or removed, and approving the phase around such
+// a task would silently drop planned work.
+func (e *Engine) unreachableTaskError() error {
+	for _, task := range e.State.Plan.ActiveTasks() {
+		switch task.Status {
+		case "validated", "accepted", "deferred", "removed":
+			continue
+		}
+		return errs.New(errs.Policy,
+			fmt.Sprintf("task %s is still %s and cannot be selected, so the phase cannot enter review; a dependency may be deferred or removed",
+				task.ID, task.Status),
+			"revise, defer, or remove the task through the PeerFoil skills change intake, then run peerfoil start")
+	}
+	return nil
+}
+
 // finishPhaseProduction moves to review when the active phase has no eligible task
 // left and everything is validated. The lifecycle has no direct produce-to-review
 // edge, so the completeness re-check is recorded as its own validate step.
 func (e *Engine) finishPhaseProduction(ctx context.Context) error {
 	if err := e.blockedTaskError(); err != nil {
+		return err
+	}
+	if err := e.unreachableTaskError(); err != nil {
 		return err
 	}
 	head, err := e.Repo.HeadCommit(ctx)

@@ -13,6 +13,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -101,6 +102,15 @@ func buildEngine(ctx context.Context, env *Env) (*controller.Engine, error) {
 	loadedPack, err := pack.Load(state.Project.Pack.ID, schemas)
 	if err != nil {
 		return nil, err
+	}
+	// The project records name the pack version whose acceptance contract was agreed;
+	// running a different embedded version would silently change the evidence commands
+	// and levels, so a mismatch fails closed instead of substituting.
+	if loadedPack.Version != state.Project.Pack.Version {
+		return nil, errs.New(errs.Configuration,
+			fmt.Sprintf("this project records pack %s version %s, but this peerfoil build ships version %s",
+				state.Project.Pack.ID, state.Project.Pack.Version, loadedPack.Version),
+			"install the peerfoil release that ships the recorded pack version, or update the project's pack with the PeerFoil skills")
 	}
 
 	producerSeat := state.Project.Settings.Roles["producer"]
