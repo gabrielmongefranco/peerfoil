@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/branding.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Describes PeerFoil's artwork, placement, accessibility, and reuse, and carries the notice for the PNG exports under assets/brand/.
 Notes: The SVG files under assets/brand/ are the editable masters.
 
@@ -36,7 +36,7 @@ Taglines and diagram labels use system sans-serif fonts and can vary slightly by
 | --- | --- | --- |
 | `peerfoil-banner` | 1600 × 500 | Above the README H1 |
 | `peerfoil-peer-review` | 900 × 310 | Under the opening section subheading |
-| `peerfoil-workflow` | 900 × 810 | Under “How AI peer review works” |
+| `peerfoil-workflow` | 900 × 810 | Under “AI peer review process” |
 | `peerfoil-workflow-mobile` | 480 × 880 | Narrow-screen diagram alternative |
 | `peerfoil-social-preview` | 1280 × 640 | GitHub social preview; upload the PNG |
 | `peerfoil-logo-dark` | 1100 × 280 | Transparent logo with dark lettering, for light surfaces |

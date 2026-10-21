@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/phase-prompt-template.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Provides a copy-and-paste prompt for starting a PeerFoil phase in a new AI chat.
 Notes: See README for an overview and full license information.
 
@@ -29,7 +29,7 @@ The template works for a complete phase, one stage within a phase, a repair, or 
 bounded project request. Repository files and Git remain the handoff between chats; the
 new agent should not need the previous chat transcript.
 
-## How to use this template
+## Template instructions
 
 1. Start a new chat with an agent that can access the PeerFoil repository.
 2. Copy the complete prompt below.

@@ -25,7 +25,7 @@ accepted project records stay in your repository, model requests go only to the 
 tools you already signed in to, and PeerFoil never stores your credentials or full
 conversations.
 
-### What stays in your repository
+### Data that stays in your repository
 
 PeerFoil writes accepted project truth under `.peerfoil/` in your repository: the
 project record, decisions, architecture, Quality Contract, plans, a small redacted
@@ -38,7 +38,7 @@ repository can read them. They contain:
 - which model family produced and reviewed each piece of work; and
 - captured patches for produced changes, after a scan for secrets.
 
-### What reaches a model provider
+### Data that reaches a model provider
 
 When PeerFoil sends work to a model, it builds a compact packet for that one task: the
 relevant repository rules, accepted decisions and architecture excerpts, the task scope,
@@ -49,7 +49,7 @@ history, other tasks' content, or anything from outside the repository.
 A local model called through Ollama runs on your own computer, so those packets reach no
 outside service at all.
 
-### What is never stored
+### Data that is never stored
 
 - **Credentials and tokens.** PeerFoil uses each tool's existing login and never reads,
   copies, or records it.
@@ -62,7 +62,7 @@ outside service at all.
   output is different: likely credential values in it are replaced with `[redacted]`
   before the output is saved, and the record notes that redaction happened.
 
-### What you control
+### Your controls
 
 - The personal or work profile keeps rule sources separate; neither profile edits your
   repository's `AGENTS.md`.

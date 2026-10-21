@@ -1,6 +1,6 @@
 # Project:  PeerFoil  |  File: .gitignore
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco); OpenAI Codex
-# Created:  2026-09-04  |  Modified: 2026-09-05
+# Created:  2026-09-04  |  Modified: 2026-10-21
 # Summary:  Excludes local tools, credentials, build output, and reconstructible PeerFoil state.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -45,6 +45,7 @@ logs/
 .cache/
 coverage/
 .coverage
+*-lint-report*
 tmp/
 temp/
 

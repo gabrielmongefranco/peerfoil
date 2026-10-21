@@ -11,7 +11,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/skills/remember/SKILL.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Guides recording a candidate lesson, checking its verification status, and promoting it with the user's approval.
 Notes: Assurance is Guided. A lesson never becomes project policy on a model's word alone, and AGENTS.md is never edited.
 
@@ -39,13 +39,13 @@ fresh reviewer verify it before it becomes guidance.
    that `/peerfoil:start <idea>` creates one. Stop.
 7. Every file under `.peerfoil/lessons/`, when the directory exists.
 
-## When the request is a new lesson
+## Requests for a new lesson
 
 Follow the lessons reference, section 1: rewrite the rule, trigger, and scope; name the
 evidence; list conflicts; propose a destination; confirm with the user; write the
 candidate from `${CLAUDE_PLUGIN_ROOT}/templates/lesson.md`; and append the transition.
 
-## When the request names an existing lesson
+## Requests that name an existing lesson
 
 - If the user asks to promote a `verified` lesson, or a `candidate` to `hint`, follow
   the lessons reference, section 3, after the user's approval.

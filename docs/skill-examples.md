@@ -95,7 +95,7 @@ The row count matches the query's expected grain, and the privacy scan reported
 nothing.
 ```
 
-### What these examples show
+### The pattern these examples follow
 
 Both examples keep the pattern the skills folder guide asks for: a frontmatter block the
 skill parser reads, a workflow of small verifiable steps, explicit constraints, and a

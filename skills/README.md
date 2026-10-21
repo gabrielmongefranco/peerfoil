@@ -18,13 +18,10 @@ See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license inf
 
 Keep all project-specific preferences and workflows in
 [project-preferences/SKILL.md](project-preferences/SKILL.md). This folder also
-contains three skills every project inherits,
-[response-style/SKILL.md](response-style/SKILL.md),
-[accessibility/SKILL.md](accessibility/SKILL.md), and
-[documentation/SKILL.md](documentation/SKILL.md), plus this guide and a copyable
-template for reusable skills.
+contains the skills that every project inherits, which [SKILLS.md](../SKILLS.md)
+lists, plus this guide and a copyable template for reusable skills.
 
-### What belongs here
+### Skills that belong here
 
 Each future skill lives at `skills/<skill-name>/SKILL.md`, with lowercase letters,
 digits, and hyphens in the folder name. Start the file with YAML frontmatter

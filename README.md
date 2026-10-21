@@ -50,7 +50,7 @@ to apply the same process to documentation, business plans, and research reports
 **In development.** PeerFoil has not been released yet. See [Status](#status) for what is
 built and what comes next.
 
-## How AI peer review works
+## AI peer review process
 
 <p align="center">
   <picture>

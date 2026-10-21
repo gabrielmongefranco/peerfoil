@@ -27,7 +27,7 @@ architecture, planning, production, evidence, independent review, and lessons. T
 assurance level of this release is **Guided**: the workflow depends on agents following
 written instructions, and nothing here enforces a step mechanically.
 
-## What this build can do
+## Features in this build
 
 This build carries the implementation work of all five Phase 1 stages; the live
 three-platform checks of Stage 5 are still open, so nothing is released. Today it can:

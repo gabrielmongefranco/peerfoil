@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/implementation-plan.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Explains what PeerFoil will deliver, when it will arrive, and how each release will be checked.
 Notes: See README for an overview and full license information.
 
@@ -109,7 +109,7 @@ itself credentials, weaken `AGENTS.md`, hide failed checks, or allow self-approv
 
 [Open the detailed Phase 1 implementation plan](plans/phase-1-skills.md)
 
-### What the user can do
+### User capabilities
 
 A user who already has Git, Claude Code, Codex, and model authentication can install the
 PeerFoil skills and complete the whole guided journey. They can make the important design
@@ -117,7 +117,7 @@ decisions, approve an architecture and plan, send small coding tasks to Codex, r
 checks, receive independent Claude and Codex reviews, accept a repair, update the plan,
 and resume from files stored in the repository.
 
-### What will be included
+### Included in this phase
 
 - A Claude Code marketplace and plugin package.
 - Portable Markdown skills and fresh agent-role instructions.
@@ -163,7 +163,7 @@ Two small software examples must complete the following journey:
 The Documentation example must use the same artifacts and review path to create and check
 one small Markdown document.
 
-### What is not enforced yet
+### Rules not enforced yet
 
 The Skills release depends on agents following the written process. It does not yet
 provide mechanical state control, controller-run evidence, crash recovery, direct provider
@@ -174,7 +174,7 @@ show **Guided** so users understand that boundary.
 
 [Open the detailed Phase 2 implementation plan](plans/phase-2-core-alpha.md)
 
-### What the user can do
+### User capabilities
 
 The `peerfoil` command will read the same files created by PeerFoil Skills and run one
 small software phase. It will call Claude Code and Codex, keep the change in a Git
@@ -191,7 +191,7 @@ peerfoil status
 peerfoil resume
 ```
 
-### What will be included
+### Included in this phase
 
 - A small Go command-line application with native development builds.
 - One clear, sequential workflow.
