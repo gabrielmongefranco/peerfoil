@@ -174,12 +174,7 @@ func TestEvidenceRejectsCheckoutMutation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			source := git(t, root, "rev-parse", "HEAD")
-			checkout, err := engine.Repo.CreateReviewWorktree(context.Background(), source, "mutation", engine.WorktreeParent)
-			if err != nil {
-				t.Fatal(err)
-			}
-			ids, _, err := engine.runTaskEvidence(context.Background(), checkout, engine.State.Plan.Tasks()[0], "cs-0001", git(t, root, "rev-parse", "HEAD"), quality)
+			ids, _, err := engine.runTaskEvidence(context.Background(), engine.State.Plan.Tasks()[0], "cs-0001", git(t, root, "rev-parse", "HEAD"), quality)
 			if err == nil || calls != 1 || len(ids) != 1 {
 				t.Fatal("modified source supplied passing evidence or later checks ran")
 			}
@@ -210,11 +205,7 @@ func TestRecommendedStartupFailureRetainsErrorAndContinues(t *testing.T) {
 			return nil, nil, 0, false, nil
 		}
 		// The retention folder is outside this checkout, as in normal validation.
-		checkout, err := engine.Repo.CreateReviewWorktree(context.Background(), git(t, root, "rev-parse", "HEAD"), "optional", engine.WorktreeParent)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ids, failed, err := engine.runTaskEvidence(context.Background(), checkout, &task, "cs-0001", git(t, root, "rev-parse", "HEAD"), quality)
+		ids, failed, err := engine.runTaskEvidence(context.Background(), &task, "cs-0001", git(t, root, "rev-parse", "HEAD"), quality)
 		if cancel {
 			if err == nil || calls != 1 {
 				t.Fatal("cancellation was ignored")
@@ -317,10 +308,6 @@ func TestEvidenceAllowsIgnoredBuildOutput(t *testing.T) {
 	root := setupFixtureRepo(t)
 	engine := testEngine(t, root, goodProducer(t), nil, nil, nil)
 	source := git(t, root, "rev-parse", "HEAD")
-	checkout, err := engine.Repo.CreateReviewWorktree(context.Background(), source, "ignored-output", engine.WorktreeParent)
-	if err != nil {
-		t.Fatal(err)
-	}
 	task := *engine.State.Plan.Tasks()[0]
 	task.RequiredEvidence = []project.EvidenceRequirement{{Name: "build", Kind: "executable", Level: "required"}}
 	engine.Evidence = func(_ context.Context, _ []string, dir string, _ []string, _ time.Duration) ([]byte, []byte, int, bool, error) {
@@ -335,7 +322,7 @@ func TestEvidenceAllowsIgnoredBuildOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ids, failed, err := engine.runTaskEvidence(context.Background(), checkout, &task, "cs-0001", source, quality)
+	ids, failed, err := engine.runTaskEvidence(context.Background(), &task, "cs-0001", source, quality)
 	if err != nil || len(failed) != 0 || len(ids) != 1 {
 		t.Fatalf("ignored build output blocked validation: %v", err)
 	}

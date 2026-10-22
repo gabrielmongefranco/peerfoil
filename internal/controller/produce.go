@@ -230,14 +230,7 @@ func (e *Engine) ProduceNext(ctx context.Context) error {
 	if err := e.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
-	// Checks receive a fresh checkout so later writer edits cannot supply evidence
-	// for different committed bytes.
-	evidencePath, err := e.Repo.CreateReviewWorktree(ctx, taskCommit, "task-evidence", e.WorktreeParent)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
-	evidenceIDs, failed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, taskCommit, quality)
+	evidenceIDs, failed, err := e.runTaskEvidence(ctx, task, changeSetID, taskCommit, quality)
 	if err != nil {
 		// The workflow is already in validate, which resume refuses as a boundary,
 		// so a runner failure pauses with the task blocked instead of stranding it.
@@ -331,18 +324,13 @@ func (e *Engine) revalidatePhaseEvidence(ctx context.Context, frozen string) ([]
 	if err != nil {
 		return nil, err
 	}
-	checkout, err := e.Repo.CreateReviewWorktree(ctx, frozen, "evidence", e.WorktreeParent)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, checkout) }()
 	var recorded []string
 	var failed []string
 	for _, task := range e.State.Plan.ActiveTasks() {
 		if task.Status != "validated" && task.Status != "accepted" {
 			continue
 		}
-		ids, taskFailed, err := e.runTaskEvidence(ctx, checkout, task, "", frozen, quality)
+		ids, taskFailed, err := e.runTaskEvidence(ctx, task, "", frozen, quality)
 		if err != nil {
 			return recorded, err
 		}
@@ -565,7 +553,37 @@ func rejectSymlinks(worktreePath string, changes []workspace.Change) error {
 // runTaskEvidence runs every executable evidence requirement the task declares, using
 // the accepted Quality Contract. It returns the record identifiers and the
 // names of required checks that did not pass.
-func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
+func (e *Engine) runTaskEvidence(ctx context.Context, task *project.Task, changeSetID, taskCommit string, quality []byte) ([]string, []string, error) {
+	var recorded, failed []string
+	for _, requirement := range task.RequiredEvidence {
+		if requirement.Level == "not-applicable" {
+			continue
+		}
+		if requirement.Kind != "executable" {
+			if requirement.Level == "required" {
+				failed = append(failed, requirement.Name+" (needs a human or inspection result)")
+			}
+			continue
+		}
+		checkout, err := e.Repo.CreateReviewWorktree(ctx, taskCommit, "check-procedure", e.WorktreeParent)
+		if err != nil {
+			return recorded, failed, err
+		}
+		single := *task
+		single.RequiredEvidence = []project.EvidenceRequirement{requirement}
+		ids, failures, runErr := e.runEvidenceProcedure(ctx, checkout, &single, changeSetID, taskCommit, quality)
+		cleanupErr := e.Repo.RemoveReviewWorktree(context.WithoutCancel(ctx), checkout)
+		recorded, failed = append(recorded, ids...), append(failed, failures...)
+		if err := errors.Join(runErr, cleanupErr); err != nil {
+			return recorded, failed, err
+		}
+	}
+	return recorded, failed, nil
+}
+
+// Commands explicitly chained in one accepted procedure share its disposable
+// checkout. No ignored output can become input to a later evidence procedure.
+func (e *Engine) runEvidenceProcedure(ctx context.Context, checkoutDir string,
 	task *project.Task, changeSetID, taskCommit string, quality []byte) ([]string, []string, error) {
 	var recorded []string
 	var failedRequired []string

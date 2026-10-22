@@ -776,7 +776,6 @@ The release boundary and deferred work remain as listed above.
 | A body example can authorize a draft contract | Parse the canonical metadata paragraph directly after the title | `TestCanonicalHeaderCannotBeSuppliedByAnExample` |
 | Private or global attributes introduce LFS pointers | Batch-inspect small source blobs for current and legacy LFS pointer headers | `TestLFSPointersFromUntrackedAttributesAreRejected` |
 | Reviewer fields inject Markdown structure | Reject line breaks, controls, and structural markup before retaining findings or risk text | `TestReviewFieldsCannotForgeMarkdown` |
-
 | Mixed-author phases cannot approve | Require different-family primary approval for each recorded change set | `TestReviewApprovalCoversEveryAuthor` |
 | Case-colliding source paths | Check file and directory prefixes in the exact Git tree using Unicode case folding | `TestCaseCollisionsRejectedBeforeCheckout` |
 | Changed project fields bypass review | Bind stable stored and loaded project fields, excluding workflow position and its timestamp | `TestReviewInputsBindStableProjectFields` |
@@ -788,6 +787,9 @@ The release boundary and deferred work remain as listed above.
 | Missing optional tools block work | Retain recommended startup errors and continue; cancellation still stops | `TestRecommendedStartupFailureRetainsErrorAndContinues` |
 | Automatic repairs leave no plan change | Archive the prior plan, add a repair task and change entry, increment the revision, and link affected and retained work | `TestRepairPlanTracksWorkAndExcludesDismissedScope` and repair recovery journeys |
 | Dismissed tasks expand repair scope | Grant only paths of affected validated or accepted tasks; reject unmapped finding locations | The same repair-plan regression |
+| Ignored files feed later checks | Give each accepted evidence procedure a fresh checkout; only explicitly chained commands share output | `TestEvidenceProceduresCannotShareIgnoredInputs` |
+| Repair plan blocks retained later phases | Require the original two-family agreement, independent repair verification, completed approval transition, and unchanged plan content apart from progress statuses | `TestVerifiedRepairAuthorizesRetainedLaterPhase` |
+| Repair change omits evidence links | Save each repair check's evidence IDs in the plan change before verification | The same later-phase journey checks every evidence record against the repair commit and change set |
 
 The additional review on revision `e311160` raised eleven findings. Their repairs use
 the existing plan-v2 change records and the existing single repair cycle. General change
@@ -802,6 +804,22 @@ The standalone Go fixture now ignores its native compiled binary. Its ignore fil
 follows the existing synthetic-content header exemption; the fixture layout check caught
 and corrected an initial project header without changing the check.
 `TestEvidenceAllowsIgnoredBuildOutput` checks that disposable ignored output remains allowed.
+
+The requested follow-up review of revision `3d6dfb1` returned three more findings.
+Their fixes isolate check procedures and complete the repair plan's evidence and
+authorization links. Explicitly chained commands can share disposable output within
+one accepted procedure; separate procedures cannot. The later-phase journey rejects
+changed assignments and missing reviewer-family agreement before exercising a retained
+task after repair approval. The existing user decision to start another phase is still
+required. These changes do not add general change intake or another repair cycle.
+Two initial targeted runs stopped at Git branch checks. The isolated later-phase
+journey then passed with native Git selected explicitly. No assertions were relaxed;
+the complete Windows suite and the pull request's full CI matrix remain required.
+The complete native Windows run passed with `go test ./... -count=1 -timeout 35m`.
+Vet, build, formatting, both fixture suites, and strict manifest validation also passed.
+Conformance first found temporary diagnostic sources, then passed after their cleanup.
+Keep such scratch files outside the checkout or remove them before conformance;
+the checker also inspects ignored files.
 
 The repair verification test also rejects a moved repair branch and pauses after two
 unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks

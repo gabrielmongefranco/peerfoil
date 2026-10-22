@@ -242,34 +242,10 @@ func (e *Engine) resumeRepairVerification(ctx context.Context, boundary *project
 // integrateVerifiedRepair reuses an accepted verification after an integration
 // failure. It validates the retained result without consuming another reviewer call.
 func (e *Engine) integrateVerifiedRepair(ctx context.Context, boundary *project.Transition, checkpoint *repairVerification) error {
+	if err := e.checkRepairApproval(checkpoint); err != nil {
+		return err
+	}
 	approval := checkpoint.Approved
-	invalid := errs.New(errs.Validation, "the retained repair approval is missing or no longer matches the repair", "restore the recorded approval before resuming integration")
-	if approval == nil || !reviewIDPattern.MatchString(approval.Review) || !sha256Pattern.MatchString(approval.SHA256) || !sha256Pattern.MatchString(approval.Digest) ||
-		approval.Reviewer.Role != "reviewer" || approval.Reviewer.LineageRoot == "" || approval.Reviewer.LineageRoot == provider.LineageUnknown || approval.Reviewer.LineageRoot == checkpoint.Author.LineageRoot ||
-		(checkpoint.Author.Session != nil && *checkpoint.Author.Session != "" && deref(approval.Reviewer.Session) == *checkpoint.Author.Session) {
-		return invalid
-	}
-	raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join("reviews", approval.Review+".md"), 1024*1024)
-	if err != nil {
-		return invalid
-	}
-	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
-	sum := sha256.Sum256([]byte(text))
-	if hex.EncodeToString(sum[:]) != approval.SHA256 {
-		return invalid
-	}
-	actor := approval.Reviewer
-	for _, line := range []string{
-		"- **Kind:** repair\n", "- **Decision:** approve\n",
-		"- **Independence:** independent — judged against each item's recorded author lineage\n",
-		fmt.Sprintf("- **Frozen material:** source revision %s, plan revision %d, architecture revision %d, quality revision %d, pass 1, digest %s, change set %s\n",
-			checkpoint.Source, checkpoint.Revisions.Plan, checkpoint.Revisions.Architecture, checkpoint.Revisions.Quality, approval.Digest, checkpoint.ChangeSet),
-		fmt.Sprintf("- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n", actor.Tool, deref(actor.Model), deref(actor.Effort), actor.LineageRoot, valueOrNull(deref(actor.Session))),
-	} {
-		if !strings.Contains(text, "\n"+line) {
-			return invalid
-		}
-	}
 	if err := e.checkReviewInputs(boundary); err != nil {
 		return err
 	}
@@ -299,4 +275,41 @@ func repairBranch(checkpoint *repairVerification) string {
 		return checkpoint.Branch
 	}
 	return fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
+}
+
+// checkRepairApproval validates the retained independent decision without changing state.
+func (e *Engine) checkRepairApproval(checkpoint *repairVerification) error {
+	approval := checkpoint.Approved
+	invalid := errs.New(errs.Validation, "the retained repair approval is missing or no longer matches the repair", "restore the recorded approval before resuming integration")
+	if approval == nil || !reviewIDPattern.MatchString(approval.Review) || !sha256Pattern.MatchString(approval.SHA256) || !sha256Pattern.MatchString(approval.Digest) ||
+		approval.Reviewer.Role != "reviewer" || approval.Reviewer.LineageRoot == "" || approval.Reviewer.LineageRoot == provider.LineageUnknown || approval.Reviewer.LineageRoot == checkpoint.Author.LineageRoot ||
+		(checkpoint.Author.Session != nil && *checkpoint.Author.Session != "" && deref(approval.Reviewer.Session) == *checkpoint.Author.Session) {
+		return invalid
+	}
+	raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join("reviews", approval.Review+".md"), 1024*1024)
+	if err != nil {
+		return invalid
+	}
+	header := reviewProjectHeader.FindStringSubmatch(canonicalMetadata(raw))
+	if header == nil || header[1] != e.State.Project.ProjectID {
+		return invalid
+	}
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	sum := sha256.Sum256([]byte(text))
+	if hex.EncodeToString(sum[:]) != approval.SHA256 {
+		return invalid
+	}
+	actor := approval.Reviewer
+	for _, line := range []string{
+		"- **Kind:** repair\n", "- **Decision:** approve\n",
+		"- **Independence:** independent — judged against each item's recorded author lineage\n",
+		fmt.Sprintf("- **Frozen material:** source revision %s, plan revision %d, architecture revision %d, quality revision %d, pass 1, digest %s, change set %s\n",
+			checkpoint.Source, checkpoint.Revisions.Plan, checkpoint.Revisions.Architecture, checkpoint.Revisions.Quality, approval.Digest, checkpoint.ChangeSet),
+		fmt.Sprintf("- **Reviewer:** reviewer (%s, %s, %s, %s, session %s)\n", actor.Tool, deref(actor.Model), deref(actor.Effort), actor.LineageRoot, valueOrNull(deref(actor.Session))),
+	} {
+		if !strings.Contains(text, "\n"+line) {
+			return invalid
+		}
+	}
+	return nil
 }

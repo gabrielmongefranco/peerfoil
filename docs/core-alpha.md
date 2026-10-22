@@ -106,8 +106,10 @@ or unsafe procedures stop validation with an actionable error.
 Core rejects tracked symbolic links and submodules before creating a writer's checkout,
 including when Windows would turn a link into an ordinary file. Capture freezes one Git
 tree. Scope checks, secret scanning, and the resulting commit use that same tree.
-Checks run in a separate checkout of the captured commit, so later writer edits cannot
-enter the accepted patch or supply its evidence. After each command, Core checks that
+Each accepted check procedure runs in a fresh checkout of the captured commit. Ignored
+output from one procedure cannot supply input to another procedure or task. Commands
+explicitly chained in the same accepted procedure share that procedure's checkout.
+After each command, Core checks that
 HEAD, the index, and non-ignored files still match the frozen commit. Any change blocks
 evidence acceptance, including changes made by recommended checks. Route generated
 source through change intake before running validation again. Ignored build output is allowed.
@@ -138,11 +140,18 @@ alongside blocking ones. Findings at the same location retain distinct requireme
 evidence, and recommendations. Exact duplicates keep both originating review references.
 Before writing, Core archives the prior JSON and Markdown plan under `.peerfoil/plans/`,
 increments the plan revision, and adds a repair task and change entry. The entry names
-affected and retained tasks and originating reviews. The repair task links back to the
+affected and retained tasks and originating reviews. Core adds the repair's evidence IDs
+to that entry as checks finish, including failed checks, before requesting verification.
+The repair task links back to the
 phase review and inherits checks and paths only from affected validated or accepted tasks.
 Deferred and removed work cannot grant paths. A finding must name a file, optionally
 followed by a line number; unclear locations return to change intake.
 Phase approval preserves deferred and removed stage statuses.
+The recorded two-family repair agreement and independent verification authorize the
+new plan revision for retained later phases. Core also requires the completed approval
+transition and an unchanged plan, apart from phase, stage, and task progress statuses.
+Changed assignments need change intake and a new review. Starting a later phase still
+requires your explicit decision through the skills.
 Status directs blocked, stale, or unreachable tasks to change intake.
 
 Each review transition retains its accepted inputs in

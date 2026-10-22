@@ -75,11 +75,16 @@ type reviewRecord struct {
 	PlanRevision    int
 	ArchRevision    int
 	QualityRevision int
+	SourceRevision  string
+	LineageRoot     string
 	ReviewedAt      string
 }
 
 var (
-	reviewProjectHeader    = regexp.MustCompile("^Project: `([^`]+)` · Assurance: [^\r\n]+$")
+	reviewProjectHeader = regexp.MustCompile("^Project: `([^`]+)` · Assurance: [^\r\n]+$")
+	reviewSourceLine    = regexp.MustCompile(`(?m)^- \*\*Frozen material:\*\* source revision ([a-z0-9]+),`)
+	reviewLineageLine   = regexp.MustCompile(`(?m)^- \*\*Reviewer:\*\* reviewer \([^,\r\n]+, [^,\r\n]+, [^,\r\n]+, ([^,\r\n]+), session [^)\r\n]+\)$`)
+
 	reviewKindLine         = regexp.MustCompile(`(?m)^- \*\*Kind:\*\* *([a-z-]+)`)
 	reviewDecisionLine     = regexp.MustCompile(`(?m)^- \*\*Decision:\*\* *([a-z-]+)`)
 	reviewIndependenceLine = regexp.MustCompile(`(?m)^- \*\*Independence:\*\* *([a-z-]+)(.*)$`)
@@ -121,6 +126,12 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 			continue
 		}
 		record := reviewRecord{ID: strings.TrimSuffix(name, ".md")}
+		if match := reviewSourceLine.FindStringSubmatch(text); match != nil {
+			record.SourceRevision = match[1]
+		}
+		if match := reviewLineageLine.FindStringSubmatch(text); match != nil {
+			record.LineageRoot = match[1]
+		}
 		if match := reviewKindLine.FindStringSubmatch(text); match != nil {
 			record.Kind = match[1]
 		}
@@ -204,6 +215,9 @@ func (e *Engine) productionGate() error {
 		planReviewed = approved("change", func(r reviewRecord) bool {
 			return r.PlanRevision == p.Revisions.Plan && r.ArchRevision == p.Revisions.Architecture
 		})
+	}
+	if !planReviewed {
+		planReviewed = e.repairAgreementAuthorizesPlan(reviews)
 	}
 	if !architectureReviewed || !planReviewed {
 		return errs.New(errs.Policy,

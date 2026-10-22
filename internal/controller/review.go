@@ -1024,17 +1024,17 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 
 	// The active phase's checks run again against the repaired revision; earlier
 	// phases are approved and closed, so their evidence is not re-litigated.
-	evidencePath, err := e.Repo.CreateReviewWorktree(ctx, repairCommit, "repair-evidence", e.WorktreeParent)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
 	var failed []string
 	for _, task := range e.State.Plan.ActiveTasks() {
 		if task.Status != "accepted" && task.Status != "validated" && task.ID != repairTask.ID {
 			continue
 		}
-		_, taskFailed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, repairCommit, quality)
+		ids, taskFailed, err := e.runTaskEvidence(ctx, task, changeSetID, repairCommit, quality)
+		change := &e.State.Plan.Changes[len(e.State.Plan.Changes)-1]
+		change.Evidence = append(change.Evidence, ids...)
+		if saveErr := e.SavePlan(); saveErr != nil {
+			return saveErr
+		}
 		if err != nil {
 			reason := fmt.Sprintf("an evidence command for %s could not run after the repair: %v", task.ID, err)
 			if pauseErr := e.Pause(reason, map[string][]string{"phase_reviews": {phaseReviewID}, "change_sets": {changeSetID}}); pauseErr != nil {
