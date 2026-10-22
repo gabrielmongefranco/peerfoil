@@ -125,3 +125,24 @@ func TestTrackedSymlinkRejectedWithoutOSLinkSupport(t *testing.T) {
 		t.Fatal("preflight rejection left a task branch")
 	}
 }
+
+func TestCaseCollisionsRejectedBeforeCheckout(t *testing.T) {
+	for _, paths := range [][]string{{"Foo.go", "foo.go"}, {"Folder/a.go", "folder/b.go"}, {"Kelvin.go", "Kelvin.go"}} {
+		root := newTestRepo(t)
+		writeFile(t, root, "content.txt", "synthetic\n")
+		blob := runGit(t, root, "hash-object", "-w", "content.txt")
+		runGit(t, root, "config", "core.ignorecase", "false")
+		for _, path := range paths {
+			runGit(t, root, "update-index", "--add", "--cacheinfo", "100644,"+blob+","+path)
+		}
+		tree := runGit(t, root, "write-tree")
+		repo := New(root)
+		if err := repo.CheckTree(context.Background(), tree); err == nil || !strings.Contains(err.Error(), "case-colliding") {
+			t.Fatalf("case collision was accepted: %v", err)
+		}
+		commit := runGit(t, root, "commit-tree", tree, "-p", "HEAD", "-m", "Synthetic case collision")
+		if _, err := repo.CreateTaskWorktree(context.Background(), commit, "tk-001", 1, t.TempDir()); err == nil {
+			t.Fatal("colliding source tree was checked out")
+		}
+	}
+}

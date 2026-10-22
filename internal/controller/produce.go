@@ -15,6 +15,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -568,6 +569,10 @@ func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 	task *project.Task, changeSetID, taskCommit string, quality []byte) ([]string, []string, error) {
 	var recorded []string
 	var failedRequired []string
+	checkout := workspace.New(checkoutDir)
+	if err := checkout.CheckUnchanged(ctx, taskCommit); err != nil {
+		return recorded, nil, err
+	}
 	for _, requirement := range task.RequiredEvidence {
 		if requirement.Level == "not-applicable" {
 			continue
@@ -601,13 +606,27 @@ func (e *Engine) runTaskEvidence(ctx context.Context, checkoutDir string,
 				RepoRoot:             checkoutDir,
 				Now:                  e.Now,
 			}, filepath.Join(e.State.Dir, "evidence"))
+			if ctx.Err() != nil {
+				record.Status, err = evidence.StatusError, ctx.Err()
+			} else if drift := checkout.CheckUnchanged(ctx, taskCommit); drift != nil {
+				record.Status = evidence.StatusError
+				if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure+"; the checkout changed during execution"); writeErr != nil {
+					return recorded, nil, writeErr
+				}
+				recorded = append(recorded, evidenceID)
+				return recorded, nil, drift
+			}
 			if err != nil {
 				// A command that could not run still produced a record with its retained
 				// output; that record belongs in the versioned evidence, not only in the
 				// returned error, so the failure stays visible after the run ends.
 				if record.Status == evidence.StatusError {
-					if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure); writeErr == nil {
-						recorded = append(recorded, evidenceID)
+					if writeErr := e.WriteEvidenceRecord(record, changeSetID, procedure); writeErr != nil {
+						return recorded, nil, writeErr
+					}
+					recorded = append(recorded, evidenceID)
+					if requirement.Level == "recommended" && record.RetainedSHA256 != "" && ctx.Err() == nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+						break
 					}
 				}
 				return recorded, nil, err

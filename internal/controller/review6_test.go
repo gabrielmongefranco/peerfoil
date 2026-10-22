@@ -80,7 +80,7 @@ func TestRepairSetupFailureLeavesReviewBoundary(t *testing.T) {
 		reviewer("codex-cli", provider.LineageOpenAIGPT, "repair", []Finding{repairFinding()}),
 	}, []provider.Seat{claudeSeat(), codexSeat()}, nil)
 	producePhase(t, engine)
-	branch := fmt.Sprintf("peerfoil/task/tk-002-r%d", engine.State.Project.Revisions.Plan+1)
+	branch := fmt.Sprintf("peerfoil/task/tk-003-r%d", engine.State.Project.Revisions.Plan+1)
 	git(t, root, "branch", branch, "peerfoil/integration")
 	if err := engine.PhaseReview(context.Background()); err == nil {
 		t.Fatal("an existing repair branch was overwritten")

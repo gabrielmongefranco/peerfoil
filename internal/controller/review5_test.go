@@ -117,7 +117,7 @@ func TestRepairVerificationResumesWithoutAnotherWriter(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				branch := fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
+				branch := repairBranch(checkpoint)
 				git(t, root, "update-ref", branch, base)
 			}
 			// A new controller reconstructs only from retained records and Git.

@@ -27,6 +27,7 @@ synthetic user-project content.
 | `go.mod` | Module `example.com/linecount`, Go 1.22, no dependencies |
 | `main.go` | The command: reads one path argument and prints the non-empty line count |
 | `main_test.go` | Tests for the counting logic, using temporary files |
+| `.gitignore` | Excludes the disposable `linecount` and `linecount.exe` build output |
 | `.peerfoil/` | The accepted project records: project, decisions, architecture, quality, plan, history, reviews |
 | `.peerfoil/plans/plan-1.json` | The retained plan revision 1 snapshot, from before change cr-0001 |
 

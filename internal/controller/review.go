@@ -36,12 +36,13 @@ import (
 
 // Finding is one normalized reviewer finding.
 type Finding struct {
-	Title          string `json:"title"`
-	Location       string `json:"location"`
-	Requirement    string `json:"requirement"`
-	Severity       string `json:"severity"`
-	Evidence       string `json:"evidence"`
-	Recommendation string `json:"recommendation"`
+	Title          string   `json:"title"`
+	Location       string   `json:"location"`
+	Requirement    string   `json:"requirement"`
+	Severity       string   `json:"severity"`
+	Evidence       string   `json:"evidence"`
+	Recommendation string   `json:"recommendation"`
+	Reviews        []string `json:"reviews,omitempty"`
 }
 
 // reviewAnswer is the one JSON object a reviewer must return.
@@ -179,7 +180,7 @@ func (e *Engine) PhaseReview(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	decision := combineDecisions(runs)
+	decision := combineDecisions(runs, authors)
 	if err := e.writePhaseReviewRecord(phaseReviewID, frozen, bundleDigest, authors, runs, merged, decision); err != nil {
 		return err
 	}
@@ -313,8 +314,8 @@ func (e *Engine) buildReviewPacket(kind, frozen, bundleDigest string, repairFind
 	fmt.Fprintf(&b, "Frozen revision: %s · bundle digest: %s\n", frozen, bundleDigest)
 	fmt.Fprintf(&b, "Revisions: plan %d, architecture %d, quality %d\n\n",
 		e.State.Project.Revisions.Plan, e.State.Project.Revisions.Architecture, e.State.Project.Revisions.Quality)
-	b.WriteString("Read the accepted records under .peerfoil/ (architecture.md, quality.md, plan.md, decisions.md, evidence/) and the deliverables they describe.\n")
-	b.WriteString("Note: the accepted .peerfoil records in this checkout reflect the phase's start; the deliverable files are the reviewed revision, and this packet's revisions and requirement list are current. The controller has refreshed .peerfoil/evidence and .peerfoil/reviews with the current change-set, evidence, and review records for the revision under review.\n")
+	b.WriteString("Read the accepted records under .peerfoil/ (architecture.md, quality.md, plan.json, plan.md, decisions.md, evidence/) and the deliverables they describe.\n")
+	b.WriteString("The controller refreshed the accepted records, generated plan.md from the authoritative plan.json, and copied current evidence and review records. Deliverable files remain at the frozen revision.\n")
 
 	if e.State.Plan != nil {
 		b.WriteString("\nRequirements to check:\n")
@@ -330,6 +331,7 @@ func (e *Engine) buildReviewPacket(kind, frozen, bundleDigest string, repairFind
 		b.WriteString("\nThis is the verification of a repair. Confirm whether each of these findings is repaired at this exact revision:\n")
 		for _, finding := range repairFindings {
 			fmt.Fprintf(&b, "- [%s] %s at %s: %s\n", finding.Severity, finding.Title, finding.Location, finding.Requirement)
+			fmt.Fprintf(&b, "  Evidence: %s. Recommendation: %s. Reviews: %s\n", finding.Evidence, finding.Recommendation, strings.Join(finding.Reviews, ", "))
 		}
 	}
 	b.WriteString(`
@@ -374,6 +376,9 @@ func (e *Engine) refreshRecordsInCheckout(checkout string) error {
 			return err
 		}
 		total += len(raw)
+	}
+	if err := fsx.WriteFileAtomic(filepath.Join(checkout, ".peerfoil", "plan.md"), []byte(renderPlanMarkdown(e.State.Project, e.State.Plan)), 0o644); err != nil {
+		return err
 	}
 	for _, name := range []string{"evidence", "reviews"} {
 		source := filepath.Join(e.State.Dir, name)
@@ -545,6 +550,9 @@ func parseReviewAnswer(text, kind, frozen string, planRevision, architectureRevi
 		problems = append(problems, fmt.Sprintf("more than %d findings", maxFindings))
 	}
 	for index, finding := range answer.Findings {
+		if len(finding.Reviews) > 0 {
+			problems = append(problems, "review references are assigned by the controller")
+		}
 		if finding.Title == "" || finding.Location == "" || finding.Requirement == "" ||
 			finding.Evidence == "" || finding.Recommendation == "" {
 			problems = append(problems, fmt.Sprintf("finding %d is missing a required field", index+1))
@@ -613,7 +621,7 @@ func plainReviewField(value string) bool {
 
 // combineDecisions applies the independence rules: approval needs both reviewers, and
 // in particular the primary (different-family) reviewer of every item, to approve.
-func combineDecisions(runs []reviewRun) string {
+func combineDecisions(runs []reviewRun, authors map[string]string) string {
 	for _, run := range runs {
 		if run.answer.Decision == "block" {
 			return "user-decision"
@@ -621,14 +629,20 @@ func combineDecisions(runs []reviewRun) string {
 	}
 	approvals := 0
 	repairs := 0
-	primaryApproved := false
+	primaryApproved := len(authors) > 0
+	for _, lineage := range authors {
+		covered := false
+		for _, run := range runs {
+			if lineage != "" && lineage != provider.LineageUnknown && run.lineage != "" && run.lineage != provider.LineageUnknown && run.lineage != lineage && run.answer.Decision == "approve" {
+				covered = true
+			}
+		}
+		primaryApproved = primaryApproved && covered
+	}
 	for _, run := range runs {
 		switch run.answer.Decision {
 		case "approve":
 			approvals++
-			if run.independence == "independent" {
-				primaryApproved = true
-			}
 		case "repair":
 			repairs++
 		}
@@ -655,18 +669,20 @@ func decisionSummary(runs []reviewRun) string {
 }
 
 // mergeFindings combines both reviewers' findings, joining duplicates by title and
-// location without losing either reviewer's severity.
+// location and substantive details without losing severity or review provenance.
 func mergeFindings(runs []reviewRun) []Finding {
 	var merged []Finding
 	index := map[string]int{}
 	rank := map[string]int{"blocking": 3, "major": 2, "minor": 1, "note": 0}
 	for _, run := range runs {
 		for _, finding := range run.answer.Findings {
-			key := strings.ToLower(finding.Title + "|" + finding.Location)
+			key := strings.ToLower(finding.Title+"|"+finding.Location) + "|" + finding.Requirement + "|" + finding.Evidence + "|" + finding.Recommendation
+			finding.Reviews = []string{run.recordID}
 			if at, seen := index[key]; seen {
 				if rank[finding.Severity] > rank[merged[at].Severity] {
 					merged[at].Severity = finding.Severity
 				}
+				merged[at].Reviews = append(merged[at].Reviews, run.recordID)
 				continue
 			}
 			index[key] = len(merged)
@@ -750,6 +766,7 @@ func (e *Engine) writePhaseReviewRecord(id, frozen, bundleDigest string, authors
 	}
 	for _, finding := range merged {
 		fmt.Fprintf(&b, "- [%s] %s at %s — %s\n", finding.Severity, finding.Title, finding.Location, finding.Requirement)
+		fmt.Fprintf(&b, "  Evidence: %s. Recommendation: %s. Reviews: %s\n", finding.Evidence, finding.Recommendation, strings.Join(finding.Reviews, ", "))
 	}
 	return fsx.WriteFileAtomic(filepath.Join(dir, id+".md"), []byte(b.String()), 0o644)
 }
@@ -827,7 +844,11 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	}
 
 	// The repair works on a fresh worktree at the frozen revision.
-	lastTask := e.lastValidatedTaskID()
+	repairPlan, repairTask, err := e.prepareRepairPlan(phaseReviewID, blocking)
+	if err != nil {
+		return err
+	}
+	lastTask := repairTask.ID
 	changeSetID, err := e.nextEvidenceDirID("cs")
 	if err != nil {
 		return err
@@ -848,14 +869,20 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		Author:  repairAuthor,
 		Summary: "Launch recorded before the repair producer ran.",
 	}
-	inputPacket, quality, err := e.snapshotInputs(changeSet)
+	candidate := *e
+	candidateState := *e.State
+	candidateProject := *e.State.Project
+	candidateProject.Revisions.Plan = repairPlan.PlanRevision
+	candidateState.Project, candidateState.Plan = &candidateProject, repairPlan
+	candidate.State = &candidateState
+	inputPacket, quality, err := candidate.snapshotInputs(changeSet)
 	if err != nil {
 		return err
 	}
-	if err := e.WriteChangeSet(changeSet); err != nil {
+	if err := candidate.WriteChangeSet(changeSet); err != nil {
 		return err
 	}
-	worktree, err := e.Repo.CreateTaskWorktree(ctx, frozen, lastTask, e.State.Project.Revisions.Plan+1, e.WorktreeParent)
+	worktree, err := e.Repo.CreateTaskWorktree(ctx, frozen, lastTask, repairPlan.PlanRevision, e.WorktreeParent)
 	if err != nil {
 		return err
 	}
@@ -881,10 +908,12 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	for _, finding := range blocking {
 		fmt.Fprintf(&packet, "- [%s] %s at %s: %s. Recommended: %s\n",
 			finding.Severity, finding.Title, finding.Location, finding.Requirement, finding.Recommendation)
+		fmt.Fprintf(&packet, "  Evidence: %s. Reviews: %s\n", finding.Evidence, strings.Join(finding.Reviews, ", "))
 	}
 	if len(blocking) == 0 {
 		packet.WriteString("- Resolve the repair findings recorded in .peerfoil/reviews/" + phaseReviewID + ".md\n")
 	}
+	fmt.Fprintf(&packet, "\nAllowed paths: %s\n", strings.Join(repairTask.AllowedPaths, ", "))
 	packet.WriteString("\nEnd with one short paragraph describing exactly what you changed.\n")
 	packet.WriteString(inputPacket)
 
@@ -906,6 +935,9 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		return errs.New(errs.Provider, reason, "")
 	}
 
+	if err := e.acceptRepairPlan(repairPlan, lastTask); err != nil {
+		return err
+	}
 	if _, err := e.Journal.Started("repair-producer", changeSetID); err != nil {
 		return err
 	}
@@ -940,10 +972,10 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	if len(changes) == 0 {
 		return rejectRepair("the repair run changed nothing; you decide how to proceed", nil)
 	}
-	// The repair may touch any path the user already approved for the active
-	// phase's tasks, and nothing else; .peerfoil, .git, instruction files, and
+	// The repair may touch only paths approved for the affected validated
+	// tasks; dismissed and unrelated tasks supply no grant; .peerfoil, .git, instruction files, and
 	// model-tool configuration stay denied regardless.
-	allowed := e.unionAllowedPaths()
+	allowed := repairTask.AllowedPaths
 	if err := workspace.CheckScope(changes, allowed); err != nil {
 		return rejectRepair(fmt.Sprintf("the repair was not accepted: %v; the worktree %s is retained", err, worktree.Branch), err)
 	}
@@ -999,7 +1031,7 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 	defer func() { _ = e.Repo.RemoveReviewWorktree(ctx, evidencePath) }()
 	var failed []string
 	for _, task := range e.State.Plan.ActiveTasks() {
-		if task.Status != "accepted" && task.Status != "validated" {
+		if task.Status != "accepted" && task.Status != "validated" && task.ID != repairTask.ID {
 			continue
 		}
 		_, taskFailed, err := e.runTaskEvidence(ctx, evidencePath, task, changeSetID, repairCommit, quality)
@@ -1019,8 +1051,12 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		}
 		return errs.New(errs.Evidence, reason, "the worktree "+worktree.Branch+" is retained; you decide how to proceed")
 	}
+	repairTask.Status = "validated"
+	if err := e.SavePlan(); err != nil {
+		return err
+	}
 	checkpoint := repairVerification{
-		PhaseReview: phaseReviewID, ChangeSet: changeSetID, Task: lastTask,
+		PhaseReview: phaseReviewID, ChangeSet: changeSetID, Task: lastTask, Branch: worktree.Branch,
 		Revisions: e.State.Project.Revisions, Base: frozen, Source: repairCommit,
 		Author: changeSet.Author, Findings: blocking,
 	}
@@ -1038,39 +1074,6 @@ func (e *Engine) repairCycle(ctx context.Context, frozen, phaseReviewID string,
 		fmt.Fprintf(e.Out, "Note: the repair worktree was not removed: %v\n", err)
 	}
 	return nil
-}
-
-func (e *Engine) lastValidatedTaskID() string {
-	last := "tk-001"
-	for _, task := range e.State.Plan.Tasks() {
-		if task.Status == "validated" || task.Status == "accepted" {
-			last = task.ID
-		}
-	}
-	return last
-}
-
-// unionAllowedPaths is the write grant for a repair: every path pattern the user
-// approved for the tasks of the active phase, and nothing from other phases.
-func (e *Engine) unionAllowedPaths() []string {
-	seen := map[string]bool{}
-	var union []string
-	for _, phase := range e.State.Plan.Phases {
-		if phase.Status != "active" {
-			continue
-		}
-		for _, stage := range phase.Stages {
-			for _, task := range stage.Tasks {
-				for _, pattern := range task.AllowedPaths {
-					if !seen[pattern] {
-						seen[pattern] = true
-						union = append(union, pattern)
-					}
-				}
-			}
-		}
-	}
-	return union
 }
 
 func firstParagraph(text string) string {

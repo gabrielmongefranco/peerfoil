@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 )
@@ -225,6 +226,7 @@ func (r *Repo) CheckTree(ctx context.Context, revision string) error {
 	if err != nil {
 		return errs.Wrap(errs.Git, "could not inspect the task's source tree", err)
 	}
+	paths := map[string]string{}
 	var pointerCandidates []string
 	seen := map[string]bool{}
 	for _, entry := range bytes.Split(entries, []byte{0}) {
@@ -235,6 +237,24 @@ func (r *Repo) CheckTree(ctx context.Context, revision string) error {
 		metadata, name, found := bytes.Cut(entry, []byte{'\t'})
 		if !found {
 			continue
+		}
+		// Include directory prefixes so Foo/a and foo/b cannot collapse on checkout.
+		parts := strings.Split(string(name), "/")
+		for i := range parts {
+			original := strings.Join(parts[:i+1], "/")
+			folded := strings.Map(func(r rune) rune {
+				least := r
+				for next := unicode.SimpleFold(r); next != r; next = unicode.SimpleFold(next) {
+					if next < least {
+						least = next
+					}
+				}
+				return least
+			}, original)
+			if prior, found := paths[folded]; found && prior != original {
+				return errs.New(errs.Policy, "the source tree contains case-colliding paths", "rename the conflicting files or directories before continuing")
+			}
+			paths[folded] = original
 		}
 		fields := strings.Fields(string(metadata))
 		if len(fields) != 4 || fields[1] != "blob" {

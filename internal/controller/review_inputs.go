@@ -52,13 +52,24 @@ func (e *Engine) reviewInputs(source string) ([]byte, error) {
 		Source          string            `json:"source_revision"`
 		Revisions       project.Revisions `json:"revisions"`
 		StoredRevisions project.Revisions `json:"stored_revisions"`
+		AcceptedProject project.Project   `json:"accepted_project"`
+		LoadedProject   project.Project   `json:"loaded_project"`
 		Plan            *project.Plan     `json:"plan"`
 		Records         map[string]string `json:"records"`
-	}{e.State.Project.ProjectID, source, e.State.Project.Revisions, storedProject.Revisions, e.State.Plan, records})
+	}{e.State.Project.ProjectID, source, e.State.Project.Revisions, storedProject.Revisions,
+		stableProject(storedProject), stableProject(*e.State.Project), e.State.Plan, records})
 	if err != nil || len(data) > 2*maxInputBytes {
 		return nil, errs.New(errs.Validation, "the accepted review input bundle could not be retained within 512 KiB", "reduce the accepted records before validation")
 	}
 	return data, nil
+}
+
+// Workflow position and its save timestamp change during controller transitions.
+// Every other accepted project field must remain fixed during review.
+func stableProject(p project.Project) project.Project {
+	p.Workflow = project.Workflow{}
+	p.UpdatedAt = ""
+	return p
 }
 
 func (e *Engine) saveReviewInputs(boundary project.Transition) error {

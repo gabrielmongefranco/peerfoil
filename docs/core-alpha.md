@@ -74,12 +74,16 @@ the `peerfoil/integration` branch. Your own branch and checkout never change. A 
 that reports a partial result, or that discovers new work along the way, stops the
 workflow with its change captured for inspection: nothing incomplete is integrated, and
 discovered work is recorded in the change set for change intake instead of being lost.
-A check command that cannot run at all is recorded as blocked evidence, and the
-workflow pauses so you can fix the environment and try again.
+A required check that cannot run is recorded as blocked evidence and pauses the workflow.
+A recommended check that cannot start remains visible but does not block later checks.
+Cancellation still stops the operation.
 
 Reduced assurance requires a dated acceptance for the exact review in both the review
 reason and history. A phrase alone cannot authorize production. The
 [review reference](../plugins/peerfoil/references/review.md) defines the shared format.
+Review metadata must name this project. Plan and change reviews must match the current
+architecture as well as the plan and Quality Contract. Body examples cannot supply
+missing project metadata.
 Saving workflow progress preserves setup results, including the host-sandbox check.
 History identifiers must increase without duplicates.
 
@@ -103,10 +107,15 @@ Core rejects tracked symbolic links and submodules before creating a writer's ch
 including when Windows would turn a link into an ordinary file. Capture freezes one Git
 tree. Scope checks, secret scanning, and the resulting commit use that same tree.
 Checks run in a separate checkout of the captured commit, so later writer edits cannot
-enter the accepted patch or supply its evidence.
+enter the accepted patch or supply its evidence. After each command, Core checks that
+HEAD, the index, and non-ignored files still match the frozen commit. Any change blocks
+evidence acceptance, including changes made by recommended checks. Route generated
+source through change intake before running validation again. Ignored build output is allowed.
 Core also rejects LFS attributes in that tree, including nested attribute files and
 attributes introduced by a producer. Unsafe filenames are withheld from reports and
 rejected before capture is retained. This includes controls, table markup, and likely credentials.
+Case-colliding file and directory names are rejected before checkout and capture,
+including on hosts that can store both spellings.
 It inspects small Git blobs for LFS pointers too. Pointers created through private or
 global Git attributes cannot bypass the tracked-attribute checks.
 
@@ -115,7 +124,8 @@ validated, it runs the two-family phase review: one fresh Claude reviewer and on
 Codex reviewer read the same frozen revision, with the current change-set, evidence,
 and review records refreshed into the checkout, their findings are merged without hiding
 disagreement, and approval requires the reviewer from a different model family than the
-work's author. The review only accepts the exact revision recorded when validation
+author of each change set. A mixed-author phase can approve when each item has a
+different-family primary approval. The review only accepts the exact revision recorded when validation
 finished; if the integration branch moved after that, resume stops instead of reviewing
 the newer, unchecked commits. When both ask for a repair, one repair cycle runs with the
 configured repair seat, whose authorship is recorded before the writer runs, the
@@ -124,14 +134,25 @@ result. A repair the controller refuses, such as an out-of-scope edit, is record
 blocked capture and the workflow pauses for you. Material disagreement stops for you
 instead of inventing consensus.
 The repair producer and verifier receive every agreed finding, including major findings
-alongside blocking ones. Phase approval preserves deferred and removed stage statuses.
+alongside blocking ones. Findings at the same location retain distinct requirements,
+evidence, and recommendations. Exact duplicates keep both originating review references.
+Before writing, Core archives the prior JSON and Markdown plan under `.peerfoil/plans/`,
+increments the plan revision, and adds a repair task and change entry. The entry names
+affected and retained tasks and originating reviews. The repair task links back to the
+phase review and inherits checks and paths only from affected validated or accepted tasks.
+Deferred and removed work cannot grant paths. A finding must name a file, optionally
+followed by a line number; unclear locations return to change intake.
+Phase approval preserves deferred and removed stage statuses.
 Status directs blocked, stale, or unreachable tasks to change intake.
 
 Each review transition retains its accepted inputs in
 `.peerfoil/evidence/tr-NNNN.inputs.json`. Core compares the current plan, architecture,
-Quality Contract, decisions, and accepted revision numbers before review and approval.
+Quality Contract, decisions, accepted revisions, and stable project fields before review
+and approval. This includes the goal, project pack, role settings, and review limits.
+Only controller-owned workflow position and its update timestamp are excluded.
 Changed inputs require change intake and fresh validation. Review checkouts receive
-current copies of these accepted records. Older review boundaries without this snapshot
+current copies of these accepted records. Core regenerates their Markdown plan from
+the current authoritative JSON plan. Older review boundaries without this snapshot
 must return through validation before Core can approve them.
 
 Review records must be regular files without symbolic links, including in their parent
@@ -183,6 +204,9 @@ the change set before retrying. A missing review revision or changed branch stop
 retry. Guided records may still use a null source commit with retained patch evidence;
 Core requires a full commit at its own review boundary.
 
+Multi-file plan intake can also stop partway through saving. Restore the archived plan
+and matching project revision through the skills before retrying such an interruption.
+
 One narrow window is a known Alpha limit: a crash exactly between the history append
 and the project write leaves `project.json` one transition behind `history.jsonl`.
 Every command then refuses with a message that names the exact one-line repair, instead
@@ -191,7 +215,8 @@ of guessing which file is right.
 ### Boundaries of Core Alpha
 
 - It runs the production part of the journey. Decisions, architecture, planning, and
-  change intake stay with the PeerFoil skills in this release.
+  general change intake stay with the PeerFoil skills in this release. The one agreed
+  repair receives a bounded plan update from Core.
 - One sequential software path, one writer at a time, one review round, one repair
   cycle. There is no SQLite, no local-model routing, and no MCP policy yet.
 - Required human and inspection evidence pauses for a person. Core Alpha has no command

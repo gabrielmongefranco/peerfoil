@@ -22,6 +22,7 @@ import (
 
 	"github.com/gabrielmongefranco/peerfoil/internal/errs"
 	"github.com/gabrielmongefranco/peerfoil/internal/evidence"
+	"github.com/gabrielmongefranco/peerfoil/internal/fsx"
 	"github.com/gabrielmongefranco/peerfoil/internal/pack"
 	"github.com/gabrielmongefranco/peerfoil/internal/project"
 	"github.com/gabrielmongefranco/peerfoil/internal/provider"
@@ -78,6 +79,7 @@ type reviewRecord struct {
 }
 
 var (
+	reviewProjectHeader    = regexp.MustCompile("^Project: `([^`]+)` · Assurance: [^\r\n]+$")
 	reviewKindLine         = regexp.MustCompile(`(?m)^- \*\*Kind:\*\* *([a-z-]+)`)
 	reviewDecisionLine     = regexp.MustCompile(`(?m)^- \*\*Decision:\*\* *([a-z-]+)`)
 	reviewIndependenceLine = regexp.MustCompile(`(?m)^- \*\*Independence:\*\* *([a-z-]+)(.*)$`)
@@ -109,11 +111,15 @@ func (e *Engine) loadReviews() ([]reviewRecord, error) {
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		raw, err := os.ReadFile(filepath.Join(dir, name))
+		raw, err := fsx.ReadRegularFile(e.State.Dir, filepath.Join("reviews", name), 1024*1024)
 		if err != nil {
 			return nil, errs.Wrap(errs.Configuration, "reading "+name, err)
 		}
 		text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+		header := reviewProjectHeader.FindStringSubmatch(canonicalMetadata(raw))
+		if header == nil || header[1] != e.State.Project.ProjectID {
+			continue
+		}
 		record := reviewRecord{ID: strings.TrimSuffix(name, ".md")}
 		if match := reviewKindLine.FindStringSubmatch(text); match != nil {
 			record.Kind = match[1]
@@ -190,13 +196,13 @@ func (e *Engine) productionGate() error {
 		return r.ArchRevision == p.Revisions.Architecture
 	})
 	planReviewed := approved("plan", func(r reviewRecord) bool {
-		return r.PlanRevision == p.Revisions.Plan
+		return r.PlanRevision == p.Revisions.Plan && r.ArchRevision == p.Revisions.Architecture
 	})
 	// A revised plan may carry its acceptance through change intake instead of a
 	// fresh full review, so a change review of the current revision also counts.
 	if !planReviewed {
 		planReviewed = approved("change", func(r reviewRecord) bool {
-			return r.PlanRevision == p.Revisions.Plan
+			return r.PlanRevision == p.Revisions.Plan && r.ArchRevision == p.Revisions.Architecture
 		})
 	}
 	if !architectureReviewed || !planReviewed {

@@ -35,6 +35,7 @@ type repairVerification struct {
 	PhaseReview string            `json:"phase_review"`
 	ChangeSet   string            `json:"change_set"`
 	Task        string            `json:"task"`
+	Branch      string            `json:"branch,omitempty"`
 	Revisions   project.Revisions `json:"revisions"`
 	Base        string            `json:"base_revision"`
 	Source      string            `json:"source_revision"`
@@ -118,6 +119,9 @@ func (e *Engine) loadRepairVerification(boundary *project.Transition) (*repairVe
 		checkpoint.Author.LineageRoot == provider.LineageUnknown || len(checkpoint.Findings) == 0 || len(checkpoint.Findings) > 2*maxFindings {
 		return invalid()
 	}
+	if checkpoint.Branch != "" && checkpoint.Branch != fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan) {
+		return invalid()
+	}
 	// The checkpoint identifies a captured repair, not an arbitrary branch commit.
 	change, err := os.ReadFile(filepath.Join(e.State.Dir, "evidence", changeID+".md"))
 	if err != nil {
@@ -169,7 +173,7 @@ func (e *Engine) resumeRepairVerification(ctx context.Context, boundary *project
 	if verifier == nil {
 		return errs.New(errs.Configuration, "no different-family repair verifier is available", "restore the reviewer seat, then run peerfoil resume")
 	}
-	branch := fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
+	branch := repairBranch(checkpoint)
 	branchTip, err := e.Repo.CommitOf(ctx, branch)
 	if err != nil {
 		return err
@@ -269,7 +273,7 @@ func (e *Engine) integrateVerifiedRepair(ctx context.Context, boundary *project.
 	if err := e.checkReviewInputs(boundary); err != nil {
 		return err
 	}
-	branch := fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
+	branch := repairBranch(checkpoint)
 	branchTip, err := e.Repo.CommitOf(ctx, branch)
 	if err != nil {
 		return err
@@ -288,4 +292,11 @@ func (e *Engine) integrateVerifiedRepair(ctx context.Context, boundary *project.
 	refs := map[string][]string{"phase_reviews": {checkpoint.PhaseReview}, "change_sets": {checkpoint.ChangeSet}, "reviews": {approval.Review}}
 	return e.approvePhase(integrationTip, refs,
 		"Phase approved after a verified repair; see "+checkpoint.PhaseReview+", "+approval.Review+", and "+checkpoint.ChangeSet+".")
+}
+
+func repairBranch(checkpoint *repairVerification) string {
+	if checkpoint.Branch != "" {
+		return checkpoint.Branch
+	}
+	return fmt.Sprintf("peerfoil/task/%s-r%d", checkpoint.Task, checkpoint.Revisions.Plan+1)
 }

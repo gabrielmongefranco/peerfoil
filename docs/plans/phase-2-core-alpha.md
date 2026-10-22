@@ -777,6 +777,32 @@ The release boundary and deferred work remain as listed above.
 | Private or global attributes introduce LFS pointers | Batch-inspect small source blobs for current and legacy LFS pointer headers | `TestLFSPointersFromUntrackedAttributesAreRejected` |
 | Reviewer fields inject Markdown structure | Reject line breaks, controls, and structural markup before retaining findings or risk text | `TestReviewFieldsCannotForgeMarkdown` |
 
+| Mixed-author phases cannot approve | Require different-family primary approval for each recorded change set | `TestReviewApprovalCoversEveryAuthor` |
+| Case-colliding source paths | Check file and directory prefixes in the exact Git tree using Unicode case folding | `TestCaseCollisionsRejectedBeforeCheckout` |
+| Changed project fields bypass review | Bind stable stored and loaded project fields, excluding workflow position and its timestamp | `TestReviewInputsBindStableProjectFields` |
+| Another project's approval authorizes production | Require canonical review metadata naming the current project | `TestReviewGateRejectsForeignProjectAndOldArchitecture` |
+| Plan review names an old architecture | Require current architecture for both plan and change approvals | The same production-gate regression |
+| Reviewers read stale plan Markdown | Regenerate the Markdown twin from the current accepted JSON plan | `TestReviewCheckoutRegeneratesCurrentPlan` |
+| Duplicate findings lose obligations | Preserve distinct requirements, evidence, recommendations, and originating reviews | `TestMergedFindingsRetainDistinctObligations` |
+| Check commands change source before passing | Verify HEAD, index, and non-ignored files after each command; retain blocked evidence and stop | `TestEvidenceRejectsCheckoutMutation` |
+| Missing optional tools block work | Retain recommended startup errors and continue; cancellation still stops | `TestRecommendedStartupFailureRetainsErrorAndContinues` |
+| Automatic repairs leave no plan change | Archive the prior plan, add a repair task and change entry, increment the revision, and link affected and retained work | `TestRepairPlanTracksWorkAndExcludesDismissedScope` and repair recovery journeys |
+| Dismissed tasks expand repair scope | Grant only paths of affected validated or accepted tasks; reject unmapped finding locations | The same repair-plan regression |
+
+The additional review on revision `e311160` raised eleven findings. Their repairs use
+the existing plan-v2 change records and the existing single repair cycle. General change
+placement remains with the skills. Multi-file intake interruption recovery remains a
+manual Alpha limit; restore the archived plan and matching project revision before retrying.
+Current verification results are retained in the pull request. The new mutation regression
+initially checked the internal status name instead of the documented Markdown result.
+It now checks `blocked` and uses a separate frozen checkout, as production does.
+An audit also caught an empty retained-task list encoding as null. It now remains an
+array, with reload coverage in `TestRepairPlanWithNoRetainedTasksLoads`.
+The standalone Go fixture now ignores its native compiled binary. Its ignore file
+follows the existing synthetic-content header exemption; the fixture layout check caught
+and corrected an initial project header without changing the check.
+`TestEvidenceAllowsIgnoredBuildOutput` checks that disposable ignored output remains allowed.
+
 The repair verification test also rejects a moved repair branch and pauses after two
 unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks
 that two valid, large answers still fit after recovery metadata and formatting are added.
@@ -791,7 +817,7 @@ phase approval remains outstanding. Automatic approval review blocked an optiona
 different-family review because that provider destination lacked explicit authorization.
 No source was sent through that rejected invocation.
 
-Targeted Windows regressions and the full native suite passed, including
+Earlier targeted Windows regressions and the full native suite passed, including
 `go test ./... -count=1 -timeout 9m`, `go vet ./...`, and `go build ./...`.
 Formatting, repository conformance, both fixture suites, and strict plugin validation
 also passed. The pull request records the new three-platform CI and review results.
@@ -815,6 +841,10 @@ that rejected carriage-return/line-feed (CRLF) endings. Review and repair recove
 now normalize line endings before parsing. The regressions check LF and CRLF records
 and confirm a recovery save keeps exactly one recovery section;
 the exact review, timestamp, and revision requirements remain unchanged.
+
+Lesson: approval belongs to each material item, and every agreed repair needs explicit
+plan links before a writer starts. Optional failures remain visible without becoming
+required gates. Evidence commands must leave the frozen source unchanged.
 
 Lesson: retain the exact capture and repair identity across retries. Re-reading a live
 checkout or choosing the original producer's lineage can change what the controller

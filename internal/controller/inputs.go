@@ -29,6 +29,24 @@ const maxInputBytes = 256 * 1024
 
 var acceptedRecordHeader = regexp.MustCompile("^Project: `([^`]+)` · Assurance: [^\r\n]+ · Revision: ([0-9]+) · Status: ([a-z-]+)$")
 
+// canonicalMetadata reads only the template's first paragraph after its title.
+func canonicalMetadata(raw []byte) string {
+	text := strings.TrimSpace(strings.ReplaceAll(string(raw), "\r\n", "\n"))
+	if strings.HasPrefix(text, "<!--") {
+		_, rest, found := strings.Cut(text, "-->")
+		if !found {
+			return ""
+		}
+		text = strings.TrimSpace(rest)
+	}
+	title, rest, _ := strings.Cut(text, "\n")
+	if !strings.HasPrefix(title, "# ") {
+		return ""
+	}
+	header, _, _ := strings.Cut(strings.TrimSpace(rest), "\n")
+	return header
+}
+
 // readAcceptedRecord bounds retained input and rejects links and secrets before
 // provider dispatch. Revisions in architecture and quality must match loaded state.
 func (e *Engine) readAcceptedRecord(name string, revision int) ([]byte, error) {
@@ -44,18 +62,8 @@ func (e *Engine) readAcceptedRecord(name string, revision int) ([]byte, error) {
 	if revision > 0 {
 		// The template's canonical metadata is the first paragraph after its title.
 		// Body examples and fenced text can never substitute for this header.
-		text := strings.TrimSpace(strings.ReplaceAll(string(raw), "\r\n", "\n"))
-		if strings.HasPrefix(text, "<!--") {
-			_, rest, found := strings.Cut(text, "-->")
-			if !found {
-				return nil, errs.New(errs.Validation, "the accepted input has an incomplete header", "restore its record template")
-			}
-			text = strings.TrimSpace(rest)
-		}
-		title, rest, _ := strings.Cut(text, "\n")
-		header, _, _ := strings.Cut(strings.TrimSpace(rest), "\n")
-		match := acceptedRecordHeader.FindStringSubmatch(header)
-		if !strings.HasPrefix(title, "# ") || match == nil || match[1] != e.State.Project.ProjectID || match[2] != fmt.Sprint(revision) || match[3] != "accepted" {
+		match := acceptedRecordHeader.FindStringSubmatch(canonicalMetadata(raw))
+		if match == nil || match[1] != e.State.Project.ProjectID || match[2] != fmt.Sprint(revision) || match[3] != "accepted" {
 			return nil, errs.New(errs.Validation, "the accepted input header does not match the current project revision: "+name,
 				"review and accept the current record through the PeerFoil skills")
 		}

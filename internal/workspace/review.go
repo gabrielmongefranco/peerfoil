@@ -114,6 +114,21 @@ func (r *Repo) TreeDigest(ctx context.Context, commit string) ([]byte, error) {
 	return out, nil
 }
 
+// CheckUnchanged verifies that HEAD, the index, and non-ignored working files still
+// match commit. It runs read-only Git checks and returns a safe error on any drift.
+func (r *Repo) CheckUnchanged(ctx context.Context, commit string) error {
+	invalid := errs.New(errs.Evidence, "an evidence command changed the frozen checkout", "route generated source changes through change intake and rerun validation")
+	head, err := r.CommitOf(ctx, "HEAD")
+	if err != nil || head != commit {
+		return invalid
+	}
+	clean, _, err := r.IsClean(ctx)
+	if err != nil || !clean {
+		return invalid
+	}
+	return nil
+}
+
 // RemoveReviewWorktree removes a worktree CreateReviewWorktree made. It refuses any
 // path outside the recorded review naming, so it can never delete user work.
 func (r *Repo) RemoveReviewWorktree(ctx context.Context, path string) error {
