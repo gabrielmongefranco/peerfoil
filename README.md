@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 README.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Provides an overview of PeerFoil and its planned releases.
 Notes: See the /docs directory for complete project documentation.
 
@@ -50,7 +50,7 @@ to apply the same process to documentation, business plans, and research reports
 **In development.** PeerFoil has not been released yet. See [Status](#status) for what is
 built and what comes next.
 
-## How AI peer review works
+## AI peer review process
 
 <p align="center">
   <picture>
@@ -102,6 +102,8 @@ controls will stay under Advanced settings.
 
 ## Documentation
 
+- **[Documentation index](docs/README.md):** Every page, including setup,
+  troubleshooting, privacy, and known limits.
 - **[PeerFoil Method](docs/PeerFoil-Method.md):** What PeerFoil does and how its workflow
   protects quality.
 - **[Architecture](docs/architecture.md):** How the planned application handles agent
@@ -117,14 +119,17 @@ controls will stay under Advanced settings.
 
 ## Status
 
-**Phase 1 in progress.** Stages 1–4 of PeerFoil Skills 0.1 are built, and Stages 2
-and 4 have received their independent Codex reviews. They provide the plugin skeleton,
-the project-file formats, setup checks, Advanced settings, the decision interview, and
-the reviewed architecture, Quality Contract, and plan. Stage 3 adds bounded production,
-retained authorship and checks, plan changes, and file-based status and resume. Stage 4
-adds the two-family phase review with a merged finding list, one guided repair with
-fresh verification, and candidate lessons. See the
-[detailed plan](docs/plans/phase-1-skills.md) for verification limits. Nothing has been
+**Phases 1 and 2 in progress.** All five stages of PeerFoil Skills 0.1 are built:
+the plugin, the project-file formats, setup checks, the decision interview, reviewed
+architecture and planning, bounded production with retained authorship and checks,
+plan changes, the two-family phase review with one guided repair, lessons, the three
+reference fixtures, and the user documentation under [docs](docs/README.md). The
+Core Alpha `peerfoil` command is implemented as a developer preview: it validates the
+project records, runs one software task at a time in a dedicated Git worktree, runs
+the declared checks itself, enforces the review and self-approval rules, and recovers
+at task boundaries. The live three-platform checks and real-model journeys recorded in
+the [Phase 1](docs/plans/phase-1-skills.md) and
+[Phase 2](docs/plans/phase-2-core-alpha.md) plans remain open. Nothing has been
 released yet.
 
 | Release | Target | What you will be able to do |

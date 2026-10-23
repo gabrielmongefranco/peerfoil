@@ -1,0 +1,52 @@
+{
+  "record_type": "project",
+  "schema_version": 1,
+  "project_id": "peerfoil-fixture-node",
+  "name": "Line Counter (Node.js)",
+  "goal": "A small command-line tool written in plain Node.js that counts the non-empty lines in a text file. It is for developers who want a quick line count inside scripts and pipelines. The first phase is finished when the command counts a named file, offers a --json flag, and reads standard input when no path is given.",
+  "pack": {
+    "id": "software",
+    "version": "0.1.0"
+  },
+  "profile": "personal",
+  "rules_source": {
+    "mode": "none"
+  },
+  "assurance": "guided",
+  "release": "peerfoil-skills/0.1.0-dev",
+  "created_at": "2026-10-20T08:00:00Z",
+  "updated_at": "2026-10-20T10:45:00Z",
+  "workflow": {
+    "state": "produce",
+    "phase": "ph-01",
+    "stage": "st-01",
+    "task": null,
+    "paused_for": null
+  },
+  "revisions": {
+    "architecture": 1,
+    "quality": 1,
+    "plan": 2
+  },
+  "settings": {
+    "roles": {
+      "evaluator": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "architect": { "tool": "claude-code", "model": "claude-fable-5", "effort": "high" },
+      "planner": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "change_steward": { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      "producer": { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" },
+      "repair_producer": { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" }
+    },
+    "phase_reviewers": [
+      { "tool": "claude-code", "model": "claude-fable-5", "effort": "medium" },
+      { "tool": "codex-cli", "model": "gpt-6-astra", "effort": "medium" }
+    ],
+    "review": {
+      "default_passes": 6,
+      "max_passes": 8,
+      "repair_selection_passes": 3,
+      "repair_selection_max_passes": 4,
+      "repair_cycles": 1
+    }
+  }
+}

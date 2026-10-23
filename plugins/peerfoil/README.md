@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/README.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Describes the PeerFoil plugin for Claude Code, what this build can do, and how to load it for testing.
 Notes: This is a development build of PeerFoil Skills 0.1. See the repository README for the project overview and license.
 
@@ -27,11 +27,13 @@ architecture, planning, production, evidence, independent review, and lessons. T
 assurance level of this release is **Guided**: the workflow depends on agents following
 written instructions, and nothing here enforces a step mechanically.
 
-## What this build can do
+## Features in this build
 
-This build covers the first four of five Phase 1 stages. Today it can:
+This build carries the implementation work of all five Phase 1 stages; the live
+three-platform checks of Stage 5 are still open, so nothing is released. Today it can:
 
-- check your prerequisites with `/peerfoil:setup`;
+- check your prerequisites, the host sandbox, and optional local models with
+  `/peerfoil:setup`;
 - start a project, choose a pack and profile, and create the project records with
   `/peerfoil:start`;
 - run the decision interview with a fresh evaluator role;
@@ -53,8 +55,17 @@ This build covers the first four of five Phase 1 stages. Today it can:
   obtain fresh verification from a different model family;
 - keep a lesson with `/peerfoil:remember` as a candidate that the next phase review
   verifies, and promote it without editing `AGENTS.md`;
-- continue any of those steps in a fresh chat with `/peerfoil:resume`; and
-- view and change Advanced settings with `/peerfoil:settings`.
+- continue any of those steps in a fresh chat with `/peerfoil:resume`;
+- view and change Advanced settings with `/peerfoil:settings`;
+- recommend the Claude Code Bash sandbox before low-supervision production and report
+  plainly when it is absent, without blocking; and
+- use an installed Ollama model in an advisory way: reading help for the coordinator,
+  and a distinguishable `local-family` review when no hosted second family is
+  available, still labeled Reduced assurance.
+
+Three reference fixtures under `fixtures/` carry the complete journey's starting state
+with one seeded requirement change and one seeded review defect each; their READMEs
+hold the journey scripts and expected results.
 
 Production never starts before the reviewed plan is approved, and a phase is approved
 only after both reviewers and you have seen every finding. Mechanical enforcement,
@@ -92,7 +103,7 @@ on Windows, macOS, and Linux.
 
 | Command | What it does |
 |---|---|
-| `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, the Codex CLI and its login, the Codex MCP server, your profile, and pack tools |
+| `/peerfoil:setup` | Checks Git, `AGENTS.md`, Claude Code, the Codex CLI and its login, the Codex MCP server, optional local models, your profile, the host sandbox, and pack tools |
 | `/peerfoil:start <idea>` | Records the goal, pack, and profile, creates the project records, runs the decision interview, and continues through reviewed planning and bounded production |
 | `/peerfoil:change <request>` | Places a request or discovered work and records a plan revision with affected tasks and evidence |
 | `/peerfoil:status` | Reports assurance, state, architecture and plan status, quality state, blocker, pending decisions, and next action |

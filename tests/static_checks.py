@@ -3,7 +3,7 @@
 # tests/static_checks.py
 # Author(s): Gabriel Mongefranco; OpenAI Codex.
 # Created: 2026-09-05
-# Last Modified: 2026-09-05
+# Last Modified: 2026-10-21
 # Summary: Runs PeerFoil's static repository checks: required files, JSON and schema validity,
 #          skill and agent frontmatter, relative links, plugin path references, file notices,
 #          manifests, packs, review settings, and stale project names.
@@ -37,8 +37,8 @@ SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", ".claude", ".idea", ".vscode",
     "tmp", "temp", "dist", "bin", "coverage", "worktrees",
 }
-CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml", ".svg"}
-CHECKED_NAMES = {".gitignore", ".gitattributes", "NOTICE"}
+CHECKED_SUFFIXES = {".md", ".json", ".jsonl", ".py", ".sh", ".yml", ".yaml", ".svg", ".go"}
+CHECKED_NAMES = {".gitignore", ".gitattributes", "NOTICE", "go.mod"}
 
 # Files that legitimately carry no PeerFoil header of their own.
 NOTICE_EXEMPT = {
@@ -47,6 +47,13 @@ NOTICE_EXEMPT = {
     # The strict plugin validator rejects unknown fields; the notice is in a sibling file.
     ".claude-plugin/marketplace.json",
 }
+
+
+def fixture_content(rel: str) -> bool:
+    """Fixture content is a synthetic user project, so it carries no PeerFoil header and
+    may hold seeded defects such as a broken link. Each fixture's README.md documents the
+    fixture and stays fully checked."""
+    return rel.startswith("fixtures/") and not rel.endswith("README.md")
 
 EXPECTED_SKILLS = [
     "setup", "start", "change", "status", "resume", "review-phase", "remember", "settings",
@@ -66,12 +73,15 @@ REQUIRED_FILES = [
     "plugins/peerfoil/references/workflow.md", "plugins/peerfoil/references/records.md",
     "plugins/peerfoil/references/lineage.md", "plugins/peerfoil/references/architecture.md",
     "plugins/peerfoil/references/planning.md", "plugins/peerfoil/references/review.md",
-    "plugins/peerfoil/references/codex.md",
+    "plugins/peerfoil/references/codex.md", "plugins/peerfoil/references/sandbox.md",
+    "plugins/peerfoil/references/local-models.md",
     "plugins/peerfoil/references/production.md", "plugins/peerfoil/references/evidence.md",
     "plugins/peerfoil/references/changes.md", "tests/stage3_checks.py",
     "plugins/peerfoil/references/phase-review.md", "plugins/peerfoil/references/repair.md",
     "plugins/peerfoil/references/lessons.md", "plugins/peerfoil/agents/repair-coordinator.md",
-    "tests/stage4_checks.py",
+    "tests/stage4_checks.py", "tests/stage5_checks.py", "fixtures/README.md",
+    "docs/README.md", "docs/setup.md", "docs/troubleshooting.md", "docs/privacy.md",
+    "docs/known-limits.md",
     "plugins/peerfoil/templates/README.md",
     "schemas/README.md", "schemas/common.schema.json", "schemas/project.schema.json",
     "schemas/plan.schema.json", "schemas/plan-v1.schema.json", "schemas/transition.schema.json", "schemas/pack.schema.json",
@@ -538,6 +548,8 @@ def check_markdown_links(files: list[Path], problems: Problems) -> None:
             continue
         # Code spans and fenced blocks may contain bracket-and-parenthesis text that is
         # not a link, such as regular expressions.
+        if fixture_content(relative(path)):
+            continue
         text = INLINE_CODE.sub("", FENCED_CODE.sub("", read_text(path)))
         for match in MARKDOWN_LINK.finditer(text):
             target = match.group(1)
@@ -557,6 +569,8 @@ def check_notices(files: list[Path], problems: Problems) -> None:
     for path in files:
         rel = relative(path)
         if rel in NOTICE_EXEMPT or rel.startswith("plugins/peerfoil/templates/"):
+            continue
+        if fixture_content(rel):
             continue
         text = read_text(path)
         head = text if path.suffix in (".json", ".jsonl") else "\n".join(text.splitlines()[:40])

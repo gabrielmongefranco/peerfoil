@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/references/review.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Defines how a PeerFoil skill obtains an independent review of an architecture or plan draft, records it, and handles the case where no different-family reviewer is available.
 Notes: This file defines the transfer for every review kind. Phase review is coordinated by phase-review.md and repair verification by repair.md; both use the packet, launch, validation, and recording rules here. Codex access is defined in codex.md.
 
@@ -209,14 +209,36 @@ the user with `AskUserQuestion`, recommending the first option:
    with `paused_for` set to "Install the Codex CLI, sign in, and register its MCP server
    with /peerfoil:setup, then run /peerfoil:resume" and record the transition. The draft
    keeps its `draft` status.
-2. **Accept Reduced assurance for this draft.** Launch the `peerfoil:claude-reviewer`
+2. **Accept Reduced assurance with a local different-family reviewer.** Offer this
+   option only when [local-models.md](local-models.md), sections 1 and 4, find an
+   installed Ollama model whose lineage root differs from the author's. Send the packet
+   from section 4 to that model as the local-models reference describes, validate the
+   result with section 8 as usual, and record `independence: local-family` with the
+   reason "No hosted different-family reviewer was available; the user accepted an
+   advisory local review at <timestamp>". Record the acceptance in the `history.jsonl`
+   summary of the next transition. Show "Reduced assurance" wherever this artifact's
+   status is shown.
+3. **Accept Reduced assurance for this draft.** Launch the `peerfoil:claude-reviewer`
    agent with the packet from section 4. Record `independence: secondary` with the reason
    "No different-family reviewer was available; the user accepted Reduced assurance at
    <timestamp>". Record the acceptance in the `history.jsonl` summary of the next
-   transition. Show "Reduced assurance" wherever this artifact's status is shown.
+   transition as described below. Show "Reduced assurance" wherever this artifact's status is shown.
 
 The acceptance covers one draft. When a later draft needs review and the situation has
 not changed, ask again.
+
+For either Reduced assurance option, use this exact history summary, substituting the
+review identifier, UTC acceptance time, and that review's three revision numbers:
+
+```text
+User accepted Reduced assurance for rv-NNNN at YYYY-MM-DDTHH:MM:SSZ; plan revision N, architecture revision N, quality revision N.
+```
+
+Include `rv-NNNN` in the transition's `refs.reviews`, and use the review's plan revision
+for `plan_revision`. If the acceptance transition would change that revision, record
+the acceptance as a separate transition in the current state first. The acceptance
+time must precede or equal the review time; the transition must follow or equal it.
+Core checks this binding before permitting production from a reduced review.
 
 ## 8. Validating the review
 
@@ -313,8 +335,12 @@ this release.
 
 For every review write `independence`:
 
-- `independent` when the reviewer's `lineage_root` differs from the author's;
-- `secondary` when they are the same family and the user accepted Reduced assurance; and
+- `independent` when the reviewer is a qualified hosted seat whose `lineage_root`
+  differs from the author's;
+- `local-family` when the reviewer is an advisory local model whose `lineage_root`
+  differs from the author's and the user accepted Reduced assurance;
+- `secondary` when reviewer and author are the same family and the user accepted
+  Reduced assurance; and
 - `reduced` when either `lineage_root` is `unknown`.
 
 A review whose reviewer `session` equals the author `session` is invalid. Discard it and

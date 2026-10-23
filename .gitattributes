@@ -1,0 +1,11 @@
+# Project:  PeerFoil  |  File: .gitattributes
+# Authors:  Gabriel Mongefranco (@gabrielmongefranco)
+# Created:  2026-10-21  |  Modified: 2026-10-21
+# Summary:  Pins line endings so formatting checks behave the same on every platform.
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# gofmt emits LF-only output, and Windows checkouts default to CRLF, so Go sources are
+# pinned to LF everywhere; otherwise the formatting check fails on Windows runners.
+*.go text eol=lf
+go.mod text eol=lf
+go.sum text eol=lf

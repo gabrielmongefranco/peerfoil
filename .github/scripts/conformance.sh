@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Project:  PeerFoil  |  File: .github/scripts/conformance.sh
 # Authors:  Gabriel Mongefranco (@gabrielmongefranco); OpenAI Codex
-# Created:  2026-09-04  |  Modified: 2026-09-05
+# Created:  2026-09-04  |  Modified: 2026-10-21
 # Summary:  Checks PeerFoil's required files, project identity, headers, license notices, and static checks.
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -81,5 +81,6 @@ done
 "$python_bin" tests/static_checks.py
 "$python_bin" tests/stage3_checks.py
 "$python_bin" tests/stage4_checks.py
+"$python_bin" tests/stage5_checks.py
 
 echo "conformance: PeerFoil repository checks pass"

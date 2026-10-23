@@ -4,7 +4,12 @@ description: Make anything a person reads or operates accessible. Apply when bui
 ---
 
 <!--
-This file is part of PeerFoil
+This file is part of PeerFoil.
+skills/accessibility/SKILL.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-09
+Last Modified: 2026-10-21
+Summary: Accessibility rules for anything a person reads or operates.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
 See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license information.
@@ -91,7 +96,8 @@ These help everyone, including dyslexic and ADHD readers.
 - Respect `prefers-reduced-motion`. Nothing flashes more than three times per
   second. Anything that moves or updates on its own needs pause, stop, and hide
   controls.
-- Write plainly, following section 12 of `AGENTS.md`.
+- Write plainly, following section 12 of `AGENTS.md` and the "Interface text"
+  section of the [response-style skill](../response-style/SKILL.md).
 
 ### Verification
 

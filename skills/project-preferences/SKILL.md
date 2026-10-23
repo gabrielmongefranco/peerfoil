@@ -8,7 +8,7 @@ This file is part of PeerFoil.
 skills/project-preferences/SKILL.md
 Author(s): Gabriel Mongefranco
 Created: 2026-09-09
-Last Modified: 2026-09-09
+Last Modified: 2026-10-21
 Summary: Repository-specific header format and conventions for PeerFoil.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
@@ -70,6 +70,19 @@ components and boundaries, and `docs/implementation-plan.md` defines delivery or
 it is consistent with both. Read all three before changing PeerFoil behavior. When they
 disagree, preserve the product contract, explain the conflict, and update every affected
 document in the same change.
+
+### Terms
+
+List the one name this project uses for each concept, and use it in the interface,
+messages, help, and documentation. PeerFoil's names so far:
+
+- "controller", not "orchestrator" or "engine";
+- "model family", not "vendor" or "provider family";
+- "project pack", not "extension" or "plugin pack";
+- "change set", not "changeset" or "patch set";
+- "lesson", not "memory" or "learning".
+
+Add a term here when a new concept gets its name.
 
 ### Additional resources
 

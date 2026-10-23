@@ -1,5 +1,10 @@
 <!--
-This file is part of PeerFoil
+This file is part of PeerFoil.
+skills/README.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-09
+Last Modified: 2026-10-21
+Summary: Explains the skills folder's shared format and how to add a reviewed skill.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
 See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license information.
@@ -13,13 +18,10 @@ See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license inf
 
 Keep all project-specific preferences and workflows in
 [project-preferences/SKILL.md](project-preferences/SKILL.md). This folder also
-contains three skills every project inherits,
-[response-style/SKILL.md](response-style/SKILL.md),
-[accessibility/SKILL.md](accessibility/SKILL.md), and
-[documentation/SKILL.md](documentation/SKILL.md), plus this guide and a copyable
-template for reusable skills.
+contains the skills that every project inherits, which [SKILLS.md](../SKILLS.md)
+lists, plus this guide and a copyable template for reusable skills.
 
-### What belongs here
+### Skills that belong here
 
 Each future skill lives at `skills/<skill-name>/SKILL.md`, with lowercase letters,
 digits, and hyphens in the folder name. Start the file with YAML frontmatter

@@ -1,0 +1,85 @@
+{
+  "record_type": "plan",
+  "schema_version": 2,
+  "project_id": "peerfoil-fixture-go",
+  "plan_revision": 1,
+  "architecture_revision": 1,
+  "quality_revision": 1,
+  "status": "accepted",
+  "revised_at": "2026-10-20T14:40:00Z",
+  "revised_by": {
+    "role": "planner",
+    "tool": "claude-code",
+    "model": "claude-fable-5",
+    "effort": "medium",
+    "lineage_root": "anthropic-claude",
+    "session": null
+  },
+  "revision_reason": "Initial plan written from architecture revision 1.",
+  "phases": [
+    {
+      "id": "ph-01",
+      "title": "First working path",
+      "outcome": "The command builds with the Go toolchain, passes its tests, and prints the number of non-empty lines in a real text file.",
+      "order": 1,
+      "status": "active",
+      "stages": [
+        {
+          "id": "st-01",
+          "title": "Line counting command",
+          "outcome": "The repository builds, the tests pass, and the command counts non-empty lines in the named file.",
+          "order": 1,
+          "status": "active",
+          "depends_on": [],
+          "tasks": [
+            {
+              "id": "tk-001",
+              "title": "Add a -w flag that also prints the word count",
+              "scope": "Add a -w flag to the command. With the flag, print the non-empty line count and the number of whitespace-separated words in the named file. Without the flag, keep the current output unchanged. Do not add dependencies.",
+              "allowed_paths": ["main.go", "main_test.go"],
+              "inputs": [".peerfoil/architecture.md", ".peerfoil/quality.md"],
+              "output": "An updated main.go and tests that cover the -w flag.",
+              "required_evidence": [
+                { "name": "build", "kind": "executable", "level": "required" },
+                { "name": "unit-tests", "kind": "executable", "level": "required" },
+                { "name": "lint", "kind": "executable", "level": "recommended" }
+              ],
+              "depends_on": [],
+              "acceptance": [
+                "Running the command with -w prints the non-empty line count and the word count.",
+                "Running the command without -w prints only the non-empty line count.",
+                "The test command exits with code 0."
+              ],
+              "author_role": "producer",
+              "status": "ready",
+              "plan_revision": 1,
+              "architecture_revision": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "r-0001",
+      "text": "The command prints the number of non-empty lines in the named file.",
+      "source": "d-0001",
+      "tasks": []
+    },
+    {
+      "id": "r-0002",
+      "text": "A missing or unreadable file prints a readable error to standard error and exits with code 1.",
+      "source": "d-0002",
+      "tasks": []
+    },
+    {
+      "id": "r-0003",
+      "text": "The -w flag also prints the word count.",
+      "source": "d-0003",
+      "tasks": ["tk-001"]
+    }
+  ],
+  "changes": [],
+  "backlog": []
+}

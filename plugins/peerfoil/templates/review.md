@@ -8,7 +8,7 @@ Project: `{{project_id}}` · Assurance: Guided
 - **Frozen material:** source revision {{full Git commit hash | null}}, plan revision {{plan_revision}}, architecture revision {{architecture_revision}}, quality revision {{quality_revision}}, pass {{pass}}, digest {{bundle or repair digest for a phase or repair review | —}}, change set {{cs-NNNN for a repair review | —}}
 - **Reviewer:** {{reviewer}} ({{tool}}, {{model}}, {{effort}}, {{lineage_root}}, session {{session | null}})
 - **Author under review:** {{role}} ({{tool}}, {{lineage_root}}, session {{session | null}})
-- **Independence:** {{independent | secondary | reduced}} — {{one-line reason, including the user's acceptance and its time for a reduced-assurance review}}
+- **Independence:** {{independent | local-family | secondary | reduced}} — {{one-line reason, including the user's acceptance and its time for a reduced-assurance review}}
 - **Passes used:** {{1}} of {{the limit for this kind of review}}
 - **Reviewed at:** {{timestamp}}
 - **Duration (seconds):** {{seconds from launch to result | null}}

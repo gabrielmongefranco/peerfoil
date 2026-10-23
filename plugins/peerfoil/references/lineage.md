@@ -3,8 +3,8 @@ This file is part of PeerFoil.
 plugins/peerfoil/references/lineage.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
-Summary: Defines how PeerFoil records model families and decides whether a reviewer is independent.
+Last Modified: 2026-10-21
+Summary: Defines how PeerFoil records model families, including local-model families, and decides whether a reviewer is independent.
 Notes: The product contract for independence is docs/PeerFoil-Method.md, section 7.
 
 Copyright © 2026 Gabriel Mongefranco
@@ -30,9 +30,12 @@ lineage root. A different endpoint name does not make a model independent.
 | `human` | A person, including the user |
 | `unknown` | A model whose base family cannot be established |
 
-Another family may be recorded as a lowercase slug such as `meta-llama` once a later
-release qualifies it. Do not guess a family. Record `unknown` when the base model is not
-documented.
+A local model reached through Ollama records its own base family as a lowercase slug:
+`qwen`, `meta-llama`, `microsoft-phi`, `mistral-ai`, `deepseek`, and `google-gemma` are
+distinct families, mapped from the model name as
+[local-models.md](local-models.md), section 4, defines. Fine-tunes of the same base are
+one family, not independent reviewers of each other. Do not guess a family. Record
+`unknown` when the base model is not documented.
 
 The family comes from the model identifier, never from the application that ran it,
 because Codex CLI and Claude Code can be pointed at other providers. Map identifiers
@@ -51,6 +54,7 @@ The `tool` field records the application that ran the model:
 |---|---|
 | `claude-code` | Claude Code, including this plugin's own session |
 | `codex-cli` | Codex CLI, including sessions started through its MCP server or `codex exec` |
+| `ollama` | A local model called through Ollama, per [local-models.md](local-models.md) |
 | `human` | A person acting directly |
 | `other` | Any other application; describe it in the record's notes |
 
@@ -94,15 +98,19 @@ For each material artifact, patch, or repair:
 5. A phase that mixes authors is judged item by item. Do not label a whole phase
    independent unless every material item has an eligible primary reviewer.
 
-Record the outcome in each review as `independence: independent`, `secondary`, or
-`reduced`.
+Record the outcome in each review as `independence: independent`, `local-family`,
+`secondary`, or `reduced`.
 
 When no eligible different-family reviewer is available, PeerFoil does not guess. It
 stops and lets the user either wait for one or accept **Reduced assurance** for that
 artifact. An accepted reduced-assurance review by a fresh same-family session is recorded
 with `independence: secondary`, the user's acceptance and its time in the review record
 and in `history.jsonl`, and the words "Reduced assurance" wherever the artifact's status
-is shown. The acceptance covers one artifact draft; a later artifact needs its own.
+is shown. When the user instead accepts an advisory review by a local model whose
+lineage root differs from the author's, record `independence: local-family` the same
+way; the label stays Reduced assurance, because the local model is not qualified, but
+the history shows that a different family inspected the draft. The acceptance covers one
+artifact draft; a later artifact needs its own.
 
 ## 5. Default arrangement
 

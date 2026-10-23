@@ -4,7 +4,12 @@ description: Write and maintain the /docs knowledge base. Apply when adding or c
 ---
 
 <!--
-This file is part of PeerFoil
+This file is part of PeerFoil.
+skills/documentation/SKILL.md
+Author(s): Gabriel Mongefranco.
+Created: 2026-09-09
+Last Modified: 2026-10-21
+Summary: Rules for the /docs knowledge base and for keeping documentation current.
 Copyright © 2026 Gabriel Mongefranco
 Licensed under the GNU Free Documentation License v1.3 or later.
 See <https://www.gnu.org/licenses/fdl-1.3.html>. See README for full license information.
@@ -85,7 +90,7 @@ Every page uses this order.
   allowlist in `config/validation.js`; axe-core scan clean as of <date>" is
   acceptable. "Fully HIPAA compliant" is not.
 
-### When to update
+### Changes that need a documentation update
 
 Update `/docs` in the same change set whenever any of these happen:
 

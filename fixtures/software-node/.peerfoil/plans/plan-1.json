@@ -1,0 +1,84 @@
+{
+  "record_type": "plan",
+  "schema_version": 2,
+  "project_id": "peerfoil-fixture-node",
+  "plan_revision": 1,
+  "architecture_revision": 1,
+  "quality_revision": 1,
+  "status": "accepted",
+  "revised_at": "2026-10-20T09:30:00Z",
+  "revised_by": {
+    "role": "planner",
+    "tool": "claude-code",
+    "model": "claude-fable-5",
+    "effort": "medium",
+    "lineage_root": "anthropic-claude",
+    "session": null
+  },
+  "revision_reason": "Initial plan written from architecture revision 1.",
+  "phases": [
+    {
+      "id": "ph-01",
+      "title": "First working path",
+      "outcome": "The line counter counts non-empty lines in a named file and offers machine-readable output.",
+      "order": 1,
+      "status": "active",
+      "stages": [
+        {
+          "id": "st-01",
+          "title": "Line counter features",
+          "outcome": "The command gains a --json flag, with tests.",
+          "order": 1,
+          "status": "active",
+          "depends_on": [],
+          "tasks": [
+            {
+              "id": "tk-001",
+              "title": "Add a --json flag that prints the result as a JSON object",
+              "scope": "Add a --json flag to linecount.js that prints the count as a JSON object instead of the plain number, and add tests for the flag in linecount.test.js. Do not change how lines are counted and do not add dependencies.",
+              "allowed_paths": ["linecount.js", "linecount.test.js"],
+              "inputs": [".peerfoil/architecture.md", ".peerfoil/quality.md", "linecount.js"],
+              "output": "linecount.js accepts --json and prints a JSON object with the count; tests cover the flag.",
+              "required_evidence": [
+                { "name": "unit-tests", "kind": "executable", "level": "required" },
+                { "name": "lint", "kind": "executable", "level": "recommended" }
+              ],
+              "depends_on": [],
+              "acceptance": [
+                "Running node linecount.js --json with a file path prints a JSON object with a count property and exits with code 0.",
+                "Running without the flag still prints the plain number.",
+                "npm test exits with code 0."
+              ],
+              "author_role": "producer",
+              "status": "ready",
+              "plan_revision": 1,
+              "architecture_revision": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "r-0001",
+      "text": "The command prints the number of non-empty lines in the named file.",
+      "source": "d-0001",
+      "tasks": []
+    },
+    {
+      "id": "r-0002",
+      "text": "A final line without a trailing newline is still counted.",
+      "source": "d-0002",
+      "tasks": []
+    },
+    {
+      "id": "r-0003",
+      "text": "The --json flag prints a JSON object with the count.",
+      "source": "d-0003",
+      "tasks": ["tk-001"]
+    }
+  ],
+  "changes": [],
+  "backlog": []
+}

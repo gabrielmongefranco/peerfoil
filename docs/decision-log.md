@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/decision-log.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Records the accepted engineering decisions that shape PeerFoil's implementation.
 Notes: Each entry is short. A decision changes only through a new entry that supersedes it.
 
@@ -58,6 +58,16 @@ that supersedes the old one, never by editing history.
 | D-0026 | Phase review record with item-level primary reviewers and a merged finding list | Accepted | Phase 1, Stage 4 |
 | D-0027 | Repairer chosen by rule; reviewer agreement stands in for the repair task's plan review | Accepted | Phase 1, Stage 4 |
 | D-0028 | Lessons are verified at phase review and promoted only with the user; hints may stay unverified | Accepted | Phase 1, Stage 4 |
+| D-0029 | PeerFoil recommends and detects the host sandbox; it never provides or enforces one | Accepted | Phase 1, Stage 5 |
+| D-0030 | Local models participate as advisory Ollama calls with `local-family` assurance bookkeeping | Accepted | Phase 1, Stage 5 |
+| D-0031 | Fixtures freeze at the production boundary; fixture content carries no PeerFoil header | Accepted | Phase 1, Stage 5 |
+| D-0032 | Core validates records with its own validator for the documented schema subset | Accepted | Phase 2, Stage 1 |
+| D-0033 | Accepted files are replaced by writing a flushed temporary file and renaming it | Accepted | Phase 2, Stage 1 |
+| D-0034 | Local operational state lives in the user cache directory, keyed by project and repository | Accepted | Phase 2, Stage 1 |
+| D-0035 | Alpha cancellation kills the direct child process and reports the descendant limit | Accepted | Phase 2, Stage 1 |
+| D-0036 | The tested structured-output interfaces are Claude Code JSON output and codex exec JSON events | Accepted | Phase 2, Stage 1 |
+| D-0037 | Core Alpha writes a reduced phase-review record and the full template shape waits for Review Beta | Accepted | Phase 2, Stage 7 |
+| D-0038 | The sandbox recommendation is layered and tool-neutral: outside isolation first, then the agent tools' own sandboxes | Accepted | Phase 2, Stage 7 |
 
 ## D-0001 — Plugin location
 
@@ -540,6 +550,217 @@ that supersedes the old one, never by editing history.
 - **Consequences:** The lesson template gains `Verification` and `Promoted to` lines;
   `plugins/peerfoil/references/lessons.md` holds the procedure; the phase packet
   asks for lesson verdicts. Core keeps the same states.
+
+## D-0029 — Host sandbox recommendation and detection
+
+- **Status:** Accepted on 2026-10-21. Resolves the proposal in repository issue 4.
+  Amended by D-0038, which reorders the recommendation so that outside isolation comes
+  first and no single vendor's tool is the only named option.
+- **Decision:** PeerFoil recommends the Claude Code Bash sandbox for low-supervision
+  runs and detects it without providing or enforcing one. The plugin documents a starter
+  `.claude/settings.json` fragment, `setup` and the production preflight report the
+  sandbox status with the `host-sandbox` environment check, and a missing sandbox asks
+  the user to confirm once per session instead of blocking. The architecture's trust
+  section states that this is a host feature PeerFoil detects and reports. Core performs
+  the same check programmatically in `peerfoil doctor`.
+- **Options considered:** Building or configuring a sandbox inside PeerFoil; blocking
+  production when the sandbox is absent; saying nothing.
+- **Reason:** The architecture keeps PeerFoil out of the sandbox business, but the host
+  tool already ships one aimed exactly at reduced-supervision runs. Recommending and
+  detecting it raises safety without new scope. Blocking would make native Windows,
+  where the sandbox needs WSL2, unusable.
+- **Consequences:** `plugins/peerfoil/references/sandbox.md` holds the fragment, the
+  check, and the honest limits: no native Windows support, a best-effort network
+  allowlist on WSL2, and hostname-only filtering. The setup skill and production
+  reference say so. Machine-level hardening stays outside PeerFoil.
+
+## D-0030 — Early local-model participation through Ollama
+
+- **Status:** Accepted on 2026-10-21. Resolves the proposal in repository issue 3,
+  taking its option (b) for assurance treatment.
+- **Decision:** During the Skills releases a local model installed in Ollama may help as
+  an explicit tool the coordinator calls, the same pattern D-0019 uses for Codex. It may
+  read, summarize, and triage without creating records, and it may give an advisory
+  review of a draft when no hosted different-family reviewer is available and the user
+  accepts. Such a review is recorded with the new `independence: local-family` value
+  when the local model's lineage root differs from the author's; the user-facing label
+  stays Reduced assurance. The lineage reference records Qwen, Llama, Phi, Mistral,
+  DeepSeek, and Gemma as distinct base families, with fine-tunes sharing their base's
+  root, so Skills-era history is already correct when Phase 7 formalizes qualification.
+  The `ollama` tool value is added to the shared schema. Local models never author,
+  repair, architect, plan, or satisfy normal approval in this release.
+- **Options considered:** Advisory-only participation with no new independence value,
+  the issue's option (a); pulling Phase 7 qualification forward, its option (c); a new
+  MCP server in front of Ollama.
+- **Reason:** Option (b) keeps D-0014's effect unchanged while making history
+  distinguishable: a different-family local review is better information than a second
+  Claude session, and recording it as plain `secondary` would hide that. Option (c) is
+  qualification work that belongs to Phase 7. Documented commands need no new bridge,
+  which rule 11 of `AGENTS.md` forbids building when an existing tool serves.
+- **Consequences:** `plugins/peerfoil/references/local-models.md` holds the detection,
+  invocation, family mapping, and role limits. The lineage, review, and records
+  references and the status skill name the `local-family` value, setup gains an
+  optional `local-models` check, and `schemas/common.schema.json` accepts `ollama`
+  actors. Nothing here survives as a second adapter mechanism once Phase 7's
+  provider-neutral contract exists.
+
+## D-0031 — Fixture layout and conventions
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The three Stage 5 fixtures live under `fixtures/` and freeze each
+  project at the production boundary: decisions, architecture, Quality Contract, and an
+  accepted revision 2 plan with one recorded change, and no production or evidence yet.
+  Their architecture and plan reviews are seeded synthetic preconditions, labeled as
+  such. Everything inside a fixture except its README.md is synthetic user content, so
+  it carries no PeerFoil header, like the plugin's templates, and it may hold seeded
+  defects that the repository link check must not flag. Each seeded defect is
+  requirement `r-0002`, recorded but covered by no task; the documentation fixture also
+  seeds a failing required link check through a broken relative link.
+- **Options considered:** Freezing fixtures after a captured production task, as the
+  Stage 3 and 4 scratch fixtures did; source-only fixtures with no `.peerfoil` records.
+- **Reason:** A post-production freeze embeds patch and input hashes that must match the
+  committed bytes exactly, which breaks on any innocent edit and on CRLF conversion. The
+  production boundary keeps the records simple and deterministic while still letting a
+  fresh session resume straight into the live journey. Source-only fixtures would leave
+  the schemas and resume path untested.
+- **Consequences:** `tests/static_checks.py` validates fixture JSON against the schemas
+  and exempts fixture content from the header and link checks;
+  `tests/stage5_checks.py` asserts the frozen state, the seeded change `cr-0001`, and
+  the seeded defects. CI runs the Go and Node.js fixture tests on all three operating
+  systems. The live journey results belong to the Stage 5 status table, not to these
+  automated checks.
+
+## D-0032 — Core's JSON Schema validation
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Core validates records with `internal/schema`, its own validator for the
+  keyword subset documented in `schemas/README.md`, with the schemas embedded in the
+  binary. A keyword outside the subset fails loading, which keeps the subset honest.
+- **Options considered:** A third-party Go JSON Schema library; validating with typed
+  decoding alone.
+- **Reason:** The schemas already restrict themselves to the subset the Python checks
+  support (D-0012), so a full draft 2020-12 library adds a dependency to vet and ship
+  without adding coverage. Typed decoding alone cannot reject unknown fields or report
+  precise locations.
+- **Consequences:** The repository checks and Core accept and reject the same records.
+  Growing the subset means updating `schemas/README.md`, the Python validator, and
+  `internal/schema` together.
+
+## D-0033 — Atomic file replacement
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** `internal/fsx` replaces an accepted file by writing a temporary file in
+  the target's directory, flushing it to disk, and renaming it over the target. Go's
+  `os.Rename` replaces an existing file on Windows, macOS, and Linux. On Windows the
+  rename is retried briefly because an open reader can hold the target. The directory
+  entry is flushed where the platform allows it.
+- **Options considered:** Write-then-rename with a separate backup file; direct
+  truncating writes.
+- **Reason:** A failed write must leave the old complete file or the new complete file.
+  Rename within one directory is the portable way to get that without a second file to
+  reconcile on recovery.
+- **Consequences:** Every accepted `.peerfoil` write in Core goes through this helper;
+  interruption tests cover a crash before and after the rename.
+
+## D-0034 — Local state directory
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Reconstructible operational state lives outside Git in the operating
+  system's user cache directory, at `peerfoil/projects/<project id>-<hash>`, where the
+  hash is a short digest of the repository root path. `os.UserCacheDir` supplies the
+  platform-correct base on Windows, macOS, and Linux.
+- **Options considered:** A dot directory inside the repository; the user configuration
+  directory.
+- **Reason:** Operational state must never enter Git, and two clones of one project on
+  one machine must not share a journal. Cache semantics fit state that can be discarded
+  and rebuilt from Git and the accepted records.
+- **Consequences:** `peerfoil doctor` reports the directory and checks that it is
+  writable. Deleting it loses only recovery convenience, never project truth.
+
+## D-0035 — Cancellation boundaries in Alpha
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** Cancelling a run (Ctrl+C or a timeout) kills the direct child process
+  through the process handle. Core Alpha does not claim to kill that child's own
+  descendants, and the limitation is stated in the runner's documentation and the Alpha
+  limits page rather than hidden.
+- **Options considered:** Process groups and job objects per platform; no timeout kills.
+- **Reason:** Platform-correct descendant cleanup needs job objects on Windows and
+  process groups elsewhere, which is Reliable Core scope. Claiming it without testing
+  it on all three platforms would be a false safety statement.
+- **Consequences:** A cancelled invocation is recorded as cancelled, an ambiguous one
+  as unknown, and an unknown mutating invocation is never rerun automatically.
+
+## D-0036 — Tested structured-output interfaces
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The Claude Code adapter uses non-interactive mode with
+  `--output-format json` and reads the result object's `result` text and `session_id`.
+  The Codex adapter uses `codex exec` with `--json` events and
+  `--output-last-message`, reading the thread identifier from the `thread.started`
+  event, with the D-0022 "answer now" nudge as `codex exec resume` on the same thread.
+  The versions these interfaces were tested with are recorded with the release
+  evidence; an unrecognized output shape is a provider error, never a guess.
+- **Options considered:** Parsing human-readable output; the Codex MCP server as Core's
+  first interface.
+- **Reason:** These are the documented non-interactive interfaces of both tools and the
+  ones already exercised during Phase 1. Core owns its processes, so the CLI paths are
+  direct; MCP routing stays later-phase scope.
+- **Consequences:** Provider envelopes are parsed behind adapters, and a tool-version
+  change shows up in diagnostics and evidence rather than silently changing behavior.
+
+## D-0037 — Core Alpha's reduced phase-review record
+
+- **Status:** Accepted on 2026-10-21.
+- **Decision:** The `pr-` record Core Alpha writes is a reduced shape: the frozen
+  revision, one whole-tree bundle digest, the plan and architecture revisions, the item
+  authorship table with each item's primary reviewer, one row per reviewer pass with
+  its recorded independence and decision, the merged finding list, and the decision.
+  The full Skills template shape, with a SHA-256 per bundle item, evidence currency,
+  open items, tool versions, and the repair section, arrives with Review Beta, which
+  owns multi-pass review. The individual `rv-` records Core writes keep the full review
+  template's field names, including the digest and, for a repair verification, the
+  change set it is bound to.
+- **Options considered:** Rendering the complete template from Alpha; keeping the
+  Skills shape and leaving Core's record undocumented.
+- **Reason:** Alpha runs exactly one fixed review round, so most of the template's
+  fields (passes per reviewer, round history, reconciliation) have no Alpha content,
+  and inventing placeholder values would make records lie. An undocumented divergence
+  would silently put two shapes under one identifier, which the Phase 2 start gate
+  forbids.
+- **Consequences:** Readers of `pr-` records check the generating release in the
+  record's first line. Review Beta replaces the reduced shape and this entry records
+  when and why the shapes differ.
+
+## D-0038 — The sandbox recommendation is layered and tool-neutral
+
+- **Status:** Accepted on 2026-10-21. Amends D-0029 after the owner's direction on
+  repository issue 4.
+- **Decision:** PeerFoil's sandbox recommendation names layers in order of preference
+  and depends on no single vendor's tool. First, an outside isolation layer that holds
+  the whole agent toolchain: a container or virtual machine such as
+  [Agent Airlock](https://github.com/gabrielmongefranco/agent-airlock), a rootless
+  Podman container for the agent CLIs, their editors, and their tools on Linux, WSL2,
+  and macOS. Second, the agent tools' own sandboxes: PeerFoil already requests a
+  sandbox level on every producer, repair, and reviewer call it makes, and Claude
+  Code's Bash sandbox can cover the rest of a guided session through one settings
+  fragment. Other isolation tools, such as Vetto on Linux, are acceptable alternatives
+  the user may choose. Detection reports the strongest layer it can see: running inside
+  a container counts as configured, then the host tool's settings; a missing sandbox
+  informs and never blocks.
+- **Options considered:** Keeping the recommendation centered on the Claude Code
+  sandbox alone (D-0029 as first accepted); recommending one third-party sandbox as the
+  required path.
+- **Reason:** The method must not depend on one vendor's harness for a safety property,
+  and an outside container isolates every tool in the chain at once, including the
+  Codex CLI, editors, and MCP servers, where a per-tool sandbox covers only its own
+  tool. Naming the layers in preference order keeps the advice honest about what each
+  one covers.
+- **Consequences:** `plugins/peerfoil/references/sandbox.md` leads with outside
+  isolation and keeps the Claude Code fragment as the host-tool example, the
+  `host-sandbox` check in `peerfoil doctor` and the setup skill treat a detected
+  container as the isolation boundary, and the architecture's trust section states the
+  layered wording. PeerFoil still provides and enforces no sandbox of its own.
 
 ## Conclusion
 

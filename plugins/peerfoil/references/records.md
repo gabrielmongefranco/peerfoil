@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 plugins/peerfoil/references/records.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Defines the shared PeerFoil records, their fields, identifiers, revisions, and file locations.
 Notes: JSON schemas under schemas/ at the repository root encode the same rules for validated files.
 
@@ -308,7 +308,7 @@ File: `.peerfoil/reviews/rv-NNNN.md`.
 | `pass` | Review pass number for this artifact draft, starting at 1 |
 | `reviewer` | Actor record |
 | `author` | Actor record of the author under review |
-| `independence` | `independent`, `secondary`, or `reduced` |
+| `independence` | `independent`, `local-family`, `secondary`, or `reduced` |
 | `passes_used` | Number of review passes |
 | `duration_seconds` | Wall-clock seconds from launching the reviewer to receiving its result |
 | `findings` | Finding records |

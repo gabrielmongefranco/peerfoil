@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/architecture.md
 Author(s): Gabriel Mongefranco; OpenAI Codex.
 Created: 2026-09-04
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Describes PeerFoil's components, data, workflow, and main design decisions.
 Notes: See README for an overview and full license information.
 
@@ -17,7 +17,7 @@ Texts. See <https://www.gnu.org/licenses/fdl-1.3.html>.
 
 # PeerFoil Architecture
 
-## How PeerFoil coordinates independent AI models without replacing their tools
+## A coordinator for independent AI models and their existing tools
 
 [Return to the PeerFoil README](../README.md)
 
@@ -327,7 +327,7 @@ A project using PeerFoil keeps accepted state under `.peerfoil/`:
   lessons/
 ```
 
-### What each file does
+### Purpose of each file
 
 | File | Purpose |
 |---|---|
@@ -421,6 +421,14 @@ PeerFoil enforces:
 PeerFoil assumes the workspace, its installed tools, and invoked model applications are
 trusted. Version 1.0 does not provide an operating-system sandbox. Users who open untrusted
 projects need an outside disposable environment.
+
+PeerFoil recommends isolating the agent tools from the host, in preference order: an
+outside container or virtual machine that holds the whole toolchain, such as Agent
+Airlock; then the agent tools' own sandboxes, such as the Claude Code Bash sandbox on
+macOS, Linux, and WSL2, alongside the sandbox level PeerFoil already requests on every
+model call. PeerFoil checks for the strongest layer it can see before low-supervision
+phases. These are host features PeerFoil detects and reports, not boundaries PeerFoil
+provides or enforces.
 
 Git worktrees and Dagger-style build environments may improve change isolation or
 reproducibility. They are not treated as hostile-code security boundaries.

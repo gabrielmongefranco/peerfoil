@@ -16,6 +16,8 @@ Project: `{{project_id}}` · Assurance: Guided
 - **Patch:** {{relative path to the captured patch | null}}
 - **Patch SHA-256:** {{sha256 | null}}
 - **Input snapshot:** {{sha256 | null}}
+- **Accepted input records:** {{relative path to retained accepted records | null}}
+- **Accepted input SHA-256:** {{sha256 of the retained accepted records | null}}
 - **Quality revision:** {{quality_revision}}
 - **Plan revision:** {{plan_revision}} · **Architecture revision:** {{architecture_revision}}
 

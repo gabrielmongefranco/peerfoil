@@ -3,7 +3,7 @@ This file is part of PeerFoil.
 docs/plans/phase-2-core-alpha.md
 Author(s): Gabriel Mongefranco.
 Created: 2026-09-05
-Last Modified: 2026-09-05
+Last Modified: 2026-10-21
 Summary: Provides the executable implementation plan for Phase 2, PeerFoil Core Alpha 0.2.
 Notes: This plan expands Phase 2 of docs/implementation-plan.md without changing its scope.
 
@@ -249,6 +249,19 @@ depends on them.
 - the architecture decisions above are accepted; and
 - the initial three-platform CI matrix passes.
 
+### Stage 1 status
+
+Implemented on 2026-10-21. The module `github.com/gabrielmongefranco/peerfoil` builds one
+binary from `cmd/peerfoil` with a `flag.FlagSet` dispatcher, the five commands, stable
+help text, the eleven error categories mapped to exit codes 2 through 12 in
+`internal/errs`, and network-free version metadata in `internal/version`. The required
+architecture decisions are D-0032 to D-0036 in the [decision log](../decision-log.md).
+CI gains a three-platform `core` job (formatting, vet, build, tests, with race detection
+on Linux and macOS). Checks run on Windows with Go 1.26.5: `gofmt -l` clean,
+`go vet ./...`, `go build ./...`, and `go test ./...` pass; `--version`, help, unknown
+commands, and unknown options return the documented codes under test. The macOS and
+Linux rows come from the CI matrix and are pending its first run on this change.
+
 ## 9. Stage 2 — Project validation, state transitions, and journal
 
 ### Outcome
@@ -297,6 +310,22 @@ identify the last safe task boundary.
 - invalid or stale state fails closed with one useful next action;
 - transition tests cover every allowed and forbidden edge; and
 - resume never repeats an unknown mutating operation automatically.
+
+### Stage 2 status
+
+Implemented on 2026-10-21. `internal/project` loads and validates `project.json`,
+`plan.json` (versions 1 and 2 by dispatch), and `history.jsonl` against the embedded
+schemas (`internal/schema`, D-0032) plus the semantic rules: identity and revision
+agreement, duplicate identifiers, missing dependencies, dependency cycles, tasks naming
+later revisions, a broken `from_state` chain, and a workflow state without supporting
+history. `internal/controller` holds the deterministic transition table;
+`internal/store` is the write-ahead journal outside Git (D-0034) with intent and result
+entries and open-invocation recovery; `internal/fsx` writes accepted files atomically
+(D-0033). `peerfoil init` previews before creating and never overwrites; `peerfoil
+status` reads files only. Tests cover all three fixtures loading, every listed rejection,
+transition edges including forbidden ones, journal reopen and a torn final line, and
+atomic replacement; all pass on Windows. Interrupting a prepared and started invocation
+is covered by the controller recovery test in Stage 6's suite.
 
 ## 10. Stage 3 — Claude Code and Codex adapters
 
@@ -359,6 +388,22 @@ the documented Alpha boundary.
 - cancellation stops the direct provider process and reports any child-process limitation
   honestly.
 
+### Stage 3 status
+
+Implemented on 2026-10-21. `internal/provider` holds the shared bounded runner (argument
+arrays, explicit working directory, minimal environment allowlist, separate capped
+output streams, context deadline that kills the direct child and reports the descendant
+limit per D-0035) and the Claude Code and Codex adapters behind one contract with fake
+injection. The Claude adapter uses non-interactive JSON output; the Codex adapter uses
+`codex exec --json` with `--output-last-message` and the D-0022 two-stage deadline,
+nudging the same thread once before giving up (D-0036). Lineage maps from the model
+identifier only. The deterministic suite covers success, nonzero exit, stdin, output
+truncation, timeout kill, cancellation, malformed and truncated envelopes, the
+timeout-then-nudge path, and the rule that error messages never carry packet text. A
+real read-only probe ran on Windows through `peerfoil doctor`, which found Claude Code
+2.1.260 and Codex CLI 0.162.0-alpha.17.2 signed in; the macOS and Linux probes remain
+for the platform matrix.
+
 ## 11. Stage 4 — Git worktrees, scope, and provenance
 
 ### Outcome
@@ -405,6 +450,21 @@ branch without modifying the user's current branch.
 - authorship survives integration and conflict handling;
 - scope and secret checks block seeded violations; and
 - the user's current branch remains unchanged.
+
+### Stage 4 status
+
+Implemented on 2026-10-21. `internal/workspace` requires a repository with a commit,
+rejects submodules and Git LFS, creates one `peerfoil/task/` worktree per task from a
+validated identifier, reads changes with NUL-delimited plumbing, captures a
+binary-capable patch through a temporary index that never touches the user's index,
+checks scope with deny-by-default patterns (`*` and `?` never cross a separator, `**`
+does, matching is case-insensitive; absolute, traversal, drive, UNC, alternate-stream,
+`.git`, and `AGENTS.md` paths are rejected), scans patches for credentials without
+echoing the match, integrates only by fast-forwarding the dedicated
+`peerfoil/integration` branch, and cleans up only resources it created. Tests run
+against real Git repositories in temporary directories, including spaces and Unicode in
+names, a diverged integration branch being refused, and proof that the user's branch,
+index, and tree stay untouched; all pass on Windows, with macOS and Linux pending CI.
 
 ## 12. Stage 5 — Controller-run evidence
 
@@ -455,6 +515,19 @@ review.
 - stale or mismatched evidence cannot be accepted; and
 - retained diagnostics are useful without exposing sensitive content.
 
+### Stage 5 status
+
+Implemented on 2026-10-21. `internal/evidence` validates every declared command before
+running it (argument-array only, shell metacharacters rejected, working directory
+contained, bounded timeout), reuses the Stage 3 runner through an injected contract,
+scrubs retained output with `internal/redact`, caps it with head and tail halves,
+stores its SHA-256, and ties every record to the exact produced commit and plan
+revision. `Fresh` and `RequiredSatisfied` reject stale, missing, failed, and
+wrong-revision evidence, accept recommended failures as visible results, and require an
+explicit human record for required human evidence. Tests cover pass, fail, timeout,
+runner errors, injection attempts, a planted token never reaching the retained file,
+truncation, and the freshness rules; all pass on Windows.
+
 ## 13. Stage 6 — Enforced vertical slice
 
 ### Outcome
@@ -501,6 +574,32 @@ accepted integration-branch change. This is the first end-to-end enforced PeerFo
 - every accepted transition has current evidence and provenance;
 - every seeded invalid transition stops safely; and
 - the integration result can be understood and reviewed after a fresh clone.
+
+### Stage 6 status
+
+Implemented on 2026-10-21. `peerfoil start` runs the enforced slice: the production
+gate (accepted and independently reviewed architecture and plan at the current
+revisions, clean tree outside `.peerfoil/`, no interrupted operation), deterministic
+task selection, the launch record persisted before the producer runs, one bounded
+producer call in a dedicated worktree, handoff validation, capture with scope and
+secret checks, controller-run required checks against the task commit, and integration
+only of passing work, with later tasks building on the integration tip. `peerfoil
+doctor` checks the operating system, Git, records, both model tools and their logins,
+seat models, pack and project tools, the host sandbox (D-0029), and the local state
+directory. The fake-provider journeys cover the full Go fixture to the review boundary,
+an out-of-scope change blocking, a planted credential blocking, a required check
+failure returning the task to production without integration, and a malformed handoff
+that cannot succeed, with the user's HEAD asserted unchanged throughout.
+
+The real-provider smoke test ran on Windows on 2026-10-21 against a scratch copy of the
+Go fixture, with Codex CLI 0.162.0-alpha.17.2 signed in: `peerfoil start` sent tk-001
+to the real producer in a dedicated worktree, captured the patch and thread identifier,
+ran the real `go build`, `go test`, and `go vet` as controller-owned evidence, and
+integrated the validated change on `peerfoil/integration` while the user's branch
+stayed at the baseline. The first attempt failed honestly because the evidence
+environment allowlist lacked the Windows cache variables Go needs; that defect is fixed
+and the allowlist still excludes everything else. The macOS and Linux rows remain open
+checks recorded in Stage 8's status.
 
 ## 14. Stage 7 — Independent review and guided repair
 
@@ -550,6 +649,22 @@ different-family verification.
 - self-approval is blocked per artifact and patch;
 - a seeded repair completes with fresh independent verification; and
 - unresolved review produces one clear user decision instead of another automatic loop.
+
+### Stage 7 status
+
+Implemented on 2026-10-21. `peerfoil resume` in the review state freezes the
+integration tip with a tree digest, checks that two reviewer seats from different known
+families exist, runs one fresh Claude and one fresh Codex review of the same read-only
+checkout with no producer transcript, validates and normalizes their findings (at most
+ten each; a blocking finding with an approve decision is corrected to repair), merges
+duplicates without erasing disagreement, and writes per-reviewer `rv-` records and one
+`pr-` phase review record in the reduced Alpha shape D-0037 defines. Approval requires every reviewer plus the different-family
+primary to approve; two same-family seats are refused outright, and one approve against
+one repair pauses for the user. The one repair cycle sends the agreed findings to the
+repair producer (never at low effort), captures the repair as its own change set,
+reruns the affected checks, and requires a fresh different-family verification before
+the phase closes. The fake-provider suite covers approval, disagreement, the
+same-family refusal, and the full repair-and-verify path; all pass on Windows.
 
 ## 15. Stage 8 — Recovery, portability, fixtures, and alpha release
 
@@ -603,6 +718,190 @@ feature remains clearly labeled.
 - the Documentation fixture proves the controller is not hard-coded to source files;
 - the final review has no unresolved blocking finding; and
 - the Reliable Core handoff identifies every known limit and next dependency.
+
+### Stage 8 status
+
+Partially complete on 2026-10-21; the alpha is not released. Done: interruption
+recovery at the journal level (an unconfirmed invocation blocks everything, and
+`--confirm-stopped` closes it, blocks the task, and pauses), a torn journal line and
+atomic-write interruption tests, reconstruction by reloading the full record set
+through validation after a complete journey, the Documentation fixture processed
+through the same controller code with its required inspection and human evidence
+pausing honestly, and the [Core Alpha documentation page](../core-alpha.md) covering
+installation, commands, recovery, privacy, and limits. The three-OS matrix (builds,
+tests, fixtures) runs in CI; pull request 7 retains the results for each revision. A
+real-provider smoke test of one produced task passed on Windows; Stage 6's status holds
+the details. Not done, recorded as open checks for the user and later work: manual
+real-provider smoke tests on macOS and Linux, a real-provider journey through the phase
+review and repair, checksummed shared binaries, a dependency vulnerability scan (the
+module has no third-party dependencies, so the scan is the toolchain's own), and the
+independent Claude and Codex review of the complete
+release candidate, which this change requests through the repository's pull-request
+review. P2-11 and the release rows of the acceptance matrix stay open until those runs
+exist.
+
+### Pull request 7 follow-up checks
+
+The 2026-10-21 follow-up addresses the remaining findings in
+[pull request 7](https://github.com/gabrielmongefranco/peerfoil/pull/7).
+It covers Stages 2, 4, 5, and 7 and corrects the Phase 1 skill-copy instructions.
+The release boundary and deferred work remain as listed above.
+
+| Finding | Implemented behavior | Regression evidence |
+|---|---|---|
+| Missing frozen review revision | Core refuses review without a recorded full commit; Guided records retain their existing nullable field | `TestPhaseReviewRequiresRecordedRevision`, `TestControllerReviewBoundaryRequiresRevision` |
+| Failed repair verifier cannot resume | Retain the repair commit, author, findings, revisions, and attempt count in the phase review; resume one fresh verification without rerunning the writer | `TestRepairVerificationResumesWithoutAnotherWriter` |
+| Repair verifier checked against the original producer | Check independence against the repair change set and reject the repair author's session | The retry test uses different producer and repair families |
+| Copied skill links break | State the two destination-relative instruction links in the template's copy instructions | Repository link checks |
+| Reviewer prose retains credentials | Scrub every free-text review field before either individual or merged review records are saved | `TestReviewProseIsScrubbedBeforeRetention` |
+| Blocked handoff retains credentials | Bound the blocker and scrub it before errors, history, or project state use it | `TestBlockedHandoffIsBoundedAndScrubbed` |
+| Tracked symlinks reach a writer | Reject symlink and submodule Git modes before task or review checkout creation, including on Windows without native links | `TestTrackedSymlinkRejectedWithoutOSLinkSupport` |
+| Capture and commit include different content | Derive scope, patch, and commit from one immutable Git tree; run checks in a separate checkout of that commit | `TestCommitUsesOnlyCapturedTree` |
+| Workflow saves erase setup checks | Preserve the schema's environment object through load and save | `TestSetupChecksSurviveWorkflowSaves` |
+| History identifiers repeat or regress | Require positive, increasing numeric identifiers and increment without machine-integer overflow | `TestHistoryIDsMustIncreaseNumerically` |
+| Reduced-assurance acceptance lacks matching history | Require the documented positive reason, valid times, exact review reference, and current plan, architecture, and quality revisions | `TestProductionGateNeedsThePositiveAcceptancePhrase` |
+| Approval overwrites dismissed stage statuses | Preserve deferred and removed stages and tasks | `TestApprovePreservesDismissedStages` |
+| Integration failure strands validation | Block the task and pause with its change set and executable evidence | `TestIntegrationFailurePausesWithEvidence` |
+| Repair setup failure strands repair | Create the worktree and pending records before entering repair; pause subsequent failures | `TestRepairSetupFailureLeavesReviewBoundary` |
+| Producer reads stale accepted files | Retain a bounded, hashed snapshot of current accepted records and send it as packet data | `TestProducerReceivesCurrentSnapshotAndUsesItsProcedure` |
+| Checks substitute pack hints for accepted procedures | Parse accepted argument lists and directories; run every command in order; reject missing, duplicate, or unsafe procedures | `TestAcceptedCommandsUseAllArgumentsAndWorkingDirectory` and the snapshot journey |
+| Status hides unfinished tasks | Direct blocked, stale, and unreachable tasks to change intake | `TestNextActionExplainsUnfinishedTasks` |
+| Repairs omit major findings | Send the full agreed finding list to both repair producer and verifier | `TestRepairIncludesBlockingAndMajorFindings` |
+| Filenames inject records or reveal credentials | Reject controls, markup, and likely credentials without echoing the offending filename | `TestUnsafeFilenamesNeverReachReports` |
+| Captured trees introduce unsupported LFS | Inspect root and nested attribute blobs in the exact base and captured Git trees | `TestLFSAttributesRejectedInBaseAndCapturedTrees` |
+| Invalid repair inputs leave writer resources | Validate accepted inputs first; close intents and remove unused worktrees on other setup failures | `TestInvalidRepairInputsCreateNoWriterResources` |
+| Review copy follows local links | Use bounded regular-file reads with parent checks; cap copied bundles and reject likely credentials | `TestReviewCopyRejectsUnboundedAndLinkedRecords`, `TestReadRegularFileBoundsAndLinks` |
+| Frozen commit carries changed accepted requirements | Retain accepted input records and revisions per review transition; compare them before review and approval | `TestReviewRefusesChangedAcceptedInputs` |
+| Integration failure discards successful verification | Retain the review identity, reviewer, and normalized text hash; retry integration without another verification attempt | `TestVerifiedRepairResumesIntegrationWithoutAnotherReview` |
+| A body example can authorize a draft contract | Parse the canonical metadata paragraph directly after the title | `TestCanonicalHeaderCannotBeSuppliedByAnExample` |
+| Private or global attributes introduce LFS pointers | Batch-inspect small source blobs for current and legacy LFS pointer headers | `TestLFSPointersFromUntrackedAttributesAreRejected` |
+| Reviewer fields inject Markdown structure | Reject line breaks, controls, and structural markup before retaining findings or risk text | `TestReviewFieldsCannotForgeMarkdown` |
+| Mixed-author phases cannot approve | Require different-family primary approval for each recorded change set | `TestReviewApprovalCoversEveryAuthor` |
+| Case-colliding source paths | Check file and directory prefixes in the exact Git tree using Unicode case folding | `TestCaseCollisionsRejectedBeforeCheckout` |
+| Changed project fields bypass review | Bind stable stored and loaded project fields, excluding workflow position and its timestamp | `TestReviewInputsBindStableProjectFields` |
+| Another project's approval authorizes production | Require canonical review metadata naming the current project | `TestReviewGateRejectsForeignProjectAndOldArchitecture` |
+| Plan review names an old architecture | Require current architecture for both plan and change approvals | The same production-gate regression |
+| Reviewers read stale plan Markdown | Regenerate the Markdown twin from the current accepted JSON plan | `TestReviewCheckoutRegeneratesCurrentPlan` |
+| Duplicate findings lose obligations | Preserve distinct requirements, evidence, recommendations, and originating reviews | `TestMergedFindingsRetainDistinctObligations` |
+| Check commands change source before passing | Verify HEAD, index, and non-ignored files after each command; retain blocked evidence and stop | `TestEvidenceRejectsCheckoutMutation` |
+| Missing optional tools block work | Retain recommended startup errors and continue; cancellation still stops | `TestRecommendedStartupFailureRetainsErrorAndContinues` |
+| Automatic repairs leave no plan change | Archive the prior plan, add a repair task and change entry, increment the revision, and link affected and retained work | `TestRepairPlanTracksWorkAndExcludesDismissedScope` and repair recovery journeys |
+| Dismissed tasks expand repair scope | Grant only paths of affected validated or accepted tasks; reject unmapped finding locations | The same repair-plan regression |
+| Ignored files feed later checks | Give each accepted evidence procedure a fresh checkout; only explicitly chained commands share output | `TestEvidenceProceduresCannotShareIgnoredInputs` |
+| Repair plan blocks retained later phases | Require the original two-family agreement, independent repair verification, completed approval transition, and unchanged plan content apart from progress statuses | `TestVerifiedRepairAuthorizesRetainedLaterPhase` |
+| Repair change omits evidence links | Save each repair check's evidence IDs in the plan change before verification | The same later-phase journey checks every evidence record against the repair commit and change set |
+
+The additional review on revision `e311160` raised eleven findings. Their repairs use
+the existing plan-v2 change records and the existing single repair cycle. General change
+placement remains with the skills. Multi-file intake interruption recovery remains a
+manual Alpha limit; restore the archived plan and matching project revision before retrying.
+Current verification results are retained in the pull request. The new mutation regression
+initially checked the internal status name instead of the documented Markdown result.
+It now checks `blocked` and uses a separate frozen checkout, as production does.
+An audit also caught an empty retained-task list encoding as null. It now remains an
+array, with reload coverage in `TestRepairPlanWithNoRetainedTasksLoads`.
+The standalone Go fixture now ignores its native compiled binary. Its ignore file
+follows the existing synthetic-content header exemption; the fixture layout check caught
+and corrected an initial project header without changing the check.
+`TestEvidenceAllowsIgnoredBuildOutput` checks that disposable ignored output remains allowed.
+
+The requested follow-up review of revision `3d6dfb1` returned three more findings.
+Their fixes isolate check procedures and complete the repair plan's evidence and
+authorization links. Explicitly chained commands can share disposable output within
+one accepted procedure; separate procedures cannot. The later-phase journey rejects
+changed assignments and missing reviewer-family agreement before exercising a retained
+task after repair approval. The existing user decision to start another phase is still
+required. These changes do not add general change intake or another repair cycle.
+Two initial targeted runs stopped at Git branch checks. The isolated later-phase
+journey then passed with native Git selected explicitly. No assertions were relaxed;
+the complete Windows suite and the pull request's full CI matrix remain required.
+The complete native Windows run passed with `go test ./... -count=1 -timeout 35m`.
+Vet, build, formatting, both fixture suites, and strict manifest validation also passed.
+Conformance first found temporary diagnostic sources, then passed after their cleanup.
+Keep such scratch files outside the checkout or remove them before conformance;
+the checker also inspects ignored files.
+
+The repair verification test also rejects a moved repair branch and pauses after two
+unusable verifier results. `TestRepairRecoveryRetainsTwoMaximumReviewAnswers` checks
+that two valid, large answers still fit after recovery metadata and formatting are added.
+This implements the existing one-no-result-retry allowance;
+it does not add another repair cycle. The original repair checkout remains available
+after verification fails. Recovery of interruptions before a completed boundary still
+needs the explicit user decision described in the Core Alpha guide.
+
+Authorship: these follow-up repairs were produced by the `openai-gpt` model family.
+The requested same-family pull-request review is a secondary check. Different-family
+phase approval remains outstanding. Automatic approval review blocked an optional local
+different-family review because that provider destination lacked explicit authorization.
+No source was sent through that rejected invocation.
+
+Earlier targeted Windows regressions and the full native suite passed, including
+`go test ./... -count=1 -timeout 9m`, `go vet ./...`, and `go build ./...`.
+Formatting, repository conformance, both fixture suites, and strict plugin validation
+also passed. The pull request records the new three-platform CI and review results.
+Local validation uses Go 1.26.5 and Node.js 26.8.1;
+CI checks the supported Go 1.22 and Node.js 20 versions. Strict plugin validation uses
+the CI-pinned version 2.1.260. The older installed validator cannot validate the current
+manifest metadata. No project dependency was added.
+
+Three full Windows runs stopped after Git returned an empty result, at different commands.
+Three isolated recovery-test repetitions passed without code or assertion changes.
+A separate read-only probe reproduced one empty result in 150 calls to the installed
+Git 2.39.2 Windows launcher; all 150 calls to its native Git executable returned hashes.
+The final local suite uses Git Bash, as Windows CI does, which selects that native
+executable. No system settings or tests were changed to bypass the failure. The pull
+request retains the final local and CI outcomes. The initial integration test also
+needed the new explicit capture call before commit; its integration assertions remain
+unchanged.
+
+The first follow-up CI run passed 11 of 12 jobs. Windows exposed a review-date parser
+that rejected carriage-return/line-feed (CRLF) endings. Review and repair recovery text
+now normalize line endings before parsing. The regressions check LF and CRLF records
+and confirm a recovery save keeps exactly one recovery section;
+the exact review, timestamp, and revision requirements remain unchanged.
+
+Lesson: approval belongs to each material item, and every agreed repair needs explicit
+plan links before a writer starts. Optional failures remain visible without becoming
+required gates. Evidence commands must leave the frozen source unchanged.
+
+Lesson: retain the exact capture and repair identity across retries. Re-reading a live
+checkout or choosing the original producer's lineage can change what the controller
+claims to have validated or independently reviewed.
+
+The next review returned nine further findings, covered in the table above. The accepted
+input snapshot uses additive change-set fields and preserves the Guided `Input snapshot`
+meaning. Source identity remains the base commit; accepted record contents are retained
+separately because they may not yet be committed. No shell or scanner installation is
+inferred from a Quality Contract note. A synthetic repair-setup test initially targeted
+the previous plan revision's branch; it now creates the actual repair branch before
+asserting the same recovery behavior. No production failure was hidden by changing an assertion.
+
+Lesson: accepted requirements must reach both the writer and the check runner as the
+same current data. A toolchain marker or a committed copy is not proof that either
+matches the accepted contract.
+
+The subsequent review returned seven findings, also tracked above. Review boundary
+snapshots add `evidence/tr-NNNN.inputs.json` without changing transition schema fields.
+They contain the accepted records and revisions, exclude mutable workflow progress,
+and must exist before the history transition is written. Older Core review boundaries
+without this record fail closed and need fresh validation. A verified repair retains
+its review identifier and SHA-256 over the review text with LF line endings, so native
+Windows line conversion does not consume another verification attempt.
+
+The review copy now caps individual files at 1 MiB, each source directory at 1,024
+entries, and the complete copied bundle at 8 MiB. Symlink tests run where the host
+allows link creation; other platforms still run the regular-file and size-limit cases.
+The native Windows host could not create the two test links, so those cases were skipped;
+the Linux and macOS jobs require link creation to succeed. No system permission is changed
+to enable a test. The initial copy test needed its synthetic evidence directory created
+before seeding the oversized file; its rejection assertion remains unchanged.
+LFS pointer detection follows the
+[Git LFS specification](https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md),
+including its pointer-size bound and legacy version header.
+
+Lesson: recovery must preserve completed approvals separately from pending integration.
+Validation must also bind accepted requirements, and local record copying is a data
+disclosure boundary even when the produced Git tree contains no links.
 
 ## 16. Phase acceptance matrix
 
